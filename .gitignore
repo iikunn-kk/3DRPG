@@ -1,0 +1,36 @@
+# ==============================================
+# 规则：只保留 Assets/Scripts 下的代码，其他全部忽略
+# ==============================================
+
+# 1. 先拉黑根目录下所有文件/文件夹
+*
+
+# 2. 例外：不拉黑 .gitignore 本身（让Git能跟踪这个配置）
+!/.gitignore
+
+# 3. 例外：不拉黑 Assets 文件夹（必须保留父目录，才能放行里面的Scripts）
+!/Assets/
+
+# 4. 拉黑 Assets 下的所有其他内容
+/Assets/*
+
+# 5. 例外：不拉黑 Assets/Scripts 文件夹
+!/Assets/Script/
+
+!/Assets/七月/Scripts/
+
+# 6. 放行 Assets/Scripts 下的所有子文件/子文件夹（也就是你的代码）
+!/Assets/Script/**/*
+
+# 7. 拉黑所有 .meta 文件（Unity自动生成，完全不需要上传）
+*.meta
+
+# 8. 额外保险：拉黑Unity项目常见的临时/自动生成垃圾文件
+/Library/
+/Temp/
+/Obj/
+/Build/
+/Logs/
+/UserSettings/
+/.vs/
+/.idea/

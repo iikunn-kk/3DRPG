@@ -1,0 +1,1058 @@
+[
+    {
+        "categoryId": "1",
+        "categoryName": "苍穹大陆",
+        "servers": 
+        [
+{
+        "serverId": "101",
+        "serverName": "苍穹大陆1区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "102",
+        "serverName": "苍穹大陆2区",
+        "state": "良好"
+    },
+    {
+        "serverId": "103",
+        "serverName": "苍穹大陆3区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "104",
+        "serverName": "苍穹大陆4区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "105",
+        "serverName": "苍穹大陆5区",
+        "state": "维护"
+    },
+    {
+        "serverId": "106",
+        "serverName": "苍穹大陆6区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "107",
+        "serverName": "苍穹大陆7区",
+        "state": "良好"
+    },
+    {
+        "serverId": "108",
+        "serverName": "苍穹大陆8区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "109",
+        "serverName": "苍穹大陆9区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "110",
+        "serverName": "苍穹大陆10区",
+        "state": "维护"
+    },
+    {
+        "serverId": "111",
+        "serverName": "苍穹大陆11区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "112",
+        "serverName": "苍穹大陆12区",
+        "state": "良好"
+    },
+    {
+        "serverId": "113",
+        "serverName": "苍穹大陆13区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "114",
+        "serverName": "苍穹大陆14区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "115",
+        "serverName": "苍穹大陆15区",
+        "state": "维护"
+    },
+    {
+        "serverId": "116",
+        "serverName": "苍穹大陆16区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "117",
+        "serverName": "苍穹大陆17区",
+        "state": "良好"
+    },
+    {
+        "serverId": "118",
+        "serverName": "苍穹大陆18区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "119",
+        "serverName": "苍穹大陆19区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "120",
+        "serverName": "苍穹大陆20区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "121",
+        "serverName": "苍穹大陆21区",
+        "state": "良好"
+    },
+    {
+        "serverId": "122",
+        "serverName": "苍穹大陆22区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "123",
+        "serverName": "苍穹大陆23区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "124",
+        "serverName": "苍穹大陆24区",
+        "state": "维护"
+    },
+    {
+        "serverId": "125",
+        "serverName": "苍穹大陆25区",
+        "state": "流畅"
+    }
+        ]
+    },
+    {
+        "categoryId": 2,
+        "categoryName": "星辰之海",
+        "servers": 
+        [
+{
+        "serverId": "201",
+        "serverName": "星辰之海1区",
+        "state": "良好"
+    },
+    {
+        "serverId": "202",
+        "serverName": "星辰之海2区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "203",
+        "serverName": "星辰之海3区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "204",
+        "serverName": "星辰之海4区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "205",
+        "serverName": "星辰之海5区",
+        "state": "维护"
+    },
+    {
+        "serverId": "206",
+        "serverName": "星辰之海6区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "207",
+        "serverName": "星辰之海7区",
+        "state": "良好"
+    },
+    {
+        "serverId": "208",
+        "serverName": "星辰之海8区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "209",
+        "serverName": "星辰之海9区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "210",
+        "serverName": "星辰之海10区",
+        "state": "维护"
+    },
+    {
+        "serverId": "211",
+        "serverName": "星辰之海11区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "212",
+        "serverName": "星辰之海12区",
+        "state": "良好"
+    },
+    {
+        "serverId": "213",
+        "serverName": "星辰之海13区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "214",
+        "serverName": "星辰之海14区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "215",
+        "serverName": "星辰之海15区",
+        "state": "维护"
+    },
+    {
+        "serverId": "216",
+        "serverName": "星辰之海16区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "217",
+        "serverName": "星辰之海17区",
+        "state": "良好"
+    },
+    {
+        "serverId": "218",
+        "serverName": "星辰之海18区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "219",
+        "serverName": "星辰之海19区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "220",
+        "serverName": "星辰之海20区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "221",
+        "serverName": "星辰之海21区",
+        "state": "良好"
+    },
+    {
+        "serverId": "222",
+        "serverName": "星辰之海22区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "223",
+        "serverName": "星辰之海23区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "224",
+        "serverName": "星辰之海24区",
+        "state": "维护"
+    },
+    {
+        "serverId": "225",
+        "serverName": "星辰之海25区",
+        "state": "流畅"
+    }
+        ]
+    },
+    {
+        "categoryId": 3,
+        "categoryName": "逐日神域",
+        "servers": 
+        [
+          {
+        "serverId": "301",
+        "serverName": "逐日神域1区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "302",
+        "serverName": "逐日神域2区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "303",
+        "serverName": "逐日神域3区",
+        "state": "良好"
+    },
+    {
+        "serverId": "304",
+        "serverName": "逐日神域4区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "305",
+        "serverName": "逐日神域5区",
+        "state": "维护"
+    },
+    {
+        "serverId": "306",
+        "serverName": "逐日神域6区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "307",
+        "serverName": "逐日神域7区",
+        "state": "良好"
+    },
+    {
+        "serverId": "308",
+        "serverName": "逐日神域8区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "309",
+        "serverName": "逐日神域9区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "310",
+        "serverName": "逐日神域10区",
+        "state": "维护"
+    },
+    {
+        "serverId": "311",
+        "serverName": "逐日神域11区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "312",
+        "serverName": "逐日神域12区",
+        "state": "良好"
+    },
+    {
+        "serverId": "313",
+        "serverName": "逐日神域13区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "314",
+        "serverName": "逐日神域14区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "315",
+        "serverName": "逐日神域15区",
+        "state": "维护"
+    },
+    {
+        "serverId": "316",
+        "serverName": "逐日神域16区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "317",
+        "serverName": "逐日神域17区",
+        "state": "良好"
+    },
+    {
+        "serverId": "318",
+        "serverName": "逐日神域18区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "319",
+        "serverName": "逐日神域19区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "320",
+        "serverName": "逐日神域20区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "321",
+        "serverName": "逐日神域21区",
+        "state": "良好"
+    },
+    {
+        "serverId": "322",
+        "serverName": "逐日神域22区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "323",
+        "serverName": "逐日神域23区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "324",
+        "serverName": "逐日神域24区",
+        "state": "维护"
+    },
+    {
+        "serverId": "325",
+        "serverName": "逐日神域25区",
+        "state": "流畅"
+    }
+        ]
+    },
+    {
+        "categoryId": 4,
+        "categoryName": "幻月仙境",
+        "servers": 
+        [
+          {
+        "serverId": "401",
+        "serverName": "幻月仙境1区",
+        "state": "良好"
+    },
+    {
+        "serverId": "402",
+        "serverName": "幻月仙境2区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "403",
+        "serverName": "幻月仙境3区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "404",
+        "serverName": "幻月仙境4区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "405",
+        "serverName": "幻月仙境5区",
+        "state": "维护"
+    },
+    {
+        "serverId": "406",
+        "serverName": "幻月仙境6区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "407",
+        "serverName": "幻月仙境7区",
+        "state": "良好"
+    },
+    {
+        "serverId": "408",
+        "serverName": "幻月仙境8区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "409",
+        "serverName": "幻月仙境9区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "410",
+        "serverName": "幻月仙境10区",
+        "state": "维护"
+    },
+    {
+        "serverId": "411",
+        "serverName": "幻月仙境11区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "412",
+        "serverName": "幻月仙境12区",
+        "state": "良好"
+    },
+    {
+        "serverId": "413",
+        "serverName": "幻月仙境13区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "414",
+        "serverName": "幻月仙境14区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "415",
+        "serverName": "幻月仙境15区",
+        "state": "维护"
+    },
+    {
+        "serverId": "416",
+        "serverName": "幻月仙境16区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "417",
+        "serverName": "幻月仙境17区",
+        "state": "良好"
+    },
+    {
+        "serverId": "418",
+        "serverName": "幻月仙境18区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "419",
+        "serverName": "幻月仙境19区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "420",
+        "serverName": "幻月仙境20区",
+        "state": "流畅"
+    },
+    {
+        "serverId": "421",
+        "serverName": "幻月仙境21区",
+        "state": "良好"
+    },
+    {
+        "serverId": "422",
+        "serverName": "幻月仙境22区",
+        "state": "爆满"
+    },
+    {
+        "serverId": "423",
+        "serverName": "幻月仙境23区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": "424",
+        "serverName": "幻月仙境24区",
+        "state": "维护"
+    },
+    {
+        "serverId": "425",
+        "serverName": "幻月仙境25区",
+        "state": "流畅"
+    }
+  ]
+    },
+    {
+        "categoryId": 5,
+        "categoryName": "天荒灵域",
+        "servers": 
+        [
+    {
+        "serverId": 501,
+        "serverName": "天荒灵域1区",
+        "state": "良好"
+    },
+    {
+        "serverId": 502,
+        "serverName": "天荒灵域2区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 503,
+        "serverName": "天荒灵域3区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 504,
+        "serverName": "天荒灵域4区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 505,
+        "serverName": "天荒灵域5区",
+        "state": "维护"
+    },
+    {
+        "serverId": 506,
+        "serverName": "天荒灵域6区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 507,
+        "serverName": "天荒灵域7区",
+        "state": "良好"
+    },
+    {
+        "serverId": 508,
+        "serverName": "天荒灵域8区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 509,
+        "serverName": "天荒灵域9区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 510,
+        "serverName": "天荒灵域10区",
+        "state": "维护"
+    },
+    {
+        "serverId": 511,
+        "serverName": "天荒灵域11区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 512,
+        "serverName": "天荒灵域12区",
+        "state": "良好"
+    },
+    {
+        "serverId": 513,
+        "serverName": "天荒灵域13区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 514,
+        "serverName": "天荒灵域14区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 515,
+        "serverName": "天荒灵域15区",
+        "state": "维护"
+    },
+    {
+        "serverId": 516,
+        "serverName": "天荒灵域16区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 517,
+        "serverName": "天荒灵域17区",
+        "state": "良好"
+    },
+    {
+        "serverId": 518,
+        "serverName": "天荒灵域18区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 519,
+        "serverName": "天荒灵域19区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 520,
+        "serverName": "天荒灵域20区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 521,
+        "serverName": "天荒灵域21区",
+        "state": "良好"
+    },
+    {
+        "serverId": 522,
+        "serverName": "天荒灵域22区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 523,
+        "serverName": "天荒灵域23区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 524,
+        "serverName": "天荒灵域24区",
+        "state": "维护"
+    },
+    {
+        "serverId": 525,
+        "serverName": "天荒灵域25区",
+        "state": "流畅"
+    }
+        ]
+    },
+    {
+        "categoryId": 6,
+        "categoryName": "星陨仙洲",
+        "servers": 
+        [
+    {
+        "serverId": 601,
+        "serverName": "星陨仙洲1区",
+        "state": "维护"
+    },
+    {
+        "serverId": 602,
+        "serverName": "星陨仙洲2区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 603,
+        "serverName": "星陨仙洲3区",
+        "state": "良好"
+    },
+    {
+        "serverId": 604,
+        "serverName": "星陨仙洲4区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 605,
+        "serverName": "星陨仙洲5区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 606,
+        "serverName": "星陨仙洲6区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 607,
+        "serverName": "星陨仙洲7区",
+        "state": "良好"
+    },
+    {
+        "serverId": 608,
+        "serverName": "星陨仙洲8区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 609,
+        "serverName": "星陨仙洲9区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 610,
+        "serverName": "星陨仙洲10区",
+        "state": "维护"
+    },
+    {
+        "serverId": 611,
+        "serverName": "星陨仙洲11区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 612,
+        "serverName": "星陨仙洲12区",
+        "state": "维护"
+    },
+    {
+        "serverId": 613,
+        "serverName": "星陨仙洲13区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 614,
+        "serverName": "星陨仙洲14区",
+        "state": "良好"
+    },
+    {
+        "serverId": 615,
+        "serverName": "星陨仙洲15区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 616,
+        "serverName": "星陨仙洲16区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 617,
+        "serverName": "星陨仙洲17区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 618,
+        "serverName": "星陨仙洲18区",
+        "state": "良好"
+    },
+    {
+        "serverId": 619,
+        "serverName": "星陨仙洲19区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 620,
+        "serverName": "星陨仙洲20区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 621,
+        "serverName": "星陨仙洲21区",
+        "state": "维护"
+    },
+    {
+        "serverId": 622,
+        "serverName": "星陨仙洲22区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 623,
+        "serverName": "星陨仙洲23区",
+        "state": "维护"
+    },
+    {
+        "serverId": 624,
+        "serverName": "星陨仙洲24区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 625,
+        "serverName": "星陨仙洲25区",
+        "state": "流畅"
+    }
+        ]
+    },
+    {
+        "categoryId": 7,
+        "categoryName": "焚天界域",
+        "servers": 
+        [
+    {
+        "serverId": 701,
+        "serverName": "焚天界域1区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 702,
+        "serverName": "焚天界域2区",
+        "state": "维护"
+    },
+    {
+        "serverId": 703,
+        "serverName": "焚天界域3区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 704,
+        "serverName": "焚天界域4区",
+        "state": "维护"
+    },
+    {
+        "serverId": 705,
+        "serverName": "焚天界域5区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 706,
+        "serverName": "焚天界域6区",
+        "state": "良好"
+    },
+    {
+        "serverId": 707,
+        "serverName": "焚天界域7区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 708,
+        "serverName": "焚天界域8区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 709,
+        "serverName": "焚天界域9区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 710,
+        "serverName": "焚天界域10区",
+        "state": "良好"
+    },
+    {
+        "serverId": 711,
+        "serverName": "焚天界域11区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 712,
+        "serverName": "焚天界域12区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 713,
+        "serverName": "焚天界域13区",
+        "state": "维护"
+    },
+    {
+        "serverId": 714,
+        "serverName": "焚天界域14区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 715,
+        "serverName": "焚天界域15区",
+        "state": "维护"
+    },
+    {
+        "serverId": 716,
+        "serverName": "焚天界域16区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 717,
+        "serverName": "焚天界域17区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 718,
+        "serverName": "焚天界域18区",
+        "state": "良好"
+    },
+    {
+        "serverId": 719,
+        "serverName": "焚天界域19区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 720,
+        "serverName": "焚天界域20区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 721,
+        "serverName": "焚天界域21区",
+        "state": "维护"
+    },
+    {
+        "serverId": 722,
+        "serverName": "焚天界域22区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 723,
+        "serverName": "焚天界域23区",
+        "state": "维护"
+    },
+    {
+        "serverId": 724,
+        "serverName": "焚天界域24区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 725,
+        "serverName": "焚天界域25区",
+        "state": "流畅"
+    }
+        ]
+    },
+    {
+        "categoryId": 8,
+        "categoryName": "月隐神墟",
+        "servers": 
+        [
+    {
+        "serverId": 801,
+        "serverName": "月隐神墟1区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 802,
+        "serverName": "月隐神墟2区",
+        "state": "维护"
+    },
+    {
+        "serverId": 803,
+        "serverName": "月隐神墟3区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 804,
+        "serverName": "月隐神墟4区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 805,
+        "serverName": "月隐神墟5区",
+        "state": "良好"
+    },
+    {
+        "serverId": 806,
+        "serverName": "月隐神墟6区",
+        "state": "爆满"
+    },
+    {
+        "serverId": 807,
+        "serverName": "月隐神墟7区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 808,
+        "serverName": "月隐神墟8区",
+        "state": "维护"
+    },
+    {
+        "serverId": 809,
+        "serverName": "月隐神墟9区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 810,
+        "serverName": "月隐神墟10区",
+        "state": "维护"
+    },
+    {
+        "serverId": 811,
+        "serverName": "月隐神墟11区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 812,
+        "serverName": "月隐神墟12区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 813,
+        "serverName": "月隐神墟13区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 814,
+        "serverName": "月隐神墟14区",
+        "state": "维护"
+    },
+    {
+        "serverId": 815,
+        "serverName": "月隐神墟15区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 816,
+        "serverName": "月隐神墟16区",
+        "state": "维护"
+    },
+    {
+        "serverId": 817,
+        "serverName": "月隐神墟17区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 818,
+        "serverName": "月隐神墟18区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 819,
+        "serverName": "月隐神墟19区",
+        "state": "拥挤"
+    },
+    {
+        "serverId": 820,
+        "serverName": "月隐神墟20区",
+        "state": "维护"
+    },
+    {
+        "serverId": 821,
+        "serverName": "月隐神墟21区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 822,
+        "serverName": "月隐神墟22区",
+        "state": "维护"
+    },
+    {
+        "serverId": 823,
+        "serverName": "月隐神墟23区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 824,
+        "serverName": "月隐神墟24区",
+        "state": "流畅"
+    },
+    {
+        "serverId": 825,
+        "serverName": "月隐神墟25区",
+        "state": "流畅"
+    }
+        ]
+    }
+]
