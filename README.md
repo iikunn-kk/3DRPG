@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[![Unity Version](https://img.shields.io/badge/Unity-2022.3+-blue.svg)](https://unity.com/)
+[![Unity Version](https://img.shields.io/badge/Unity-6000.0.59f2+-blue.svg)](https://unity.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Mac%20%7C%20Linux-lightgrey.svg)]()
 
@@ -50,6 +50,7 @@
 ## ✨ 功能特性
 
 ### 🧙 角色系统
+
 - 角色创建与选择
 - 属性系统（生命、攻击、防御、暴击等）
 - 等级与经验系统
@@ -58,6 +59,7 @@
 - 死亡与复活机制
 
 ### ⚔️ 战斗系统
+
 - 实时战斗机制
 - 全局冷却（GCD）系统
 - 目标锁定系统
@@ -66,6 +68,7 @@
 - 受击反馈系统
 
 ### 🌟 技能系统
+
 - 主动技能与被动技能
 - 技能冷却系统
 - 技能升级机制
@@ -75,6 +78,7 @@
 - 技能快照机制
 
 ### 🎒 背包系统
+
 - 物品增删改查
 - 装备与卸下
 - 物品堆叠
@@ -84,6 +88,7 @@
 - 物品分类（装备、消耗品、材料）
 
 ### 📜 任务系统
+
 - 主线任务与支线任务
 - 任务链系统
 - 任务目标类型（击杀、收集、对话、到达等）
@@ -92,12 +97,14 @@
 - 跨场景任务恢复
 
 ### 🏰 公会系统
+
 - 公会创建与加入
 - 公会成员管理
 - 公会权限系统
 - 公会数据持久化
 
 ### 🎨 UI 系统
+
 - 模块化面板管理
 - DOTween 动画效果
 - Toast 提示系统
@@ -106,6 +113,7 @@
 - 设置面板（分辨率、热键等）
 
 ### 🎬 场景管理
+
 - Addressables 场景加载
 - 异步场景切换
 - Loading 过渡界面
@@ -113,12 +121,14 @@
 - 玩家跨场景迁移
 
 ### 🎮 输入系统
+
 - Unity 新输入系统
 - 运行时热键修改
 - 热键配置持久化
 - 多设备支持
 
 ### 🔊 音频系统
+
 - 背景音乐管理
 - 音效管理
 - UI 音效系统
@@ -128,24 +138,27 @@
 ## 🛠 技术栈
 
 ### 核心技术
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| **Unity** | 2022.3+ | 游戏引擎 |
-| **C#** | 9.0+ | 编程语言 |
-| **.NET** | 4.x | 运行时框架 |
+
+| 技术      | 版本        | 用途       |
+| --------- | ----------- | ---------- |
+| **Unity** | 6000.059f2+ | 游戏引擎   |
+| **C#**    | 9.0+        | 编程语言   |
+| **.NET**  | 4.x         | 运行时框架 |
 
 ### 核心包
-| 包名 | 用途 |
-|------|------|
-| **MongoDB.Driver** | 数据库连接与操作 |
-| **DOTween** | 动画效果 |
-| **Cinemachine** | 摄像机控制 |
-| **TextMeshPro** | 高质量文本渲染 |
-| **Addressables** | 资源管理与加载 |
-| **Universal Render Pipeline** | 通用渲染管线 |
-| **Post Processing** | 后处理效果 |
+
+| 包名                          | 用途             |
+| ----------------------------- | ---------------- |
+| **MongoDB.Driver**            | 数据库连接与操作 |
+| **DOTween**                   | 动画效果         |
+| **Cinemachine**               | 摄像机控制       |
+| **TextMeshPro**               | 高质量文本渲染   |
+| **Addressables**              | 资源管理与加载   |
+| **Universal Render Pipeline** | 通用渲染管线     |
+| **Post Processing**           | 后处理效果       |
 
 ### 第三方资源
+
 - **Suntail Village** - 场景与美术资源
 - **MagicaCloth2** - 布料模拟
 - **Lofelt.NiceVibrations** - 触觉反馈
@@ -157,24 +170,27 @@
 
 ### 环境要求
 
-- Unity 2022.3 或更高版本
-- Visual Studio 2022 或 Rider
+- Unity 6000.0.59f2 或更高版本
+- Visual Studio 2026 或 Rider
 - MongoDB 4.4+ （可选，用于数据库功能）
 - Git
 
 ### 安装步骤
 
 1. **克隆仓库**
+
 ```bash
 git clone https://github.com/yourusername/3DRPG.git
 cd 3DRPG
 ```
 
 2. **打开项目**
+
 - 使用 Unity Hub 打开项目文件夹
 - 等待 Unity 完成包导入
 
 3. **安装必需包**
+
 ```
 Window > Package Manager
 - MongoDB.Driver
@@ -187,6 +203,7 @@ Window > Package Manager
 4. **配置渲染管线**
 
 **内置渲染管线（Built-in）:**
+
 ```
 1. Package Manager > 安装 Post Processing
 2. Edit > Project Settings > Player > Other Settings > Color Space: Linear
@@ -194,6 +211,7 @@ Window > Package Manager
 ```
 
 **通用渲染管线（URP）:**
+
 ```
 1. Edit > Project Settings > Player > Other Settings > Color Space: Linear
 2. 解压 "SRP Packages" 文件夹中的 URP 包
@@ -203,12 +221,14 @@ Window > Package Manager
 5. **配置 MongoDB（可选）**
 
 如果需要使用数据库功能：
+
 ```csharp
 // 在 MongoDBManager 中配置连接字符串
 private const string ConnectionString = "mongodb://localhost:27017";
 ```
 
 6. **运行游戏**
+
 - 打开 `Assets/Scenes/MainScene.unity`
 - 点击 Play 按钮
 
@@ -322,16 +342,16 @@ Assets/
                       ↕ 事件/回调
 ┌─────────────────────────────────────────────┐
 │              控制层 (Controller)             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │ Manager类 │  │Controller│  │  事件系统 │  │
-│  └──────────┘  └──────────┘  └──────────┘  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │ Manager类│  │Controller│  │  事件系统 │   │
+│  └──────────┘  └──────────┘  └──────────┘   │
 └─────────────────────────────────────────────┘
                       ↕ 数据访问
 ┌─────────────────────────────────────────────┐
-│               数据层 (Data)                   │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │  SO配置  │  │ 运行时数据│  │  MongoDB │  │
-│  └──────────┘  └──────────┘  └──────────┘  │
+│               数据层 (Data)                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │  SO配置  │  │ 运行时数据│  │  MongoDB │   │
+│  └──────────┘  └──────────┘  └──────────┘   │
 └─────────────────────────────────────────────┘
 ```
 
@@ -361,6 +381,7 @@ GameManager (游戏总控制器)
 **核心类**: `CharacterState.cs` (partial)
 
 **功能实现**:
+
 ```csharp
 public class CharacterState : MonoBehaviour
 {
@@ -370,13 +391,13 @@ public class CharacterState : MonoBehaviour
     public float CurrentHealth { get; private set; }
     public float AttackPower { get; private set; }
     public float Defense { get; private set; }
-    
+
     // 装备系统
     public EquipmentData GetCurrentEquipment() { }
-    
+
     // 伤害计算
     public void TakeDamage(float damage) { }
-    
+
     // 死亡与复活
     public void OnDeath() { }
     public void Respawn() { }
@@ -390,6 +411,7 @@ public class CharacterState : MonoBehaviour
 **核心类**: `SkillManager.cs`, `SkillController.cs`
 
 **技能释放流程**:
+
 ```
 玩家输入
   ↓
@@ -407,6 +429,7 @@ SkillController.CastSkill()
 ```
 
 **技能配置示例**:
+
 ```csharp
 [CreateAssetMenu(fileName = "NewSkill", menuName = "Skills/Default Skill")]
 public class SkillSO : ScriptableObject
@@ -430,6 +453,7 @@ public class SkillSO : ScriptableObject
 **核心类**: `InventoryManager.cs`
 
 **主要功能**:
+
 - 异步加载/保存背包数据
 - 物品增删改查
 - 装备/卸下
@@ -437,6 +461,7 @@ public class SkillSO : ScriptableObject
 - 事件广播
 
 **事件系统**:
+
 ```csharp
 public class InventoryManager : Singleton<InventoryManager>
 {
@@ -444,7 +469,7 @@ public class InventoryManager : Singleton<InventoryManager>
     public event Action<InventoryItem> OnItemRemoved;
     public event Action<EquipmentData> OnEquipmentChanged;
     public event Action OnInventoryUpdated;
-    
+
     public async Task<bool> AddItemAsync(string itemID, int count)
     {
         // 添加物品逻辑
@@ -462,6 +487,7 @@ public class InventoryManager : Singleton<InventoryManager>
 **核心类**: `TaskManager.cs`, `TaskDataSO.cs`
 
 **任务状态流转**:
+
 ```
 未接受 → 已接受 → 进行中 → 已完成 → 已领取奖励
          ↓
@@ -469,6 +495,7 @@ public class InventoryManager : Singleton<InventoryManager>
 ```
 
 **任务事件系统**:
+
 ```csharp
 public static class TaskEvents
 {
@@ -487,6 +514,7 @@ public static class TaskEvents
 **核心类**: `UIManager.cs`, `UIPopPanelBase.cs`
 
 **面板打开流程**:
+
 ```csharp
 // 方式1: 泛型方法（推荐）
 var panel = UIManager.Instance.OpenPanel<SkillUpgradePanel>(out bool isOpen);
@@ -500,12 +528,13 @@ var panel = UIManager.Instance.OpenPanel("PackagePanel");
 ```
 
 **动画效果**:
+
 ```csharp
 public virtual void Show(Action onComplete = null)
 {
     transform.localScale = Vector3.one * 0.8f;
     transform.DOScale(Vector3.one, 0.3f).SetEase(Ease.OutBack);
-    
+
     canvasGroup.alpha = 0f;
     canvasGroup.DOFade(1f, 0.3f).OnComplete(() =>
     {
@@ -523,6 +552,7 @@ public virtual void Show(Action onComplete = null)
 **核心类**: `SceneLoadManager.cs`
 
 **场景加载流程**:
+
 ```
 SceneLoadManager.LoadScene(sceneName)
   ↓
@@ -546,12 +576,14 @@ SceneLoadManager.LoadScene(sceneName)
 ### 7. 输入与热键系统
 
 **核心特性**:
+
 - 基于 Unity 新输入系统
 - 运行时修改热键
 - 热键配置持久化到 PlayerPrefs
 - 多实例同步
 
 **使用示例**:
+
 ```csharp
 // 修改热键
 HotkeySettingsPanel.SaveBinding("Skill1", newKeybinding);
@@ -570,11 +602,12 @@ InputBindingBootstrap.LoadBindingsOnStartup();
 **核心类**: `MongoDBManager.cs`
 
 **异步操作示例**:
+
 ```csharp
 public class MongoDBManager : Singleton<MongoDBManager>
 {
     private IMongoCollection<CharacterData> _characters;
-    
+
     public async Task<bool> SaveCharacterAsync(CharacterData data)
     {
         var filter = Builders<CharacterData>.Filter.Eq("_id", data._id);
@@ -585,7 +618,7 @@ public class MongoDBManager : Singleton<MongoDBManager>
         );
         return result.IsAcknowledged;
     }
-    
+
     public async Task<CharacterData> LoadCharacterAsync(string characterId)
     {
         var filter = Builders<CharacterData>.Filter.Eq("_id", characterId);
@@ -607,7 +640,7 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 {
     private static T _instance;
     public static T Instance => _instance;
-    
+
     protected virtual void Awake()
     {
         if (_instance != null && _instance != this)
@@ -641,7 +674,7 @@ public class HealthListener : BaseEventListener<int, IntEventSO>
 {
     public IntEventSO Event;
     public UnityEvent<int> Response;
-    
+
     public void OnEventRaised(int value) => Response.Invoke(value);
 }
 ```
@@ -666,6 +699,7 @@ public class EquipmentData : ScriptableObject
 ```
 
 **优势**:
+
 - 数据可视化编辑
 - 数据与逻辑分离
 - 易于版本控制
@@ -691,7 +725,7 @@ public class MonsterStateMachine : MonoBehaviour
 {
     private Dictionary<MonsterState, MonsterState> _states;
     private MonsterState _currentState;
-    
+
     public void ChangeState(MonsterState newState)
     {
         _currentState?.Exit();
@@ -735,6 +769,7 @@ Controller (控制层)
 ### 2. 对象池
 
 高频创建销毁的对象使用对象池:
+
 - 投射物对象池
 - 怪物对象池
 - UI 元素对象池
@@ -792,6 +827,7 @@ Controller (控制层)
 **A**: 场景使用了 URP 但未正确配置渲染管线。
 
 **解决方法**:
+
 ```
 Edit > Project Settings > Graphics
 设置 Scriptable Render Pipeline Settings 为 SuntailUniversalRenderPipelineAsset
@@ -802,6 +838,7 @@ Edit > Project Settings > Graphics
 **A**: 检查 MongoDB 服务是否启动，连接字符串是否正确。
 
 **解决方法**:
+
 ```csharp
 // MongoDBManager.cs
 private const string ConnectionString = "mongodb://localhost:27017";
@@ -812,6 +849,7 @@ private const string ConnectionString = "mongodb://localhost:27017";
 **A**: 确保添加了 `InputBindingBootstrap` 组件。
 
 **解决方法**:
+
 1. 在主场景创建空 GameObject，命名为 `InputBootstrap`
 2. 附加 `InputBindingBootstrap.cs` 脚本
 
@@ -820,6 +858,7 @@ private const string ConnectionString = "mongodb://localhost:27017";
 **A**: 确保在场景切换前保存数据。
 
 **解决方法**:
+
 ```csharp
 await GameManager.Instance.SaveCurrentCharacterData();
 await SceneLoadManager.LoadSceneAsync("NewScene");
