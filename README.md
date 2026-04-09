@@ -893,9 +893,9 @@ await SceneLoadManager.LoadSceneAsync("NewScene");
 
 ## 📧 联系方式
 
-- **作者**: [你的名字]
-- **GitHub**: [https://github.com/yourusername](https://github.com/yourusername)
-- **邮箱**: [your.email@example.com](mailto:your.email@example.com)
+- **作者**: [七月]
+- **GitHub**: [https://github.com/iikunn-kk](https://github.com/iikunn-kk)
+- **邮箱**: [2228054362@qq.com](mailto:2228054362@qq.com)
 
 ---
 
