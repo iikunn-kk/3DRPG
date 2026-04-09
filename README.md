@@ -916,6 +916,6 @@ await SceneLoadManager.LoadSceneAsync("NewScene");
 
 **如果这个项目对你有帮助，请给个 ⭐️ Star！**
 
-Made with ❤️ by [你的名字]
+Made with ❤️ by [Coolcoolcoo]
 
 </div>
