@@ -18,17 +18,24 @@ public class NormalAttackUI : MonoBehaviour
     private void OnChannelStart()
     {
         transform.DOScale(0.8f, 0.3f);
-        highLightImage.gameObject.SetActive(true);
-        highLightImage.DOFade(1f, 0.3f);
-        highLightImage.transform.DORotate(new Vector3(0, 0, -360), 2f, RotateMode.FastBeyond360).SetLoops(-1, LoopType.Restart);
+        if (highLightImage != null)
+        {
+            highLightImage.gameObject.SetActive(true);
+            highLightImage.DOFade(1f, 0.3f);
+            highLightImage.transform.DORotate(new Vector3(0, 0, -360), 2f, RotateMode.FastBeyond360).SetLoops(-1, LoopType.Restart);
+        }
     }
 
     // 绑定到 NormalAttackController 的“结束引导”
     private void OnChannelEnd()
     {
         transform.DOScale(1f, 0.3f);
-        highLightImage.DOKill();
-        highLightImage.gameObject.SetActive(false);
+        if (highLightImage != null)
+        {
+            highLightImage.DOKill();
+            highLightImage.gameObject.SetActive(false);
+        }
+
     }
 
     // 适配 BoolEventSO：true=开始，false=结束
@@ -41,7 +48,10 @@ public class NormalAttackUI : MonoBehaviour
     private void OnDisable()
     {
         transform.DOKill();
-        highLightImage.DOKill();
-        highLightImage.transform.DOKill();
+        if (highLightImage != null)
+        {
+            highLightImage.DOKill();
+            highLightImage.transform.DOKill();
+        }
     }
 }

@@ -98,7 +98,15 @@ public enum SkillType
     连环踢,
     奥术护盾,
     奥术射线,
-    七月自定义技能
+    七月自定义技能,
+    //七月自定义技能
+    翠影凝生术,
+    星尘贯空流,
+    星慧启明诀,
+    天霆雷铠,
+    星芒寻踪,
+    裂风旋影式
+
 }
 public enum SkillEffectType
 {
