@@ -15,7 +15,7 @@
 ---
 
 
-## 📋 目录
+## 📋 目录 {#table-of-contents}
 
 - [项目简介](#intro)
 - [功能特性](#features)
@@ -33,7 +33,7 @@
 
 ---
 
-## 🎮 项目简介 {#intro}
+## 项目简介 {#intro}
 
 这是一个基于 Unity 引擎开发的 3D RPG 游戏框架项目，采用模块化架构设计，包含完整的 MMORPG 核心系统。项目展示了扎实的 Unity 开发能力、系统架构设计能力和大型项目管理经验。
 
@@ -48,7 +48,7 @@
 
 ---
 
-## ✨ 功能特性 {#features}
+## 功能特性 {#features}
 
 ### 🧙 角色系统
 
@@ -167,7 +167,7 @@
 
 ---
 
-## 🚀 快速开始 {#quick-start}
+## 快速开始 {#quick-start}
 
 ### 环境要求
 
@@ -375,7 +375,7 @@ GameManager (游戏总控制器)
 
 ---
 
-## 🔧 核心系统详解 {#core-systems}
+## 核心系统详解 {#core-systems}
 
 ### 1. 玩家系统
 
@@ -886,7 +886,7 @@ await SceneLoadManager.LoadSceneAsync("NewScene");
 
 ---
 
-## 📄 许可证 {#license}
+## 许可证 {#license}
 
 本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
 
