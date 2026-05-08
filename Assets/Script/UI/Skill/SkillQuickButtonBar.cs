@@ -4,6 +4,7 @@
 // 建立槽位显示、加载/刷新快捷键文本、处理输入系统按键与槽位映射、以及保存/加载快捷栏布局。
 // 本文件的注释以中文为主，关键公有方法均使用 XML 注释以便编辑器/IDE 能显示说明。
 
+
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
@@ -484,11 +485,12 @@ public class SkillQuickButtonBar : MonoBehaviour
                 if (pi == null) continue;
 
                 InputActionAsset asset = null;
-#if UNITY_2023_2_OR_NEWER
-                asset = pi.GetComponent<InputActionAsset>();
-#else
+
+                // #if UNITY_2023_2_OR_NEWER
+                //                 asset = pi.GetComponent<InputActionAsset>();
+                // #else
                 try { asset = pi.actions; } catch { }
-#endif
+                // #endif
 
                 if (asset == null) continue;
                 var act = asset.FindAction(actionName, false);

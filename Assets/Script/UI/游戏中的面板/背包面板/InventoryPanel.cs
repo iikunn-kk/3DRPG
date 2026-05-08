@@ -5,42 +5,44 @@ using UnityEngine;
 public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
 {
     #region 序列化字段
-    
+
     [Header("3D展示摄影棚管理器")]
     [SerializeField] private Inventory3DStudioManager inventory3DStudioManager;
-    
+
     [Header("角色装备")]
     [SerializeField] private EquipmentSlotUI headSlotUI;
     [SerializeField] private EquipmentSlotUI bodySlotUI;
-    [SerializeField] private EquipmentSlotUI handSlotUI;
+    // [SerializeField] private EquipmentSlotUI handSlotUI;
+    [SerializeField] private EquipmentSlotUI weaponSlotUI;
     [SerializeField] private EquipmentSlotUI footSlotUI;
     [SerializeField] private EquipmentSlotUI ringSlotUI;
-    
+
+
     [Header("背包格子的预制体")]
     [SerializeField] private GameObject inventorySlotPrefab;
-    
+
     [Header("背包格子的父物体")]
     [SerializeField] private Transform inventorySlotParent;
-    
+
     [Header("详情面板")]
     [SerializeField] private SlotDetailsPanel slotDetailsPanel;
     [SerializeField] private EquipSlotDetailsPanel equipSlotDetailsPanel; // 新增：装备专用详情面板
     [SerializeField] private TMP_Text goldText;
-    
+
     [SerializeField] private int randomSlotCount = 5;
-    
+
     #endregion
-    
+
     #region 私有字段
-    
+
     // [修改] 背包格子和装备格子的引用
     private readonly List<InventorySlot> _inventorySlotsUI = new();
     private readonly Dictionary<EquipmentType, EquipmentSlotUI> _equipmentSlotsUI = new();
-    
+
     #endregion
-    
+
     #region 生命周期方法
-    
+
     protected override void Awake()
     {
         base.Awake();
@@ -68,11 +70,11 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
         InventoryManager.OnInventoryUpdated -= RefreshAllUI;
         OnUIPanelHide();
     }
-    
+
     #endregion
-    
+
     #region UI刷新方法
-    
+
     /// <summary>
     /// [新增] 统一的UI刷新入口
     /// </summary>
@@ -92,9 +94,11 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
         // 填充装备槽字典，方便后续访问
         _equipmentSlotsUI[EquipmentType.头盔] = headSlotUI;
         _equipmentSlotsUI[EquipmentType.上衣] = bodySlotUI;
-        _equipmentSlotsUI[EquipmentType.手套] = handSlotUI;
+        // _equipmentSlotsUI[EquipmentType.手套] = handSlotUI;
+        _equipmentSlotsUI[EquipmentType.武器] = weaponSlotUI;
         _equipmentSlotsUI[EquipmentType.鞋子] = footSlotUI;
         _equipmentSlotsUI[EquipmentType.戒指] = ringSlotUI;
+
 
         // 预创建背包格子
         int maxSlots = InventoryManager.Instance.MaxInventorySlots;
@@ -106,7 +110,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
             _inventorySlotsUI.Add(slotUI);
         }
     }
-    
+
     private void TryRegisterProtectedAreas()
     {
         if (DragAndDropPanel.Instance == null) return;
@@ -122,11 +126,13 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
         // 装备槽区域：逐个注册其 RectTransform（若存在）
         if (headSlotUI != null) DragAndDropPanel.Instance.RegisterProtectedArea(headSlotUI.transform as RectTransform);
         if (bodySlotUI != null) DragAndDropPanel.Instance.RegisterProtectedArea(bodySlotUI.transform as RectTransform);
-        if (handSlotUI != null) DragAndDropPanel.Instance.RegisterProtectedArea(handSlotUI.transform as RectTransform);
+        // if (handSlotUI != null) DragAndDropPanel.Instance.RegisterProtectedArea(handSlotUI.transform as RectTransform);
+        if (weaponSlotUI != null) DragAndDropPanel.Instance.RegisterProtectedArea(weaponSlotUI.transform as RectTransform);
         if (footSlotUI != null) DragAndDropPanel.Instance.RegisterProtectedArea(footSlotUI.transform as RectTransform);
         if (ringSlotUI != null) DragAndDropPanel.Instance.RegisterProtectedArea(ringSlotUI.transform as RectTransform);
+
     }
-    
+
     /// <summary>
     /// [新增] 初始化3D展示
     /// </summary>
@@ -154,7 +160,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
             }
         }
     }
-    
+
     /// <summary>
     /// [新增] 刷新背包物品的UI显示
     /// </summary>
@@ -176,7 +182,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
             }
         }
     }
-    
+
     /// <summary>
     /// [新增] 在刷新前，清空所有格子的显示内容
     /// </summary>
@@ -191,11 +197,11 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
             slot.ClearSlot();
         }
     }
-    
+
     #endregion
-    
+
     #region 详情面板方法
-    
+
     /// <summary>
     /// [修改] 统一的显示详情方法，根据物品类型显示不同面板
     /// </summary>
@@ -227,7 +233,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
             }
         }
     }
-    
+
     private void HideDetails()
     {
         if (slotDetailsPanel != null)
@@ -239,11 +245,11 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
             equipSlotDetailsPanel.HideDetails();
         }
     }
-    
+
     #endregion
-    
+
     #region 金币显示方法
-    
+
     public void RefenceGoldText(int text)
     {
         goldText.text = text.ToString();
@@ -253,21 +259,21 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
     {
         goldText.text = PlayerCurrencyManager.Instance.Money.ToString();
     }
-    
+
     #endregion
-    
+
     #region 公共方法
-    
+
     public void OnCloseButtonClick()
     {
-       UIManager.Instance.ClosePanel<InventoryPanel>();
-       Hide();
+        UIManager.Instance.ClosePanel<InventoryPanel>();
+        Hide();
     }
-    
+
     #endregion
-    
+
     #region 玩家控制锁定
-    
+
     public void OnUIPanelShow()
     {
         if (MoveMent.Instance != null)
@@ -283,11 +289,11 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
             MoveMent.Instance.UnlockPlayerControl();
         }
     }
-    
+
     #endregion
-    
+
     #region 测试方法 (用于调试)
-    
+
     /// <summary>
     /// 随机生成若干物品添加到背包中（用于调试）
     /// </summary>
@@ -295,7 +301,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
     {
         GameManager.Instance.ItemDataSo.GenerateRandomItems(randomSlotCount);
     }
-    
+
     /// <summary>
     /// 随机生成若干装备添加到背包中（用于调试）
     /// </summary>

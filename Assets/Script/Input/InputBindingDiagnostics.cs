@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+
 /// <summary>
 /// 输入绑定诊断工具 - 用于调试打包后的绑定问题
 /// 在 Inspector 中点击按钮来执行诊断
@@ -10,15 +11,15 @@ public class InputBindingDiagnostics : MonoBehaviour
     [Header("诊断工具")]
     [Tooltip("要检查的 InputActionAsset")]
     public InputActionAsset targetAsset;
-    
+
     [Tooltip("要检查的动作引用列表")]
     public InputActionReference[] actionRefs;
-    
+
     [ContextMenu("1. 诊断 PlayerPrefs 中的绑定")]
     public void DiagnosePlayerPrefs()
     {
         Debug.Log("========== PlayerPrefs 诊断 ==========");
-        
+
         if (targetAsset != null)
         {
             string key = "Keybindings." + targetAsset.name;
@@ -33,27 +34,27 @@ public class InputBindingDiagnostics : MonoBehaviour
                 Debug.LogWarning($"未找到保存的绑定: {key}");
             }
         }
-        
+
         // 列出所有 Keybindings 相关的键
         Debug.Log("\n检查所有可能的 Keybindings 键...");
         // 注意：Unity 的 PlayerPrefs 不支持列出所有键，这是已知限制
         Debug.Log("提示：PlayerPrefs 不支持列举所有键，请手动检查键名是否正确");
     }
-    
+
     [ContextMenu("2. 诊断 InputActionAsset 当前状态")]
     public void DiagnoseAssetState()
     {
         Debug.Log("========== InputActionAsset 诊断 ==========");
-        
+
         if (targetAsset == null)
         {
             Debug.LogError("targetAsset 未设置！");
             return;
         }
-        
+
         Debug.Log($"资产名称: {targetAsset.name}");
         Debug.Log($"资产启用状态: {(targetAsset.enabled ? "启用" : "禁用")}");
-        
+
         foreach (var actionMap in targetAsset.actionMaps)
         {
             Debug.Log($"\n动作映射: {actionMap.name}");
@@ -73,31 +74,32 @@ public class InputBindingDiagnostics : MonoBehaviour
             }
         }
     }
-    
+
     [ContextMenu("3. 诊断所有 PlayerInput 实例")]
     public void DiagnosePlayerInputs()
     {
         Debug.Log("========== PlayerInput 实例诊断 ==========");
-        
+
 #if UNITY_2023_1_OR_NEWER
         var players = FindObjectsByType<PlayerInput>(FindObjectsSortMode.None);
 #else
         var players = FindObjectsOfType<PlayerInput>(true);
 #endif
-        
+
         Debug.Log($"找到 {players.Length} 个 PlayerInput 实例");
-        
+
         foreach (var pi in players)
         {
             Debug.Log($"\nPlayerInput: {pi.gameObject.name}");
             Debug.Log($"  路径: {GetGameObjectPath(pi.gameObject)}");
 
             InputActionAsset actions = null;
-#if UNITY_2023_2_OR_NEWER
-            actions = pi.GetComponent<InputActionAsset>();
-#else
+
+            // #if UNITY_2023_2_OR_NEWER
+            //             actions = pi.GetComponent<InputActionAsset>();
+            // #else
             try { actions = pi.actions; } catch { }
-#endif
+            // #endif
 
             if (actions != null)
             {
@@ -126,12 +128,12 @@ public class InputBindingDiagnostics : MonoBehaviour
             }
         }
     }
-    
+
     [ContextMenu("4. 强制重新加载绑定")]
     public void ForceReloadBindings()
     {
         Debug.Log("========== 强制重新加载绑定 ==========");
-        
+
         if (actionRefs != null && actionRefs.Length > 0)
         {
             try
@@ -143,7 +145,7 @@ public class InputBindingDiagnostics : MonoBehaviour
             {
                 Debug.LogError($"LoadOverrides 失败: {ex.Message}");
             }
-            
+
             try
             {
                 InputBindingRuntimeSync.ApplySavedOverridesToAllPlayersFor(actionRefs);
@@ -158,7 +160,7 @@ public class InputBindingDiagnostics : MonoBehaviour
         {
             Debug.LogWarning("actionRefs 未设置或为空");
         }
-        
+
         try
         {
             InputBindingRuntimeSync.ApplySavedOverridesToAllPlayersExisting();
@@ -169,12 +171,12 @@ public class InputBindingDiagnostics : MonoBehaviour
             Debug.LogError($"ApplySavedOverridesToAllPlayersExisting 失败: {ex.Message}");
         }
     }
-    
+
     [ContextMenu("5. 清除所有保存的绑定")]
     public void ClearAllSavedBindings()
     {
         Debug.Log("========== 清除保存的绑定 ==========");
-        
+
         if (targetAsset != null)
         {
             string key = "Keybindings." + targetAsset.name;
@@ -189,7 +191,7 @@ public class InputBindingDiagnostics : MonoBehaviour
                 Debug.Log($"键不存在: {key}");
             }
         }
-        
+
         // 同时清除资产的运行时覆盖
         if (targetAsset != null)
         {
@@ -197,7 +199,7 @@ public class InputBindingDiagnostics : MonoBehaviour
             Debug.Log("已清除资产的运行时覆盖");
         }
     }
-    
+
     private string GetGameObjectPath(GameObject obj)
     {
         string path = obj.name;

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+
 /// <summary>
 /// 运行时同步热键绑定到所有 PlayerInput 实例
 /// </summary>
@@ -43,7 +44,7 @@ public static class InputBindingRuntimeSync
                 assetNameToJson[name] = json;
             }
         }
-        
+
         if (assetNameToJson.Count == 0) return;
 
         // 应用到所有 PlayerInput 实例
@@ -53,14 +54,15 @@ public static class InputBindingRuntimeSync
             if (pi == null) continue;
 
             InputActionAsset actions = null;
-#if UNITY_2023_2_OR_NEWER
-            actions = pi.GetComponent<InputActionAsset>();
-#else
+
+            // #if UNITY_2023_2_OR_NEWER
+            // actions = pi.GetComponent<InputActionAsset>();
+            // #else
             try { actions = pi.actions; } catch { }
-#endif
+            // #endif
             if (actions == null) continue;
             if (!assetNameToJson.TryGetValue(actions.name, out var json)) continue;
-            
+
             try
             {
                 bool wasEnabled = actions.enabled;
@@ -81,7 +83,7 @@ public static class InputBindingRuntimeSync
             var asset = r != null ? r.action?.actionMap?.asset : null;
             if (asset == null || processedAssets.Contains(asset.name)) continue;
             if (!assetNameToJson.TryGetValue(asset.name, out var json)) continue;
-            
+
             processedAssets.Add(asset.name);
             try
             {
@@ -105,17 +107,17 @@ public static class InputBindingRuntimeSync
             if (pi == null) continue;
 
             InputActionAsset actions = null;
-#if UNITY_2023_2_OR_NEWER
-            actions = pi.GetComponent<InputActionAsset>();
-#else
+            // #if UNITY_2023_2_OR_NEWER
+            // actions = pi.GetComponent<InputActionAsset>();
+            // #else
             try { actions = pi.actions; } catch { }
-#endif
+            // #endif
             if (actions == null) continue;
             string key = KeyPrefix + actions.name;
             if (!PlayerPrefs.HasKey(key)) continue;
             string json = PlayerPrefs.GetString(key, string.Empty);
             if (string.IsNullOrEmpty(json)) continue;
-            
+
             try
             {
                 bool wasEnabled = actions.enabled;

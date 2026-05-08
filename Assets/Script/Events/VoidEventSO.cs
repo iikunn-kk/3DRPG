@@ -6,13 +6,13 @@ public class VoidEventSO : ScriptableObject
 {
     [TextArea]
     public string description;
-    
-    public UnityAction onEventRaised;
-    public string lastSender;
-    
+
+    public UnityAction onEventRaised;//事件回调
+    public string lastSender;  // 记录最后一个发送者（调试用）
+
     public void Raise(object sender)
     {
-        onEventRaised?.Invoke();
+        onEventRaised?.Invoke();   // 触发所有监听者
         lastSender = sender?.ToString();
     }
 }

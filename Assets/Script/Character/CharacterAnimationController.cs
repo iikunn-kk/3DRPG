@@ -522,32 +522,23 @@ public class CharacterAnimationController : MonoBehaviour
         // 保持方法以便移动系统调用；不再在这里修改 Animator.applyRootMotion
     }
 
-    // Forward animator root motion to MoveMent so it can apply it via CharacterController.Move (preserving collisions)
-    private void OnAnimatorMove()
-    {
-        if (animator == null) return;
-        if (_movement == null) return;
-
-        // Only forward if animator is using root motion
-        if (!animator.applyRootMotion) return;
-
-        Vector3 deltaPos = animator.deltaPosition;
-        Quaternion rootRot = animator.rootRotation;
-
-        if (deltaPos.sqrMagnitude > 0.000001f || rootRot != Quaternion.identity)
-        {
-            //陈子原始代码
-            _movement.ApplyRootMotion(deltaPos, rootRot);
-
-
-            //七月修改后的代码
-            // ✅ 应用冲刺倍率
-            // _movement.ApplyRootMotion(
-            //     deltaPos * _movement.sprintMultiplier,  // ← 直接应用倍率
-            //     rootRot
-            // );
-        }
-    }
+    // ========== 根运动已禁用 - 纯代码驱动移动 ==========
+    // 【纯代码驱动】动画只负责视觉表现，移动完全由 MoveMent.FixedUpdate() 处理
+    // private void OnAnimatorMove()
+    // {
+    //     if (!useRootMotion) return;
+    //     if (animator == null) return;
+    //     if (_movement == null) return;
+    //     if (!animator.applyRootMotion) return;
+    //
+    //     Vector3 deltaPos = animator.deltaPosition;
+    //     Quaternion rootRot = animator.rootRotation;
+    //
+    //     if (deltaPos.sqrMagnitude > 0.000001f || rootRot != Quaternion.identity)
+    //     {
+    //         _movement.ApplyPhysicsMotion(deltaPos, rootRot);
+    //     }
+    // }
 
     private void OnDisable()
     {

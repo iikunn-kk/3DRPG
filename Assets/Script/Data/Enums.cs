@@ -18,7 +18,7 @@ public enum ItemType
 
 public enum EquipmentType
 {
-    头盔, 戒指, 上衣, 手套, 鞋子
+    头盔, 戒指, 上衣, 手套, 鞋子, 武器
 }
 public enum ConsumablesType
 {

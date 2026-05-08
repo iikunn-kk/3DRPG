@@ -10,19 +10,19 @@ using UnityEngine;
 public class InventoryManager : Singleton<InventoryManager>
 {
     #region 事件 Events
-    
+
     /// <summary>当一件物品被装备时触发。</summary>
     public static event Action<InventoryItem, EquipmentData> OnItemEquipped;
-    
+
     /// <summary>当一件物品被卸下时触发。</summary>
     public static event Action<InventoryItem, EquipmentData> OnItemUnequipped;
 
     /// <summary>当一个消耗品被使用时触发。</summary>
     public static event Action<ConsumablesData> OnItemConsumed;
-    
+
     /// <summary>当背包数据发生任何变化时触发，通知UI刷新。</summary>
     public static event Action OnInventoryUpdated;
-    
+
     #endregion
 
     #region 字段与属性 Fields & Properties
@@ -32,16 +32,16 @@ public class InventoryManager : Singleton<InventoryManager>
     public int MaxInventorySlots => maxInventorySlots;
     [SerializeField] private int quickSlotCount = 10;
     public int QuickSlotCount => quickSlotCount;
-    
+
 
     private PlayerInventoryData _playerInventory;
     public List<InventoryItem> AllItems => _playerInventory?.allItems;
     private string _characterId;
-    
+
     // 新增: 标记背包是否已完成一次加载（成功或失败兜底后也算完成）
     private bool _isLoaded;
     public bool IsLoaded => _isLoaded;
-    
+
     // 数据库并发保存相关
     private bool _isSaving;
     private bool _savePending;
@@ -62,7 +62,7 @@ public class InventoryManager : Singleton<InventoryManager>
     }
 
     #endregion
-    
+
     #region 数据加载与保存 (Data Persistence)
 
     private async Task LoadInventoryAsync()
@@ -74,7 +74,7 @@ public class InventoryManager : Singleton<InventoryManager>
             OnInventoryUpdated?.Invoke();
             return;
         }
-    
+
         try
         {
             var inventoryData = await MongoDBManager.Instance.GetPlayerInventoryDataAsync(_characterId);
@@ -175,7 +175,7 @@ public class InventoryManager : Singleton<InventoryManager>
         _isLoaded = true;
         OnInventoryUpdated?.Invoke();
     }
-    
+
     /// <summary>
     /// 异步保存当前背包状态到数据库。
     /// </summary>
@@ -186,9 +186,9 @@ public class InventoryManager : Singleton<InventoryManager>
             Debug.LogWarning("背包数据无效，无法保存");
             return;
         }
-    
+
         _latestInventoryDataToSave = _playerInventory;
-    
+
         if (!_isSaving)
         {
             await ProcessSave();
@@ -337,11 +337,11 @@ public class InventoryManager : Singleton<InventoryManager>
                     UIManager.Instance?.ShowToast("背包已满，无法获得物品");
                     return false;
                 }
-                
+
                 // [修正] 新创建的物品必须分配一个有效的格子索引。
                 int emptySlot = FindFirstEmptyInventorySlot();
                 if (emptySlot == -1) return false; // 再次确认，虽然前面检查过
-                
+
                 var newItem = new InventoryItem(itemId, count)
                 {
                     location = ItemLocation.Inventory,
@@ -356,24 +356,24 @@ public class InventoryManager : Singleton<InventoryManager>
             {
                 if (IsInventoryFull())
                 {
-                     Debug.Log("背包已满，无法添加新装备。");
+                    Debug.Log("背包已满，无法添加新装备。");
                     UIManager.Instance?.ShowToast("背包已满，无法获得装备");
                     return false;
                 }
-                
+
                 var equipmentData = itemData as EquipmentData;
                 if (equipmentData != null)
                 {
                     // [修正] 新创建的装备也必须分配一个有效的格子索引。
                     int emptySlot = FindFirstEmptyInventorySlot();
                     if (emptySlot == -1) return false;
-                    
+
                     var newItem = new InventoryItem(itemId)
                     {
                         location = ItemLocation.Inventory,
                         slotIndex = emptySlot
                     };
-                    
+
                     equipmentData.GenerateBaseProperties(GameManager.Instance.PropertyScalingData);
                     // 深拷贝属性，避免后续再次调用 GenerateBaseProperties 导致已有物品属性被修改
                     newItem.generatedProperties = equipmentData.GetAllProperties()
@@ -384,22 +384,80 @@ public class InventoryManager : Singleton<InventoryManager>
                 }
             }
         }
-    
+
         SaveInventoryAsync();
         OnInventoryUpdated?.Invoke();
-        
+
         // 显示获得物品的 Toast 提示
         string itemName = itemData.itemName;
         if (string.IsNullOrEmpty(itemName))
         {
             itemName = "物品";
         }
-        
+
         string message = count > 1 ? $"获得 {itemName} x{count}" : $"获得 {itemName}";
-        UIManager.Instance.ShowToast(message,itemData.itemSprite);
-        TaskEvents.TriggerItemCollected(itemId,count);
+        UIManager.Instance.ShowToast(message, itemData.itemSprite);
+        TaskEvents.TriggerItemCollected(itemId, count);
         return true;
     }
+
+
+    /// <summary>
+    /// 直接添加已生成的InventoryItem (用于抽卡等场景)
+    /// </summary>
+    public bool AddItemWithoutToast(int itemId, int count = 1, InventoryItem preGeneratedItem = null)
+    {
+        if (count <= 0) return false;
+
+        // 防御性检查
+        if (_playerInventory == null)
+        {
+            Debug.LogWarning("背包数据尚未加载完成，临时创建本地背包数据以接收物品。");
+            _playerInventory = new PlayerInventoryData(_characterId ?? string.Empty);
+        }
+
+        if (_playerInventory.allItems == null)
+        {
+            _playerInventory.allItems = new List<InventoryItem>();
+        }
+
+        var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(itemId);
+        if (itemData == null)
+        {
+            Debug.LogWarning($"未找到ID为 {itemId} 的物品数据");
+            return false;
+        }
+
+        // 如果有预生成的物品(通常是抽卡生成的装备)
+        if (preGeneratedItem != null)
+        {
+            // 分配格子索引
+            int emptySlot = FindFirstEmptyInventorySlot();
+            if (emptySlot == -1)
+            {
+                UIManager.Instance?.ShowToast("背包已满，无法获得装备");
+                return false;
+            }
+
+            preGeneratedItem.slotIndex = emptySlot;
+            preGeneratedItem.location = ItemLocation.Inventory;
+
+            AllItems.Add(preGeneratedItem);
+
+            SaveInventoryAsync();
+            OnInventoryUpdated?.Invoke();
+
+            // 触发物品收集事件
+            TaskEvents.TriggerItemCollected(itemId, count);
+
+            return true;
+        }
+
+        return AddItem(itemId, count);
+    }
+
+
+
 
     /// <summary>
     /// 彻底移除一个物品实例 (例如丢弃)。
@@ -439,7 +497,7 @@ public class InventoryManager : Singleton<InventoryManager>
         }
 
         SaveInventoryAsync();
-        OnInventoryUpdated?.Invoke(); 
+        OnInventoryUpdated?.Invoke();
         return true;
     }
 
@@ -450,10 +508,10 @@ public class InventoryManager : Singleton<InventoryManager>
     {
         var item = GetItemByInstanceId(instanceId);
         if (item == null) return;
-        
+
         var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
-        if(itemData == null) return;
-        
+        if (itemData == null) return;
+
         // 根据物品类型执行不同操作
         switch (itemData.itemType)
         {
@@ -531,6 +589,8 @@ public class InventoryManager : Singleton<InventoryManager>
         OnInventoryUpdated?.Invoke();
     }
 
+
+
     /// <summary>
     /// 装备一件物品的便捷方法。
     /// </summary>
@@ -548,7 +608,7 @@ public class InventoryManager : Singleton<InventoryManager>
         MoveItem(instanceId, ItemLocation.Inventory, targetInventorySlot);
         AudioManager.Instance.PlayUISound(UISoundType.卸下装备);
     }
-    
+
     #endregion
 
     #region 数据查询 (Queries)
@@ -559,7 +619,7 @@ public class InventoryManager : Singleton<InventoryManager>
     }
 
     public IEnumerable<InventoryItem> GetInventoryItems() => GetItemsByLocation(ItemLocation.Inventory);
-    public IEnumerable<InventoryItem> GetEquippedItems()  => GetItemsByLocation(ItemLocation.Equipped);
+    public IEnumerable<InventoryItem> GetEquippedItems() => GetItemsByLocation(ItemLocation.Equipped);
     public IEnumerable<InventoryItem> GetQuickSlotItems() => GetItemsByLocation(ItemLocation.QuickSlot);
 
     public InventoryItem GetItemByInstanceId(string instanceId)
@@ -578,7 +638,7 @@ public class InventoryManager : Singleton<InventoryManager>
     {
         return GetInventoryItems().Count() >= maxInventorySlots;
     }
-    
+
     /// <summary>
     /// 查找并返回第一个可用的背包空格子索引。
     /// </summary>
@@ -598,7 +658,7 @@ public class InventoryManager : Singleton<InventoryManager>
         }
         return -1;
     }
-    
+
     /// <summary>
     /// 清空整个玩家的所有物品（危险操作！）。
     /// </summary>
@@ -613,7 +673,7 @@ public class InventoryManager : Singleton<InventoryManager>
     }
 
     #endregion
-    
+
     #region [删除] UI & 拖拽
     // [优化] 这部分逻辑已从InventoryManager中移除。
     // DragAndDropPanel现在是独立的单例，不再由InventoryManager创建。
