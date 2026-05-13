@@ -14,22 +14,25 @@ public class GuildPanel : UIPopPanelBase
     [Header("测试功能设置")]
     [SerializeField] private int minLevel = 1;
     [SerializeField] private int maxLevel = 100;
-    [SerializeField] private string[] testPlayerNames = {
+    [SerializeField]
+    private string[] testPlayerNames = {
         "嘉然的骑士", "妮可的信徒", "流萤的伙伴", "浮波柚叶的朋友",
         "勇敢的冒险者", "无畏的战士", "智慧的法师", "敏捷的游侠",
         "神圣的牧师", "暗影的刺客", "钢铁的守护者", "元素的掌控者",
         "幸运的寻宝者", "技艺精湛的工匠", "经验丰富的猎人", "博学的学者"
     };
-    
+
     [Header("公会测试功能设置")]
-    [SerializeField] private string[] testGuildNames = {
+    [SerializeField]
+    private string[] testGuildNames = {
         "嘉然的守护者", "妮可的信徒团", "流萤战队", "浮波柚叶联盟",
         "星辰公会", "龙之谷联盟", "暗影兄弟会", "光明圣殿骑士团",
         "铁血军团", "翡翠议会", "风暴之眼", "永恒守护者",
         "烈焰之心", "寒冰堡垒", "雷鸣战团", "大地之盾"
     };
-    
-    [SerializeField] private string[] testGuildDescriptions = {
+
+    [SerializeField]
+    private string[] testGuildDescriptions = {
         "追求力量与荣耀的勇士们聚集于此",
         "热爱和平与正义的守护者联盟",
         "探索未知世界的冒险者组织",
@@ -66,13 +69,13 @@ public class GuildPanel : UIPopPanelBase
             // 玩家没有公会，显示创建/搜索公会面板
             alreadyHaveGuildPanel.gameObject.SetActive(false);
             notHaveGuildPanel.gameObject.SetActive(true);
-            
+
             // 初始化无公会面板并传入当前面板引用
             notHaveGuildPanel.Init(this);
         }
-        
+
     }
-    
+
     /// <summary>
     /// 显示已有公会面板
     /// </summary>
@@ -83,7 +86,7 @@ public class GuildPanel : UIPopPanelBase
         alreadyHaveGuildPanel.gameObject.SetActive(true);
         alreadyHaveGuildPanel.Init(guildData, this);
     }
-    
+
     public void OnCloseButtonClick()
     {
         UIManager.Instance.ClosePanel<GuildPanel>();
@@ -116,7 +119,7 @@ public class GuildPanel : UIPopPanelBase
             {
                 // 生成随机角色数据
                 CharacterData randomCharacter = GenerateRandomCharacterData(currentGuildData.serverId);
-                
+
                 // 保存角色数据到数据库
                 bool characterSaveSuccess = await MongoDBManager.Instance.CreateAndSaveCharacterData(randomCharacter);
                 if (!characterSaveSuccess)
@@ -180,7 +183,7 @@ public class GuildPanel : UIPopPanelBase
         int successCount = 0;
         try
         {
-            CharacterData currentCharacter = GameManager.Instance.CurrentCharacter;
+            CharacterData currentCharacter = SessionManager.Instance.CurrentCharacter;
             if (currentCharacter == null)
             {
                 Debug.LogError("当前角色数据为空，无法生成测试公会");
@@ -191,7 +194,7 @@ public class GuildPanel : UIPopPanelBase
             {
                 // 生成随机公会数据
                 GuildData randomGuild = GenerateRandomGuildData(currentCharacter.serverId, currentCharacter.playerUid);
-                
+
                 // 保存公会数据到数据库
                 bool guildSaveSuccess = await MongoDBManager.Instance.SaveGuildDataAsync(randomGuild);
                 if (guildSaveSuccess)
@@ -222,16 +225,16 @@ public class GuildPanel : UIPopPanelBase
     {
         // 生成随机玩家UID（测试用）
         string playerUid = "TestPlayer_" + UnityEngine.Random.Range(10000, 99999);
-        
+
         // 生成随机角色名
         string characterName = GenerateRandomCharacterName();
-        
+
         // 随机职业
         CharacterProfession profession = (CharacterProfession)UnityEngine.Random.Range(0, Enum.GetValues(typeof(CharacterProfession)).Length);
-        
+
         // 随机等级
         int level = UnityEngine.Random.Range(minLevel, maxLevel + 1);
-        
+
         // 创建角色数据
         CharacterData characterData = new CharacterData(playerUid, serverId, characterName, profession)
         {
@@ -245,7 +248,7 @@ public class GuildPanel : UIPopPanelBase
 
         return characterData;
     }
-    
+
     /// <summary>
     /// 生成随机公会数据
     /// </summary>
@@ -292,14 +295,14 @@ public class GuildPanel : UIPopPanelBase
         string suffix = UnityEngine.Random.Range(1000, 9999).ToString();
         return prefix + "_" + suffix;
     }
-    
+
     /// <summary>
     /// 生成随机公会名
     /// </summary>
     /// <returns>随机公会名</returns>
     private string GenerateRandomGuildName()
     {
-        return testGuildNames[UnityEngine.Random.Range(0, testGuildNames.Length)] + 
+        return testGuildNames[UnityEngine.Random.Range(0, testGuildNames.Length)] +
                "_" + UnityEngine.Random.Range(100, 999);
     }
 }

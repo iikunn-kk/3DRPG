@@ -24,13 +24,13 @@ public class GuildDetailsPanel : MonoBehaviour
     {
         alreadyHaveGuildPanel = panel;
     }
-    
+
     public void OnQuitGuildButtonClick()
     {
         quitPopupPanel.gameObject.SetActive(true);
         quitPopupPanel.Init(currentGuildData.guildName, async () =>
         {
-            bool success = await GameManager.Instance.QuitGuild();
+            bool success = await GuildManager.Instance.QuitGuild();
             if (success && alreadyHaveGuildPanel != null)
             {
                 // 获取公会面板的父对象（GuildPanel）
@@ -95,7 +95,7 @@ public class GuildDetailsPanel : MonoBehaviour
     public void OnAnnouncementClicked()
     {
         if (currentGuildData == null) return;
-        var current = GameManager.Instance.CurrentCharacter;
+        var current = SessionManager.Instance.CurrentCharacter;
         if (current == null) return;
 
         // 仅允许会长修改公会公告

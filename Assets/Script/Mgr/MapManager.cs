@@ -1,5 +1,4 @@
 
-
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -18,7 +17,7 @@ public class MapManager : MonoBehaviour
     [SerializeField] private Camera miniMapCamera;
     private void OnEnable()
     {
-        GameManager.Instance.SetMapManager(this);
+        CharacterRuntimeManager.Instance.SetMapManager(this);
     }
 
     private void Start()
@@ -35,7 +34,7 @@ public class MapManager : MonoBehaviour
     /// </summary>
     public void SpawnCurrentPlayer()
     {
-        CharacterData currentCharacter = GameManager.Instance.CurrentCharacter;
+        CharacterData currentCharacter = SessionManager.Instance.CurrentCharacter;
         if (currentCharacter != null)
         {
             SpawnPlayer(currentCharacter);
@@ -66,19 +65,19 @@ public class MapManager : MonoBehaviour
         if (playerCharacter != null)
         {
             playerCharacter.Init(characterData, spawnPosition);
-            GameManager.Instance.SetPlayerCharacter(playerCharacter);
+            CharacterRuntimeManager.Instance.SetPlayerCharacter(playerCharacter);
             // --- 在玩家生成后初始化任务（延迟到此，确保角色数据已就绪） ---
             if (TaskManager.Instance != null)
             {
                 TaskManager.Instance.InitializeForCurrentCharacter();
             }
             // 恢复跨场景保存的临时 Buff
-            GameManager.Instance.RestoreTransientPlayerState(playerCharacter);
+            CharacterRuntimeManager.Instance.RestoreTransientPlayerState(playerCharacter);
             cameraController.SetTarget(playerInstance.transform);
             // 事件最后广播，保证监听方能立即读取到已初始化的任务数据
             playerSpawned.RaiseEvent(playerCharacter, this);
             // 生成完成后保存一次（含任务初始化结果）
-            GameManager.Instance.SaveCurrentCharacterData();
+            SaveCoordinator.Instance.SaveCurrentCharacterData();
             // 新增：延迟多次尝试强制初始化装备，防止极端竞态
             StartCoroutine(EnsureEquipmentInitSequence(playerCharacter));
         }

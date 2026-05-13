@@ -46,7 +46,7 @@ public class PackageCell : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
     {
         // 数据初始化
         this.packageLocalData = packageLocalData;
-        this.packageTableItem = GameManager.Instance.GetPackageItemById(packageLocalData.id);
+        this.packageTableItem = LegacyPackageManager.Instance.GetPackageItemById(packageLocalData.id);
         this.uiParent = uiParent;
         // 等级信息
         UILevel.GetComponent<Text>().text = "Lv." + this.packageLocalData.level.ToString();

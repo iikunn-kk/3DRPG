@@ -60,7 +60,7 @@ public partial class CharacterState
 #endif
             }
         }
-        
+
         if (CurrentHealth <= 0)
         {
             Die();
@@ -82,8 +82,8 @@ public partial class CharacterState
         _movement?.LockPlayerControl();
         _plannedRespawnPosition = ResolveNearestSpawnPoint();
         _pendingRuntimeRespawn = true;
-        try { PlayerDeathEventSo?.RaiseEvent(gameObject,this); } catch (System.Exception ex) { Debug.LogWarning($"playerDeathEventSo Raise 失败: {ex.Message}"); }
-        CameraDeathEventSo?.RaiseEvent(false,this);
+        try { PlayerDeathEventSo?.RaiseEvent(gameObject, this); } catch (System.Exception ex) { Debug.LogWarning($"playerDeathEventSo Raise 失败: {ex.Message}"); }
+        CameraDeathEventSo?.RaiseEvent(false, this);
         if (ApplyPenaltyImmediately) { ApplyDeathPenaltyAndPersist(); }
     }
 
@@ -95,9 +95,9 @@ public partial class CharacterState
             ApplyDeathPenaltyAndPersist();
         }
     }
-/// <summary>
-/// 复活
-/// </summary>
+    /// <summary>
+    /// 复活
+    /// </summary>
     private void PerformRuntimeRespawn()
     {
         if (!_pendingRuntimeRespawn) return;
@@ -107,7 +107,7 @@ public partial class CharacterState
         _pendingRuntimeRespawn = false;
         RestoreLayerAndInteraction();
         OnValueChange();
-        PlayerRespawnEventSo.RaiseEvent(gameObject,this);
+        PlayerRespawnEventSo.RaiseEvent(gameObject, this);
     }
 
     private void ApplyDeathPenaltyAndPersist()
@@ -127,10 +127,10 @@ public partial class CharacterState
             _ = MongoDBManager.Instance.CreateAndSaveCharacterData(saveData);
         }
         CurrentHealth = backupHp;
-        var panel= UIManager.Instance.OpenPanel<DeathPopupPanel>(out bool isOpen);
+        var panel = UIManager.Instance.OpenPanel<DeathPopupPanel>(out bool isOpen);
         if (isOpen)
         {
-            panel.GetComponent<DeathPopupPanel>().Init(expLost,PlayerBeginRuntimeRespawn);
+            panel.GetComponent<DeathPopupPanel>().Init(expLost, PlayerBeginRuntimeRespawn);
         }
         _penaltyApplied = true;
         OnValueChange();
@@ -139,8 +139,8 @@ public partial class CharacterState
     public void PlayerBeginRuntimeRespawn()
     {
         if (!_pendingRuntimeRespawn) return;
-        PlayerBeginRespawnEventSo?.RaiseEvent(gameObject,this);
-        var panel= UIManager.Instance.OpenPanel<PlayerRespawnPanel>(out bool isOpen);
+        PlayerBeginRespawnEventSo?.RaiseEvent(gameObject, this);
+        var panel = UIManager.Instance.OpenPanel<PlayerRespawnPanel>(out bool isOpen);
         if (isOpen)
         {
             panel.Init();
@@ -162,7 +162,7 @@ public partial class CharacterState
         if (mapManager != null && data != null)
         {
             mapManager.SpawnPlayer(data);
-            var current = GameManager.Instance.CurrentPlayerCharacter();
+            var current = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
             if (current != null)
             {
                 newPlayer = current.gameObject;
@@ -176,7 +176,7 @@ public partial class CharacterState
         }
         if (newPlayer != null)
         {
-            PlayerRespawnEventSo?.RaiseEvent(newPlayer,this);
+            PlayerRespawnEventSo?.RaiseEvent(newPlayer, this);
         }
         if (newPlayer != null && newPlayer != this.gameObject)
         {

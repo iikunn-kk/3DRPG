@@ -15,7 +15,7 @@ public class PlayerLogInManager : Singleton<PlayerLogInManager>
 
     public void GotoGameScene(CharacterData characterData)
     {
-        GameManager.Instance.SetCurrentCharacterData(characterData);
+        SessionManager.Instance.SetCurrentCharacterData(characterData);
         // 防止存档中 currentScene 丢失导致 scene key 为空
 
         // 2. 确定目标场景地址

@@ -40,7 +40,7 @@ public static class ShopPurchaseHelper
         {
             rec.purchased += quantity;
         }
-        GameManager.Instance.SaveCurrentCharacterData();
+        SaveCoordinator.Instance.SaveCurrentCharacterData();
     }
     #endregion
 
@@ -67,7 +67,7 @@ public static class ShopPurchaseHelper
         {
             rec.purchased += quantity;
         }
-        GameManager.Instance.SaveCurrentCharacterData();
+        SaveCoordinator.Instance.SaveCurrentCharacterData();
     }
     #endregion
 

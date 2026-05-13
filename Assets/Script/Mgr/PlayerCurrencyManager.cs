@@ -14,7 +14,7 @@ public class PlayerCurrencyManager : Singleton<PlayerCurrencyManager>
     /// 玩家当前拥有的金钱数量
     /// </summary>
     public int Money { get; private set; }
-    
+
     /// <summary>
     /// 玩家当前拥有的钻石数量
     /// </summary>
@@ -30,7 +30,7 @@ public class PlayerCurrencyManager : Singleton<PlayerCurrencyManager>
     [SerializeField] private Sprite iconImage;
     [SerializeField] private Sprite gemImage;
     #region 初始化方法
-    
+
     /// <summary>
     /// 从角色数据初始化玩家数据
     /// </summary>
@@ -41,11 +41,11 @@ public class PlayerCurrencyManager : Singleton<PlayerCurrencyManager>
         Diamonds = characterData.gem;
         moneyChangedEvent?.RaiseEvent(Money, this);
     }
-    
+
     #endregion
-    
+
     #region 数据操作方法
-    
+
     /// <summary>
     /// 增加金钱
     /// </summary>
@@ -60,14 +60,14 @@ public class PlayerCurrencyManager : Singleton<PlayerCurrencyManager>
         }
         Money += amount;
         // 同步更新PlayerCharacter中的金币数量
-        var playerCharacter = GameManager.Instance.CurrentPlayerCharacter();
+        var playerCharacter = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
         moneyChangedEvent?.RaiseEvent(Money, this);
-        moneyChangedNumberEvent.RaiseEvent(amount,this);
-        GameManager.Instance.SaveCurrentCharacterData();
-        UIManager.Instance.ShowToast("获得金币+"+amount,iconImage);
+        moneyChangedNumberEvent.RaiseEvent(amount, this);
+        SaveCoordinator.Instance.SaveCurrentCharacterData();
+        UIManager.Instance.ShowToast("获得金币+" + amount, iconImage);
         return true;
     }
-    
+
     /// <summary>
     /// 减少金钱
     /// </summary>
@@ -80,20 +80,20 @@ public class PlayerCurrencyManager : Singleton<PlayerCurrencyManager>
             Debug.LogWarning("尝试减少负数金钱，应使用AddMoney方法");
             return false;
         }
-        
+
         if (Money < amount)
         {
             Debug.LogWarning("金钱不足，无法完成操作");
             return false;
         }
         Money -= amount;
-        print("减少金钱"+amount+"剩余"+Money);
+        print("减少金钱" + amount + "剩余" + Money);
         moneyChangedEvent?.RaiseEvent(Money, this);
-        UIManager.Instance.ShowToast("消耗了金币"+amount,iconImage);
-        GameManager.Instance.SaveCurrentCharacterData();
+        UIManager.Instance.ShowToast("消耗了金币" + amount, iconImage);
+        SaveCoordinator.Instance.SaveCurrentCharacterData();
         return true;
     }
-    
+
     /// <summary>
     /// 增加钻石
     /// </summary>
@@ -107,13 +107,13 @@ public class PlayerCurrencyManager : Singleton<PlayerCurrencyManager>
             return false;
         }
         Diamonds += amount;
-        diamondsChangedEvent.RaiseEvent(Diamonds,this);
-        diamondsChangedNumberEvent.RaiseEvent(amount,this);
-        UIManager.Instance.ShowToast("获得钻石+"+amount,gemImage);
-        GameManager.Instance.SaveCurrentCharacterData();
+        diamondsChangedEvent.RaiseEvent(Diamonds, this);
+        diamondsChangedNumberEvent.RaiseEvent(amount, this);
+        UIManager.Instance.ShowToast("获得钻石+" + amount, gemImage);
+        SaveCoordinator.Instance.SaveCurrentCharacterData();
         return true;
     }
-    
+
     /// <summary>
     /// 减少钻石
     /// </summary>
@@ -126,7 +126,7 @@ public class PlayerCurrencyManager : Singleton<PlayerCurrencyManager>
             Debug.LogWarning("尝试减少负数钻石，应使用AddDiamonds方法");
             return false;
         }
-        
+
         if (Diamonds < amount)
         {
             Debug.LogWarning("钻石不足，无法完成操作");
@@ -134,9 +134,9 @@ public class PlayerCurrencyManager : Singleton<PlayerCurrencyManager>
         }
 
         Diamonds -= amount;
-        diamondsChangedEvent.RaiseEvent(Diamonds,this);
-        UIManager.Instance.ShowToast("消耗了钻石"+amount,gemImage);
-        GameManager.Instance.SaveCurrentCharacterData();
+        diamondsChangedEvent.RaiseEvent(Diamonds, this);
+        UIManager.Instance.ShowToast("消耗了钻石" + amount, gemImage);
+        SaveCoordinator.Instance.SaveCurrentCharacterData();
         return true;
     }
 

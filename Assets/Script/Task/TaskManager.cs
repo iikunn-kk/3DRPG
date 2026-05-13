@@ -31,9 +31,9 @@ public class TaskManager : Singleton<TaskManager>
     /// </summary>
     public void InitializeForCurrentCharacter(bool force = false)
     {
-        var gm = GameManager.Instance;
-        if (gm == null || gm.CurrentCharacter == null) return;
-        var charData = gm.CurrentCharacter;
+        var currentChar = SessionManager.Instance.CurrentCharacter;
+        if (currentChar == null) return;
+        var charData = currentChar;
 
         bool isSameCharacter = !force && _initializedCharacterId == charData.Id;
         if (isSameCharacter)
@@ -187,7 +187,7 @@ public class TaskManager : Singleton<TaskManager>
         }
         var all = (taskDataSo.mainMission ?? new List<TaskData>()).Concat(taskDataSo.sideMission ?? new List<TaskData>());
         var curChar = GameManager.Instance?.CurrentCharacter;
-         foreach (var td in all)
+        foreach (var td in all)
         {
             if (td == null) continue;
             if (td.startNpcId != npcId)

@@ -16,14 +16,15 @@ public class PackageDetail : MonoBehaviour
     private PackageTableItem packageTableItem;
     private PackagePanel uiParent;
 
-    private void Awake() {
+    private void Awake()
+    {
         InitUIName();
         Test();
     }
 
     private void Test()
     {
-        Refresh(GameManager.Instance.GetPackageLocalData()[1], null);
+        Refresh(LegacyPackageManager.Instance.GetPackageLocalData()[1], null);
     }
 
     private void InitUIName()
@@ -40,7 +41,7 @@ public class PackageDetail : MonoBehaviour
     {
         // 初始化：动态数据、静态数据、父物品逻辑
         this.packageLocalData = packageLocalData;
-        this.packageTableItem = GameManager.Instance.GetPackageItemById(packageLocalData.id);
+        this.packageTableItem = LegacyPackageManager.Instance.GetPackageItemById(packageLocalData.id);
         this.uiParent = uiParent;
         // 等级
         UILevelText.GetComponent<Text>().text = string.Format("Lv.{0}/40", this.packageLocalData.level.ToString());

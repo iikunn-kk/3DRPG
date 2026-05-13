@@ -48,7 +48,7 @@ public class MainCanvas : MonoBehaviour
         var playerStatePanel = UIManager.Instance.OpenPanel<PlayerStatePanel>(out var isOpen);
         if (isOpen)
         {
-            playerStatePanel.Init(GameManager.Instance.CurrentPlayerCharacter());
+            playerStatePanel.Init(CharacterRuntimeManager.Instance.CurrentPlayerCharacter());
         }
     }
     public void ShowInventoryPanel()
@@ -80,7 +80,7 @@ public class MainCanvas : MonoBehaviour
         var guildPanel = UIManager.Instance.OpenPanel<GuildPanel>(out var isOpen);
         if (isOpen)
         {
-            guildPanel.Init(GameManager.Instance.CurrentCharacter);
+            guildPanel.Init(SessionManager.Instance.CurrentCharacter);
         }
     }
 

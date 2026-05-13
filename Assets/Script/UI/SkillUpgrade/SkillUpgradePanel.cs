@@ -15,7 +15,7 @@ namespace Game.UI.SkillUpgrade
         [SerializeField] private GameObject listItemPrefab;           // 技能列表项Prefab（挂载 SkillUpgradeListItem）
         [SerializeField] private SkillUpgradeDetailPanel detailPanel; // 右侧详情面板
         [SerializeField] private TextMeshProUGUI goldText;            // 顶部金币显示
-        
+
         private readonly List<GameObject> _spawnedItems = new();
         private string _currentSelectedSkillID;
         private IReadOnlyDictionary<string, PlayerSkill> _skillsSnapshot;
@@ -23,7 +23,7 @@ namespace Game.UI.SkillUpgrade
         // 去掉事件订阅，仅初始化
         public void Init()
         {
-            var skillController = GameManager.Instance.CurrentPlayerCharacter()?.GetComponent<SkillController>();
+            var skillController = CharacterRuntimeManager.Instance.CurrentPlayerCharacter()?.GetComponent<SkillController>();
             RefreshGold();
             OnSkillsInitialized(skillController);
             Show();
@@ -36,7 +36,7 @@ namespace Game.UI.SkillUpgrade
                 goldText.text = PlayerCurrencyManager.Instance != null ? PlayerCurrencyManager.Instance.Money.ToString() : "0";
             }
         }
-        
+
         public void OnSkillsInitialized(SkillController controller)
         {
             if (controller == null) return;
@@ -127,9 +127,9 @@ namespace Game.UI.SkillUpgrade
             UIManager.Instance.ClosePanel<SkillUpgradePanel>();
             Hide();
         }
-            
+
 
         public IReadOnlyDictionary<string, PlayerSkill> GetSkillsSnapshot() => _skillsSnapshot;
-        public int GetPlayerLevel() => GameManager.Instance.CurrentPlayerCharacter()?.PlayerCharacterData.level ?? 0;
+        public int GetPlayerLevel() => CharacterRuntimeManager.Instance.CurrentPlayerCharacter()?.PlayerCharacterData.level ?? 0;
     }
 }
