@@ -9,7 +9,8 @@ using UnityEngine;
 /// </summary>
 public class ArcaneIntellectSkill : Skill
 {
-    [Tooltip("Buff持续时长（秒），默认30分钟")] [SerializeField]
+    [Tooltip("Buff持续时长（秒），默认30分钟")]
+    [SerializeField]
     private float durationSeconds = 30f * 60f;
 
     [Header("视觉（在Skill的Prefab上配置）")]
@@ -31,7 +32,7 @@ public class ArcaneIntellectSkill : Skill
             AudioManager.Instance.PlayWeaponSound(SkillSoundType.Buff释放);
         }
 
-        var cs = GameManager.Instance != null ? GameManager.Instance.CurrentPlayerCharacter() : null;
+        var cs = GameManager.Instance != null ? CharacterRuntimeManager.Instance.CurrentPlayerCharacter() : null;
         if (cs == null)
         {
             Debug.LogWarning("ArcaneIntellectSkill: 未找到玩家角色");

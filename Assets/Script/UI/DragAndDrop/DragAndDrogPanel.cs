@@ -6,7 +6,7 @@ using System.Collections.Generic;
 public class DragAndDropPanel : Singleton<DragAndDropPanel>
 {
     private const string Path = "PlayingPrefabs";
-    [Header("拖拽视觉预制体")] 
+    [Header("拖拽视觉预制体")]
     [SerializeField] private GameObject dragVisualPrefab;
 
     // 新增: 用于判定"仍在背包/装备UI范围内"的根RectTransform（不算作拖出界外）
@@ -16,7 +16,7 @@ public class DragAndDropPanel : Singleton<DragAndDropPanel>
     private DragVisualPrefab _dragVisualInstance;
     private InventorySlot _sourceSlot; // 记录拖拽的源头（背包格子）
     private EquipmentSlotUI _sourceEquipmentSlot; // 记录拖拽的装备槽源头
-    [SerializeField]  private Canvas canvas;
+    [SerializeField] private Canvas canvas;
 
     protected override void Awake()
     {
@@ -292,14 +292,14 @@ public class DragAndDropPanel : Singleton<DragAndDropPanel>
             };
             InventoryManager.Instance.RemoveItem(item.instanceId);
 
-            var player = GameManager.Instance.CurrentPlayerCharacter();
+            var player = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
             Vector3 spawnPos = Vector3.zero;
             if (player != null && player.transform != null)
             {
                 spawnPos = player.transform.position + (player.transform.forward * 1.2f);
             }
 
-            GameObject prefab = Resources.Load<GameObject>(Path+"/"+"DroppedItems");
+            GameObject prefab = Resources.Load<GameObject>(Path + "/" + "DroppedItems");
             if (prefab != null)
             {
                 var go = Object.Instantiate(prefab, spawnPos, Quaternion.identity);

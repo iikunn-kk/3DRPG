@@ -15,7 +15,7 @@ public class SkillManager : Singleton<SkillManager>
 
     // 当当前玩家技能被（重新）初始化/重建 时广播：参数为快照（只读视图）
     public event Action<IReadOnlyDictionary<string, PlayerSkill>> PlayerSkillsInitialized;
-    
+
     [SerializeField] private SkillUpgradedEventSO skillUpgradedEvent;
     protected override void Awake()
     {
@@ -76,7 +76,7 @@ public class SkillManager : Singleton<SkillManager>
         _currentPlayerSkills.Clear();
         var characterState = GameManager.Instance?.CurrentPlayerCharacter();
         var data = characterState?.PlayerCharacterData;
-        
+
         if (data != null)
         {
             // 如果角色的技能数据为空或null，自动初始化全部技能为1级
@@ -166,13 +166,13 @@ public class SkillManager : Singleton<SkillManager>
         }
 
         int nextLv = curLv + 1;
-        
+
         // 注意：这里的伤害计算是"基础"预览，不包含角色实时攻击力
         float currentBaseDamage = GetBaseDamageAtLevel(so, curLv);
         float nextBaseDamage = GetBaseDamageAtLevel(so, nextLv);
         float currentAttackScale = GetAttackScalePercentAtLevel(so, curLv);
         float nextAttackScale = GetAttackScalePercentAtLevel(so, nextLv);
-        
+
         // 伤害提升百分比可以基于一个假定的基础攻击力来估算，这里用100作为参考值
         float currentTotalDamage = currentBaseDamage + 100 * (currentAttackScale / 100f);
         float nextTotalDamage = nextBaseDamage + 100 * (nextAttackScale / 100f);
@@ -285,10 +285,10 @@ public class SkillManager : Singleton<SkillManager>
             SkillID = ps.SkillSO.SkillID,
             NewLevel = ps.Level
         };
-        skillUpgradedEvent.RaiseEvent(payload,this);
+        skillUpgradedEvent.RaiseEvent(payload, this);
         // 升级后刷新当前玩家技能快照并广播（让UI/控制器同步）
         RebuildCurrentPlayerSkillsFromGame();
-        GameManager.Instance.SaveCurrentCharacterData();
+        SaveCoordinator.Instance.SaveCurrentCharacterData();
         return true;
     }
 

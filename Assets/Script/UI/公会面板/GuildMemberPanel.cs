@@ -25,7 +25,8 @@ public class GuildMemberPanel : MonoBehaviour
     [Header("测试功能设置")]
     [SerializeField] private int minLevel = 1;
     [SerializeField] private int maxLevel = 100;
-    [SerializeField] private string[] testPlayerNames = {
+    [SerializeField]
+    private string[] testPlayerNames = {
         "嘉然的骑士", "妮可的信徒", "流萤的伙伴", "浮波柚叶的朋友",
         "勇敢的冒险者", "无畏的战士", "智慧的法师", "敏捷的游侠",
         "神圣的牧师", "暗影的刺客", "钢铁的守护者", "元素的掌控者",
@@ -58,7 +59,7 @@ public class GuildMemberPanel : MonoBehaviour
             }
         }
 
-        CharacterData currentCharacter = GameManager.Instance.CurrentCharacter;
+        CharacterData currentCharacter = SessionManager.Instance.CurrentCharacter;
         string selfUid = currentCharacter != null ? currentCharacter.playerUid : null;
         string selfCharacterName = currentCharacter != null ? currentCharacter.characterName : null;
         GuildMemberInfo selfMemberInfo = null;
@@ -115,7 +116,7 @@ public class GuildMemberPanel : MonoBehaviour
     {
         if (setGuildFunctionPanel == null) return;
         // 只有会长能设置且不能修改会长职位
-        GuildMemberInfo self = currentGuildData.members.FirstOrDefault(m => m.playerUid == GameManager.Instance.CurrentCharacter.playerUid);
+        GuildMemberInfo self = currentGuildData.members.FirstOrDefault(m => m.playerUid == SessionManager.Instance.CurrentCharacter.playerUid);
         if (self == null || self.rank != GuildMemberRank.Leader) return;
         if (target.rank == GuildMemberRank.Leader) return;
         setGuildFunctionPanel.Init(target, newRank => { _ = ChangeMemberRankAsync(target, newRank); });
@@ -132,7 +133,7 @@ public class GuildMemberPanel : MonoBehaviour
         if (target == null) return;
         if (target.rank == newRank) return;
         // 再次权限验证
-        GuildMemberInfo self = currentGuildData.members.FirstOrDefault(m => m.playerUid == GameManager.Instance.CurrentCharacter.playerUid);
+        GuildMemberInfo self = currentGuildData.members.FirstOrDefault(m => m.playerUid == SessionManager.Instance.CurrentCharacter.playerUid);
         if (self == null || self.rank != GuildMemberRank.Leader) return;
         if (target.rank == GuildMemberRank.Leader) return;
 
@@ -152,7 +153,7 @@ public class GuildMemberPanel : MonoBehaviour
     private async Task KickMemberAsync(GuildMemberInfo target)
     {
         if (target == null) return;
-        CharacterData selfChar = GameManager.Instance.CurrentCharacter;
+        CharacterData selfChar = SessionManager.Instance.CurrentCharacter;
         var self = currentGuildData.members.FirstOrDefault(m => m.playerUid == selfChar.playerUid);
         if (self == null) return;
 

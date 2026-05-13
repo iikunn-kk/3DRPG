@@ -1,6 +1,6 @@
 using UnityEngine;
 // 移除未使用的命名空间引用，保持文件整洁
-using DamageNumbersPro; 
+using DamageNumbersPro;
 
 public partial class CharacterState : MonoBehaviour, IDamageable
 {
@@ -16,19 +16,19 @@ public partial class CharacterState : MonoBehaviour, IDamageable
 
     // 升级特效（粒子预制体），播放完后自动移除
     [Header("特效配置")]
-    [Tooltip("升级时播放的粒子预制体")] 
+    [Tooltip("升级时播放的粒子预制体")]
     [SerializeField] private GameObject levelUpEffectPrefab;
     [Tooltip("如果不为空，特效将从该 Transform 位置播放；否则默认从玩家头顶播放")]
     [SerializeField] private Transform levelUpEffectSpawnPoint;
 
     // 死亡流程配置
-    [Header("死亡流程配置")] 
-    [Tooltip("死亡惩罚百分比 (0.1=10%)")] 
-    [Range(0f,0.9f)]
+    [Header("死亡流程配置")]
+    [Tooltip("死亡惩罚百分比 (0.1=10%)")]
+    [Range(0f, 0.9f)]
     [SerializeField] private float deathPenaltyPercent = 0.10f;
-    [Tooltip("如果 UIManager 未实现回调时的备用过场等待秒数")] 
+    [Tooltip("如果 UIManager 未实现回调时的备用过场等待秒数")]
     [SerializeField] private float fallbackDeathTransitionSeconds = 5f;
-    [Tooltip("是否在 Die() 中立即应用惩罚并保存（防止强退刷资源）")] 
+    [Tooltip("是否在 Die() 中立即应用惩罚并保存（防止强退刷资源）")]
     [SerializeField] private bool applyPenaltyImmediately = true;
     [SerializeField] private LayerMask deathLayerName; // 玩家死亡后放入的物理层
     #endregion
@@ -54,7 +54,7 @@ public partial class CharacterState : MonoBehaviour, IDamageable
     public string CharacterName { get; private set; }
     public CharacterProfession Profession { get; private set; }
     public float CritChancePercent { get; private set; }
-    
+
     // 装备与 Buff 计算前的基础攻击力（含等级+装备，不含临时 Buff）
     private int _attackBeforeBuffs;
 
@@ -63,7 +63,7 @@ public partial class CharacterState : MonoBehaviour, IDamageable
     private Vector3 _plannedRespawnPosition;
     private bool _penaltyApplied;
     private bool _pendingRuntimeRespawn; // 仅运行时标记（不持久化）
-    
+
     // 新增：标记核心 Init 是否已完成（供装备初始化判断）
     private bool _hasRunCoreInit;
     internal bool HasRunCoreInit => _hasRunCoreInit;
@@ -75,10 +75,10 @@ public partial class CharacterState : MonoBehaviour, IDamageable
     private PlayerInteraction _interaction;
     private CharacterAnimationController _anim;
     private MoveMent _movement;
-    
+
     // --- 可供 UIManager/外部调用的委托（可选，不在 Inspector 绑定事件） ---
     public System.Action OnDeathPopupShouldShow; // Die() 时调用，外部展示弹窗
-//    public System.Action OnRespawnRuntimeDone;   // 实际复活完成后回调
+                                                 //    public System.Action OnRespawnRuntimeDone;   // 实际复活完成后回调
 
     // 跨 partial 访问需要：对其它文件开放的序列化字段访问器（若未来需要可改成属性）
     internal CharacterStateEventSO CharacterStateEventSo => characterStateEventSo;
@@ -116,7 +116,7 @@ public partial class CharacterState : MonoBehaviour, IDamageable
         MagicDamage = 0f;
         CritChancePercent = 0f;
         transform.position = pos;
-        GameManager.Instance.SetPlayerCharacter(this);
+        CharacterRuntimeManager.Instance.SetPlayerCharacter(this);
 
         // 初始化货币
         PlayerCurrencyManager.Instance.InitializeFromCharacterData(data);
@@ -181,7 +181,7 @@ public partial class CharacterState : MonoBehaviour, IDamageable
         var instance = Instantiate(levelUpEffectPrefab, spawnPos, Quaternion.identity);
         StartCoroutine(DestroyWhenEffectFinished(instance));
         // 显示升级 toast
-        UIManager.Instance.ShowToast("升级！当前等级"+ Level);
+        UIManager.Instance.ShowToast("升级！当前等级" + Level);
     }
 
     private System.Collections.IEnumerator DestroyWhenEffectFinished(GameObject effectInstance)

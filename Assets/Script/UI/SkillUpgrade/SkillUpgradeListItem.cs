@@ -15,7 +15,7 @@ namespace Game.UI.SkillUpgrade
         [SerializeField] private TextMeshProUGUI nameText;
         [SerializeField] private TextMeshProUGUI levelText;
         [SerializeField] private Button button;
-        
+
         public string SkillID { get; private set; }
         private Action<string> _onClick;
 
@@ -31,7 +31,7 @@ namespace Game.UI.SkillUpgrade
             var so = SkillManager.Instance?.GetSkillSo(SkillID);
             if (GameManager.Instance != null)
             {
-                var skills = GameManager.Instance.CurrentPlayerCharacter()?.GetComponent<SkillController>()?.GetAllSkillsSnapshot();
+                var skills = CharacterRuntimeManager.Instance.CurrentPlayerCharacter()?.GetComponent<SkillController>()?.GetAllSkillsSnapshot();
                 if (so != null && skills != null && skills.TryGetValue(SkillID, out var ps))
                 {
                     if (iconImage && so.icon != null) iconImage.sprite = so.icon; // 修复初始未显示图标（若 prefab 引用正确）
@@ -46,7 +46,7 @@ namespace Game.UI.SkillUpgrade
                 }
             }
         }
-        
+
         public void OnClick()
         {
             _onClick?.Invoke(SkillID);

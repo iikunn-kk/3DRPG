@@ -230,7 +230,7 @@ public class SearchGuildPanel : UIPopPanelBase
         int successCount = 0;
         try
         {
-            CharacterData currentCharacter = GameManager.Instance.CurrentCharacter;
+            CharacterData currentCharacter = SessionManager.Instance.CurrentCharacter;
             if (currentCharacter == null)
             {
                 Debug.LogError("当前角色数据为空，无法生成测试公会");

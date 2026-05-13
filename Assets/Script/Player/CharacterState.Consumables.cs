@@ -76,7 +76,7 @@ public partial class CharacterState
         {
             PlayLevelUpEffect();
         }
-        GameManager.Instance.SaveCurrentCharacterData();
+        SaveCoordinator.Instance.SaveCurrentCharacterData();
     }
 
     private void LevelUp()

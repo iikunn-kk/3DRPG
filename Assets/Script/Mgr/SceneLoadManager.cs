@@ -85,7 +85,7 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
     /// </summary>
     public void LoadLoginScene(bool useLoadingScreen = false, SceneLoadCallback onComplete = null)
     {
-        LoadGameplayScene(LoginSceneKey, useLoadingScreen, onComplete, treatAsLogin:true);
+        LoadGameplayScene(LoginSceneKey, useLoadingScreen, onComplete, treatAsLogin: true);
     }
 
     /// <summary>
@@ -304,13 +304,12 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
     {
         try
         {
-            var gm = GameManager.Instance;
-            var player = gm?.CurrentPlayerCharacter();
+            var player = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
             if (player != null)
             {
-                gm.SaveSceneTransitionPlayerState(player);
+                CharacterRuntimeManager.Instance.SaveSceneTransitionPlayerState(player);
                 UnityEngine.Object.Destroy(player.gameObject);
-                gm.UnsetPlayerInstance();
+                CharacterRuntimeManager.Instance.UnsetPlayerInstance();
             }
         }
         catch (Exception ex)

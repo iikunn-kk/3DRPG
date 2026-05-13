@@ -138,7 +138,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
     /// </summary>
     private void Setup3DStudio()
     {
-        var playerCharacter = GameManager.Instance.CurrentPlayerCharacter();
+        var playerCharacter = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
         if (playerCharacter != null)
         {
             inventory3DStudioManager.InitStudio(playerCharacter.Profession);
