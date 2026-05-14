@@ -1,28 +1,30 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class TaskTrackerPanel : MonoBehaviour
 {
-    [Header("行预制体(包含 TaskTrackerLine)")] [SerializeField] private TaskTrackerLine linePrefab;
-    [Header("列表父节点 (只包含任务行)")] [SerializeField] private Transform contentParent;
-    [Header("最大显示任务条数 (-1 表示全部)")] [SerializeField] private int maxLines = 5;
-    [Header("自动隐藏已完成任务")] [SerializeField] private bool hideCompleted;
+    [Header("行预制体(包含 TaskTrackerLine)")][SerializeField] private TaskTrackerLine linePrefab;
+    [Header("列表父节点 (只包含任务行)")][SerializeField] private Transform contentParent;
+    [Header("最大显示任务条数 (-1 表示全部)")][SerializeField] private int maxLines = 5;
+    [Header("自动隐藏已完成任务")][SerializeField] private bool hideCompleted;
 
     [Header("折叠相关 (可选) ")]
     [Tooltip("需要被折叠/展开动画的内容容器(不要包含头部Button)")]
     [SerializeField] private CanvasGroup containerCanvasGroup; // 用于淡入淡出（并控制交互）
     [SerializeField] private Animator animator; // 用于播放折叠/展开动画（通过 trigger）
-    [Tooltip("Animator 打开 trigger 名称")] [SerializeField] private string openTrigger = "Open";
-    [Tooltip("Animator 折叠 trigger 名称")] [SerializeField] private string closeTrigger = "Close";
+    [Tooltip("Animator 打开 trigger 名称")][SerializeField] private string openTrigger = "Open";
+    [Tooltip("Animator 折叠 trigger 名称")][SerializeField] private string closeTrigger = "Close";
     [Tooltip("动画播放等待时长(秒)，若 Animator 状态机中动画长度不固定，可在这里调整等待时间)")]
     [SerializeField] private float collapseAnimationDuration = 0.25f;
     [Tooltip("是否在 Init 时默认折叠")][SerializeField] private bool startCollapsed;
 
-    [Header("自动刷新间隔(秒)")] [SerializeField] private float autoRefreshInterval = 0.6f;
+    [Header("自动刷新间隔(秒)")][SerializeField] private float autoRefreshInterval = 0.6f;
 
     private float _refreshTimer;
 
@@ -32,6 +34,7 @@ public class TaskTrackerPanel : MonoBehaviour
 
     // Icon pulse
     private Coroutine _iconPulseRoutine;
+    private CancellationTokenSource _iconPulseCts;
 
     #region Unity
     private void OnEnable()
@@ -47,8 +50,11 @@ public class TaskTrackerPanel : MonoBehaviour
     private void OnDestroy()
     {
         UnsubscribeTaskEvents();
-        if (_iconPulseRoutine != null)
-            StopCoroutine(_iconPulseRoutine);
+        if (_iconPulseCts != null)
+        {
+            _iconPulseCts.Cancel();
+            _iconPulseCts.Dispose();
+        }
     }
 
     private void Update()
@@ -118,44 +124,62 @@ public class TaskTrackerPanel : MonoBehaviour
     {
         // 为了避免事件顺序导致的 race（TaskManager 可能也在 OnTaskCompleted 中接取下一个任务并切换追踪），
         // 我们延后一帧处理，让 TaskManager 先完成它的链式逻辑。
-        StartCoroutine(HandleTaskCompletedCoroutine(taskId));
+        HandleTaskCompletedAsync(taskId).Forget();
     }
 
-    private IEnumerator HandleTaskCompletedCoroutine(int completedTaskId)
+    private async UniTaskVoid HandleTaskCompletedAsync(int completedTaskId)
     {
-        // 等一帧以让 TaskManager 的 HandleTaskCompletedChain 先执行（若订阅顺序不同会造成 race）
-        yield return null;
-
-        if (TaskManager.Instance == null)
+        try
         {
-            Rebuild();
-            yield break;
-        }
+            // 等一帧以让 TaskManager 的 HandleTaskCompletedChain 先执行（若订阅顺序不同会造成 race）
+            await UniTask.Yield();
 
-        TaskManager tm = TaskManager.Instance;
-        // 尝试找到对应行（行此时仍指向旧任务 ID）
-        TaskTrackerLine line = _lines.FirstOrDefault(l => l != null && l.TaskId == completedTaskId);
+            if (TaskManager.Instance == null)
+            {
+                Rebuild();
+                return;
+            }
 
-        // 尝试拿运行时任务（可能已被自动领取奖励逻辑移除）
-        tm.tasks.TryGetValue(completedTaskId, out var completedTaskRuntime);
-        int nextId = -1;
-        if (completedTaskRuntime != null)
-        {
-            nextId = completedTaskRuntime.nextTaskId;
-        }
-        else
-        {
-            // 运行时可能已被移除（自动领奖励），回退 TaskDataSO 查 nextTaskId
-            var td = tm.FindTaskDataById(completedTaskId);
-            if (td != null) nextId = td.nextTaskId;
-        }
+            TaskManager tm = TaskManager.Instance;
+            // 尝试找到对应行（行此时仍指向旧任务 ID）
+            TaskTrackerLine line = _lines.FirstOrDefault(l => l != null && l.TaskId == completedTaskId);
 
-        // 如果存在下一个任务并且已被 TaskManager 自动接受
-        if (nextId != -1 && tm.tasks.TryGetValue(nextId, out var nextTaskRuntime))
-        {
+            // 尝试拿运行时任务（可能已被自动领取奖励逻辑移除）
+            tm.tasks.TryGetValue(completedTaskId, out var completedTaskRuntime);
+            int nextId = -1;
+            if (completedTaskRuntime != null)
+            {
+                nextId = completedTaskRuntime.nextTaskId;
+            }
+            else
+            {
+                // 运行时可能已被移除（自动领奖励），回退 TaskDataSO 查 nextTaskId
+                var td = tm.FindTaskDataById(completedTaskId);
+                if (td != null) nextId = td.nextTaskId;
+            }
+
+            // 如果存在下一个任务并且已被 TaskManager 自动接受
+            if (nextId != -1 && tm.tasks.TryGetValue(nextId, out var nextTaskRuntime))
+            {
+                if (line != null)
+                {
+                    line.SetData(nextTaskRuntime, OnLineClicked);
+                }
+                else
+                {
+                    Rebuild();
+                }
+                UpdateLinesTrackedState();
+                Refresh();
+                UpdateHeaderSummary();
+                return;
+            }
+
+            // 没有后续任务：移除该行并刷新
             if (line != null)
             {
-                line.SetData(nextTaskRuntime, OnLineClicked);
+                if (line.gameObject != null) Destroy(line.gameObject);
+                _lines.Remove(line);
             }
             else
             {
@@ -164,22 +188,11 @@ public class TaskTrackerPanel : MonoBehaviour
             UpdateLinesTrackedState();
             Refresh();
             UpdateHeaderSummary();
-            yield break;
         }
-
-        // 没有后续任务：移除该行并刷新
-        if (line != null)
+        catch (System.Exception ex)
         {
-            if (line.gameObject != null) Destroy(line.gameObject);
-            _lines.Remove(line);
+            Debug.LogError($"[TaskTrackerPanel] HandleTaskCompletedAsync failed: {ex}");
         }
-        else
-        {
-            Rebuild();
-        }
-        UpdateLinesTrackedState();
-        Refresh();
-        UpdateHeaderSummary();
     }
     private void HandleTaskRewardsClaimed(int taskId)
     {
@@ -210,14 +223,14 @@ public class TaskTrackerPanel : MonoBehaviour
         }
         var all = TaskManager.Instance.tasks.Values.ToList();
         // 排序：主线优先 -> 支线 -> ID
-        all.Sort((a,b)=>
+        all.Sort((a, b) =>
         {
             int cat = a.taskCategory.CompareTo(b.taskCategory);
             if (cat != 0) return cat;
             return a.id.CompareTo(b.id);
         });
         if (hideCompleted)
-            all = all.Where(t=>!t.isCompleted).ToList();
+            all = all.Where(t => !t.isCompleted).ToList();
         if (maxLines > 0)
             all = all.Take(maxLines).ToList();
         foreach (var t in all)
@@ -271,28 +284,35 @@ public class TaskTrackerPanel : MonoBehaviour
             animator.SetTrigger(_isCollapsed ? closeTrigger : openTrigger);
         }
 
-        // 启动协程在动画结束后设置 CanvasGroup 和可交互性
+        // 启动异步任务在动画结束后设置 CanvasGroup 和可交互性
         if (containerCanvasGroup != null)
         {
-            StartCoroutine(WaitForCollapseAnimationAndApply(_isCollapsed));
+            ApplyCollapseAfterAnimationAsync(_isCollapsed).Forget();
         }
 
         UpdateHeaderSummary();
     }
 
-    private IEnumerator WaitForCollapseAnimationAndApply(bool collapsed)
+    private async UniTaskVoid ApplyCollapseAfterAnimationAsync(bool collapsed)
     {
-        // 如果有动画器并且 duration > 0，则等待指定时长，否则一帧后立即应用
-        if (collapseAnimationDuration > 0f)
-            yield return new WaitForSeconds(collapseAnimationDuration);
-        else
-            yield return null;
-
-        if (containerCanvasGroup != null)
+        try
         {
-            containerCanvasGroup.alpha = collapsed ? 0f : 1f;
-            containerCanvasGroup.interactable = !collapsed;
-            containerCanvasGroup.blocksRaycasts = !collapsed;
+            // 如果有动画器并且 duration > 0，则等待指定时长，否则一帧后立即应用
+            if (collapseAnimationDuration > 0f)
+                await UniTask.Delay(TimeSpan.FromSeconds(collapseAnimationDuration));
+            else
+                await UniTask.Yield();
+
+            if (containerCanvasGroup != null)
+            {
+                containerCanvasGroup.alpha = collapsed ? 0f : 1f;
+                containerCanvasGroup.interactable = !collapsed;
+                containerCanvasGroup.blocksRaycasts = !collapsed;
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[TaskTrackerPanel] ApplyCollapseAfterAnimationAsync failed: {ex}");
         }
     }
 
@@ -303,9 +323,9 @@ public class TaskTrackerPanel : MonoBehaviour
     {
         if (TaskManager.Instance == null) return;
         int total = TaskManager.Instance.tasks.Count;
-        int claimable =  TaskManager.Instance.tasks.Values.Count(t=>t.isCompleted && !t.isRewardClaimed);
-  
-      
+        int claimable = TaskManager.Instance.tasks.Values.Count(t => t.isCompleted && !t.isRewardClaimed);
+
+
     }
 
 

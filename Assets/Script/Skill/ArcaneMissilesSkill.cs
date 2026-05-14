@@ -1,4 +1,6 @@
-using System.Collections;
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 /// <summary>
 /// 奥术飞弹（Arcane Missiles）技能逻辑：
@@ -58,30 +60,34 @@ public class ArcaneMissilesSkill : Skill
         {
             _animCtrl.SkillCastPointReached += OnSkillCastPointReached;
             // 为避免极端情况下事件缺失导致挂起，增加一个轻量兜底协程：若若干秒内未触发，则回退为立即发射
-            StartCoroutine(FallbackCastPointTimeout(3.0f));
+            FallbackCastPointTimeoutAsync(3.0f, this.GetCancellationTokenOnDestroy()).Forget();
         }
         else
         {
             // 找不到动画控制器：立即发射（兜底）
-            StartCoroutine(FireSequence());
+            FireSequenceAsync(this.GetCancellationTokenOnDestroy()).Forget();
         }
         Debug.LogWarning("我出生了");
     }
 
-    private IEnumerator FallbackCastPointTimeout(float timeout)
+    private async UniTaskVoid FallbackCastPointTimeoutAsync(float timeout, CancellationToken token)
     {
-        float t = 0f;
-        while (!_firedViaEvent && t < timeout)
+        try
         {
-            t += Time.deltaTime;
-            yield return null;
+            float t = 0f;
+            while (!_firedViaEvent && t < timeout)
+            {
+                t += Time.deltaTime;
+                await UniTask.Yield(token);
+            }
+            if (!_firedViaEvent)
+            {
+                // 超时兜底：直接发射，防止技能卡住
+                FireSequenceAsync(token).Forget();
+                SafeUnsubscribe();
+            }
         }
-        if (!_firedViaEvent)
-        {
-            // 超时兜底：直接发射，防止技能卡住
-            StartCoroutine(FireSequence());
-            SafeUnsubscribe();
-        }
+        catch (OperationCanceledException) { }
     }
 
     private void OnSkillCastPointReached()
@@ -89,7 +95,7 @@ public class ArcaneMissilesSkill : Skill
         if (_firedViaEvent) return;
         _firedViaEvent = true;
         SafeUnsubscribe();
-        StartCoroutine(FireSequence());
+        FireSequenceAsync(this.GetCancellationTokenOnDestroy()).Forget();
     }
 
     private void SafeUnsubscribe()
@@ -105,66 +111,71 @@ public class ArcaneMissilesSkill : Skill
         SafeUnsubscribe();
     }
 
-    private IEnumerator FireSequence()
+    private async UniTaskVoid FireSequenceAsync(CancellationToken token)
     {
-        if (PlayerSkill == null || PlayerSkill.SkillSO == null) { Destroy(gameObject); yield break; }
-        var so = PlayerSkill.SkillSO;
-
-        if (_target == null)
+        try
         {
-            Debug.LogWarning("ArcaneMissilesSkill: 未提供目标，技能取消。");
-            Destroy(gameObject);
-            yield break;
-        }
+            if (PlayerSkill == null || PlayerSkill.SkillSO == null) { Destroy(gameObject); return; }
+            var so = PlayerSkill.SkillSO;
 
-        // 发射序列开始时播放一次发射音效
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlayWeaponSound(SkillSoundType.奥术飞弹发射);
-        }
-
-        int count = 3;
-        float interval = Mathf.Max(0f, so.missileInterval);
-        float speed = so.projectileSpeed > 0 ? so.projectileSpeed : 12f;
-
-        for (int i = 0; i < count; i++)
-        {
-            if (_target == null) break;
-
-            if (projectilePrefab != null)
+            if (_target == null)
             {
-                Vector3 spawnPos = (_firePoint != null) ? _firePoint.position : Caster.position + Vector3.up * 1.2f;
-                var go = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
-                var proj = go.GetComponent<ArcaneMissileProjectile>();
-                if (proj != null)
+                Debug.LogWarning("ArcaneMissilesSkill: 未提供目标，技能取消。");
+                Destroy(gameObject);
+                return;
+            }
+
+            // 发射序列开始时播放一次发射音效
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayWeaponSound(SkillSoundType.奥术飞弹发射);
+            }
+
+            int count = 3;
+            float interval = Mathf.Max(0f, so.missileInterval);
+            float speed = so.projectileSpeed > 0 ? so.projectileSpeed : 12f;
+
+            for (int i = 0; i < count; i++)
+            {
+                token.ThrowIfCancellationRequested();
+                if (_target == null) break;
+
+                if (projectilePrefab != null)
                 {
-                    proj.Initialize(target: _target,
-                                    speed: speed,
-                                    damage: Mathf.Max(0, Mathf.RoundToInt(PlayerSkill.GetDamage())),
-                                    hitRadius: hitRadius,
-                                    explosionPrefab: explosionPrefab,
-                                    enemyLayers: enemyLayers,
-                                    aoeRadius: aoeRadiusLv5,
-                                    aoePercent: aoePercentLv5,
-                                    bounceRange: bounceRangeLv10,
-                                    remainingBounces: PlayerSkill.Level >= 10 ? 1 : 0,
-                                    casterState: CasterState);
+                    Vector3 spawnPos = (_firePoint != null) ? _firePoint.position : Caster.position + Vector3.up * 1.2f;
+                    var go = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+                    var proj = go.GetComponent<ArcaneMissileProjectile>();
+                    if (proj != null)
+                    {
+                        proj.Initialize(target: _target,
+                                        speed: speed,
+                                        damage: Mathf.Max(0, Mathf.RoundToInt(PlayerSkill.GetDamage())),
+                                        hitRadius: hitRadius,
+                                        explosionPrefab: explosionPrefab,
+                                        enemyLayers: enemyLayers,
+                                        aoeRadius: aoeRadiusLv5,
+                                        aoePercent: aoePercentLv5,
+                                        bounceRange: bounceRangeLv10,
+                                        remainingBounces: PlayerSkill.Level >= 10 ? 1 : 0,
+                                        casterState: CasterState);
+                    }
+                    else
+                    {
+                        Debug.LogWarning("ArcaneMissilesSkill: projectilePrefab 缺少 ArcaneMissileProjectile 组件，已销毁该实例。");
+                        Destroy(go);
+                    }
                 }
                 else
                 {
-                    Debug.LogWarning("ArcaneMissilesSkill: projectilePrefab 缺少 ArcaneMissileProjectile 组件，已销毁该实例。");
-                    Destroy(go);
+                    Debug.LogWarning("ArcaneMissilesSkill: 未提供 projectilePrefab，技能将不会产生弹丸。请在 Inspector 中分配 projectilePrefab。");
                 }
-            }
-            else
-            {
-                Debug.LogWarning("ArcaneMissilesSkill: 未提供 projectilePrefab，技能将不会产生弹丸。请在 Inspector 中分配 projectilePrefab。");
+
+                if (i < count - 1 && interval > 0f)
+                    await UniTask.Delay(TimeSpan.FromSeconds(interval), cancellationToken: token);
             }
 
-            if (i < count - 1 && interval > 0f)
-                yield return new WaitForSeconds(interval);
+            Destroy(gameObject);
         }
-
-        Destroy(gameObject);
+        catch (OperationCanceledException) { }
     }
 }

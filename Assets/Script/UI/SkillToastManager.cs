@@ -1,6 +1,8 @@
-using System.Collections;
+using System;
 using TMPro;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
+using System.Threading;
 
 /// <summary>
 /// 技能提示专用的 Toast（单条、可自定义位置、无动画）。
@@ -17,7 +19,7 @@ public class SkillToastManager : MonoBehaviour
     [Header("默认显示时长（秒），小于等于 0 表示常显")]
     [SerializeField] private float defaultDuration = 1.6f;
 
-    private Coroutine _autoHideCo;
+    private CancellationTokenSource _autoHideCts;
     // 如果在该 GameObject（或父物体）处于非激活状态时调用 Init，则延迟启动自动隐藏
     private float _pendingAutoHideDuration = -1f;
 
@@ -37,13 +39,14 @@ public class SkillToastManager : MonoBehaviour
     private void OnEnable()
     {
         // 如果在该物体（或其父物体）处于非激活状态时调用了 Init 方法并请求自动隐藏，
-        // 则在该物体启用时启动协程。
+        // 则在该物体启用时启动异步任务。
         if (_pendingAutoHideDuration > 0f)
         {
-            // 仅在协程未运行时启动协程
-            if (_autoHideCo == null)
+            if (_autoHideCts == null || _autoHideCts.IsCancellationRequested)
             {
-                _autoHideCo = StartCoroutine(AutoHideAfter(_pendingAutoHideDuration));
+                _autoHideCts?.Dispose();
+                _autoHideCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+                AutoHideAfterAsync(_pendingAutoHideDuration, _autoHideCts.Token).Forget();
             }
             _pendingAutoHideDuration = -1f;
         }
@@ -57,19 +60,22 @@ public class SkillToastManager : MonoBehaviour
         }
         gameObject.SetActive(true);
 
-        if (_autoHideCo != null)
+        // 取消之前的自动隐藏任务
+        if (_autoHideCts != null)
         {
-            StopCoroutine(_autoHideCo);
-            _autoHideCo = null;
+            _autoHideCts.Cancel();
+            _autoHideCts.Dispose();
+            _autoHideCts = null;
         }
 
         float dur = duration > 0f ? duration : defaultDuration;
         if (dur > 0f)
         {
-            // 仅在该 GameObject 在层级视图中处于激活状态时启动协程；否则延迟到 OnEnable 时启动。
+            // 仅在该 GameObject 在层级视图中处于激活状态时启动任务；否则延迟到 OnEnable 时启动。
             if (gameObject.activeInHierarchy && this.isActiveAndEnabled)
             {
-                _autoHideCo = StartCoroutine(AutoHideAfter(dur));
+                _autoHideCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+                AutoHideAfterAsync(dur, _autoHideCts.Token).Forget();
                 _pendingAutoHideDuration = -1f;
             }
             else
@@ -81,19 +87,27 @@ public class SkillToastManager : MonoBehaviour
 
     public void Hide()
     {
-        if (_autoHideCo != null)
+        if (_autoHideCts != null)
         {
-            StopCoroutine(_autoHideCo);
-            _autoHideCo = null;
+            _autoHideCts.Cancel();
+            _autoHideCts.Dispose();
+            _autoHideCts = null;
         }
         // 清除任何延迟的自动隐藏请求
         _pendingAutoHideDuration = -1f;
         gameObject.SetActive(false);
     }
 
-    private IEnumerator AutoHideAfter(float sec)
+    private async UniTaskVoid AutoHideAfterAsync(float sec, CancellationToken token)
     {
-        yield return new WaitForSeconds(sec);
-        Hide();
+        try
+        {
+            await UniTask.Delay(TimeSpan.FromSeconds(sec), cancellationToken: token);
+            Hide();
+        }
+        catch (OperationCanceledException)
+        {
+            // 取消操作时无需处理
+        }
     }
 }

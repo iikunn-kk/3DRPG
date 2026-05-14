@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using Cysharp.Threading.Tasks;
 
 public class SkillManager : Singleton<SkillManager>
 {
@@ -288,7 +289,7 @@ public class SkillManager : Singleton<SkillManager>
         skillUpgradedEvent.RaiseEvent(payload, this);
         // 升级后刷新当前玩家技能快照并广播（让UI/控制器同步）
         RebuildCurrentPlayerSkillsFromGame();
-        SaveCoordinator.Instance.SaveCurrentCharacterData();
+        SaveCoordinator.Instance.SaveCurrentCharacterData().Forget();
         return true;
     }
 

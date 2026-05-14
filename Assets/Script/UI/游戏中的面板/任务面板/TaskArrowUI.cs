@@ -9,33 +9,33 @@ using UnityEngine;
 /// </summary>
 public class TaskArrowUI : MonoBehaviour
 {
-    [Header("引用")] [SerializeField] private RectTransform arrowRect; // 箭头图片 Rect
+    [Header("引用")][SerializeField] private RectTransform arrowRect; // 箭头图片 Rect
     [SerializeField] private TMP_Text distanceText; // 距离或提示
     [SerializeField] private CanvasGroup canvasGroup; // 整体显隐
     [SerializeField] private TMP_Text taskNameText; // 任务名称显示
 
-    [Header("罗盘模式")] [SerializeField] private bool useCompassMode = true; // 始终固定在UI上，仅旋转
-    [Tooltip("忽略高度差，仅在水平面计算方向")] [SerializeField] private bool flattenY = true;
-    [Tooltip("不同场景时在距离后面追加场景名")] [SerializeField] private bool appendSceneNameWhenDifferent = true;
-    [Tooltip("当目标在范围内时是否隐藏箭头图形")] [SerializeField] private bool hideArrowWhenInside = true;
+    [Header("罗盘模式")][SerializeField] private bool useCompassMode = true; // 始终固定在UI上，仅旋转
+    [Tooltip("忽略高度差，仅在水平面计算方向")][SerializeField] private bool flattenY = true;
+    [Tooltip("不同场景时在距离后面追加场景名")][SerializeField] private bool appendSceneNameWhenDifferent = true;
+    [Tooltip("当目标在范围内时是否隐藏箭头图形")][SerializeField] private bool hideArrowWhenInside = true;
 
-    [Header("显示配置")] [SerializeField] private float fadeSpeed = 6f;
+    [Header("显示配置")][SerializeField] private float fadeSpeed = 6f;
     [SerializeField] private bool hideWhenNoTrack = true;
-    [Header("最小显示距离(进入范围后不再显示距离)")] [SerializeField] private float minDistanceToShow = 0.5f;
+    [Header("最小显示距离(进入范围后不再显示距离)")][SerializeField] private float minDistanceToShow = 0.5f;
     [SerializeField] private float playerMoveThreshold = 0.3f; // 玩家移动阈值
 
     // --- 新增动画相关配置 ---
     [Header("箭头过渡动画")]
-    [Tooltip("旋转平滑时间（秒），使用 SmoothDampAngle")] [SerializeField] private float arrowRotationSmoothTime = 0.12f;
-    [Tooltip("是否启用缩放过渡（显示/隐藏时平滑缩放）")] [SerializeField] private bool animateScaleOnChange = true;
-    [Tooltip("缩放平滑时间（秒）")] [SerializeField] private float arrowScaleSmoothTime = 0.12f;
-    [Tooltip("当目标缩放小于此阈值时认为已隐藏（用于物体激活/禁用判断）")] [SerializeField] private float hideScaleThreshold = 0.01f;
+    [Tooltip("旋转平滑时间（秒），使用 SmoothDampAngle")][SerializeField] private float arrowRotationSmoothTime = 0.12f;
+    [Tooltip("是否启用缩放过渡（显示/隐藏时平滑缩放）")][SerializeField] private bool animateScaleOnChange = true;
+    [Tooltip("缩放平滑时间（秒）")][SerializeField] private float arrowScaleSmoothTime = 0.12f;
+    [Tooltip("当目标缩放小于此阈值时认为已隐藏（用于物体激活/禁用判断）")][SerializeField] private float hideScaleThreshold = 0.01f;
 
     // 新增：将位置查询与每帧视觉更新分离
     [Header("查询与更新频率")]
-    [Tooltip("目标世界位置查询间隔（秒），查询可能较重，设置为较大以节省性能。同时允许每帧旋转更新以保持流畅）")] [SerializeField] private float positionFetchInterval = 0.25f;
-    [Tooltip("距离文字更新间隔（秒），避免每帧重新计算/设置UI")] [SerializeField] private float distanceUpdateInterval = 0.25f;
-    [Tooltip("当距离变化超过该值（米）时会立即更新距离显示）")] [SerializeField] private float distanceChangeThreshold = 1f;
+    [Tooltip("目标世界位置查询间隔（秒），查询可能较重，设置为较大以节省性能。同时允许每帧旋转更新以保持流畅）")][SerializeField] private float positionFetchInterval = 0.25f;
+    [Tooltip("距离文字更新间隔（秒），避免每帧重新计算/设置UI")][SerializeField] private float distanceUpdateInterval = 0.25f;
+    [Tooltip("当距离变化超过该值（米）时会立即更新距离显示）")][SerializeField] private float distanceChangeThreshold = 1f;
 
     private float _timer;
     private float _positionFetchTimer;
@@ -77,7 +77,7 @@ public class TaskArrowUI : MonoBehaviour
     private void OnDisable()
     {
         TaskEvents.OnTaskTrackedChanged -= OnTrackedChanged;
-        
+
     }
 
     private void OnTrackedChanged(int taskId)
@@ -125,8 +125,8 @@ public class TaskArrowUI : MonoBehaviour
             // 尝试从服务获取一次目标信息（可能涉及查找锚点，较重）
             // 使用快速接口获取平方距离，避免内部做开方运算
             bool ok = TaskTrackingService.Instance.TryGetArrowTargetFast(out var targetPos, out bool inside, out float fetchedDistanceSqr, out _, out string scene, out _);
-             if (!ok)
-             {
+            if (!ok)
+            {
                 // 无目标：隐藏/淡出
                 if (hideWhenNoTrack)
                 {
@@ -156,8 +156,8 @@ public class TaskArrowUI : MonoBehaviour
             _cachedTargetScene = scene;
             _cachedInside = inside;
             _cachedDistanceSqr = fetchedDistanceSqr;
-             _cachedValid = true;
-         }
+            _cachedValid = true;
+        }
 
         // 到这里 _cachedValid 为 true 且包含最近一次查询的数据
         // 填充任务名（如果有）
@@ -325,5 +325,5 @@ public class TaskArrowUI : MonoBehaviour
             canvasGroup.blocksRaycasts = v;
         }
     }
-    
+
 }

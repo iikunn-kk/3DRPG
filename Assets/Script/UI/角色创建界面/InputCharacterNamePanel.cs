@@ -64,71 +64,75 @@ public class InputCharacterNamePanel : UIPopPanelBase
 
     public async void OnValidateNameButtonClick()
     {
-        //播放按下音效
-        AudioManager.Instance.PlayUISound(UISoundType.按下按钮);
-        string value = inputField.text.Trim();
-
-        // 本地校验
-        if (string.IsNullOrEmpty(value))
-        {
-            tipText.text = "请输入角色名";
-            enterButton.interactable = false;
-            _isValidated = false;
-            return;
-        }
-        if (value.Length > MAX_NAME_LENGTH)
-        {
-            tipText.text = $"角色名不能超过{MAX_NAME_LENGTH}个字符";
-            enterButton.interactable = false;
-            _isValidated = false;
-            return;
-        }
-        if (!IsNameValid(value))
-        {
-            tipText.text = "角色名不能包含特殊符号";
-            enterButton.interactable = false;
-            _isValidated = false;
-            return;
-        }
-
-        // 远端校验当前服务器是否重名
-        int serverId = 0;
-        if (PlayerLogInManager.Instance != null)
-        {
-            serverId = PlayerLogInManager.Instance.GetCurrentServerId();
-        }
-        else
-        {
-            Debug.LogWarning("未找到 PlayerLogInManager.Instance，serverId 默认为 0 进行校验。");
-        }
-
-        tipText.text = "正在验证角色名，请稍候…";
-        bool exists = false;
         try
         {
-            exists = await MongoDBManager.Instance.IsCharacterNameExistsOnServer(value, serverId);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"验证角色名时发生异常: {e.Message}");
-            tipText.text = "验证失败，请稍后重试";
-            enterButton.interactable = false;
-            _isValidated = false;
-            return;
-        }
+            //播放按下音效
+            AudioManager.Instance.PlayUISound(UISoundType.按下按钮);
+            string value = inputField.text.Trim();
 
-        if (exists)
-        {
-            tipText.text = "当前服务器已有同名角色，请更换角色名";
-            enterButton.interactable = false;
-            _isValidated = false;
+            // 本地校验
+            if (string.IsNullOrEmpty(value))
+            {
+                tipText.text = "请输入角色名";
+                enterButton.interactable = false;
+                _isValidated = false;
+                return;
+            }
+            if (value.Length > MAX_NAME_LENGTH)
+            {
+                tipText.text = $"角色名不能超过{MAX_NAME_LENGTH}个字符";
+                enterButton.interactable = false;
+                _isValidated = false;
+                return;
+            }
+            if (!IsNameValid(value))
+            {
+                tipText.text = "角色名不能包含特殊符号";
+                enterButton.interactable = false;
+                _isValidated = false;
+                return;
+            }
+
+            // 远端校验当前服务器是否重名
+            int serverId = 0;
+            if (PlayerLogInManager.Instance != null)
+            {
+                serverId = PlayerLogInManager.Instance.GetCurrentServerId();
+            }
+            else
+            {
+                Debug.LogWarning("未找到 PlayerLogInManager.Instance，serverId 默认为 0 进行校验。");
+            }
+
+            tipText.text = "正在验证角色名，请稍候…";
+            bool exists = false;
+            try
+            {
+                exists = await MongoDBManager.Instance.IsCharacterNameExistsOnServer(value, serverId);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"验证角色名时发生异常: {e.Message}");
+                tipText.text = "验证失败，请稍后重试";
+                enterButton.interactable = false;
+                _isValidated = false;
+                return;
+            }
+
+            if (exists)
+            {
+                tipText.text = "当前服务器已有同名角色，请更换角色名";
+                enterButton.interactable = false;
+                _isValidated = false;
+            }
+            else
+            {
+                tipText.text = "角色名可用";
+                enterButton.interactable = true;
+                _isValidated = true;
+            }
         }
-        else
-        {
-            tipText.text = "角色名可用";
-            enterButton.interactable = true;
-            _isValidated = true;
-        }
+        catch (OperationCanceledException) { }
     }
 
     public void OnEnterButtonClick()

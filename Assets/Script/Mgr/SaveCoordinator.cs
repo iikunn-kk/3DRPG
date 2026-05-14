@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 存档协调器 - 统一管理角色数据保存
@@ -15,7 +16,7 @@ public class SaveCoordinator : Singleton<SaveCoordinator>
     /// <summary>
     /// 汇总当前运行时的所有角色数据并保存（统一入口）
     /// </summary>
-    public async void SaveCurrentCharacterData()
+    public async UniTask SaveCurrentCharacterData()
     {
         try
         {

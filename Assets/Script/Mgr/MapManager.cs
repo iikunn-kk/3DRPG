@@ -1,7 +1,10 @@
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 public class MapManager : MonoBehaviour
 {
@@ -77,9 +80,10 @@ public class MapManager : MonoBehaviour
             // 事件最后广播，保证监听方能立即读取到已初始化的任务数据
             playerSpawned.RaiseEvent(playerCharacter, this);
             // 生成完成后保存一次（含任务初始化结果）
-            SaveCoordinator.Instance.SaveCurrentCharacterData();
+            SaveCoordinator.Instance.SaveCurrentCharacterData().Forget();
             // 新增：延迟多次尝试强制初始化装备，防止极端竞态
-            StartCoroutine(EnsureEquipmentInitSequence(playerCharacter));
+            var equipCtrl = playerCharacter.GetComponent<EquipmentController>();
+            EnsureEquipmentInitAsync(equipCtrl, this.GetCancellationTokenOnDestroy()).Forget();
         }
         else
         {
@@ -88,18 +92,22 @@ public class MapManager : MonoBehaviour
     }
 
 
-    private System.Collections.IEnumerator EnsureEquipmentInitSequence(CharacterState cs)
+    private async UniTaskVoid EnsureEquipmentInitAsync(EquipmentController equipCtrl, CancellationToken token)
     {
-        if (cs == null) yield break;
-        // 第一帧之后（等其它 OnEnable / Init 完成）
-        yield return null;
-        cs.EnsureEquipmentInitialized();
-        // 再延迟 0.2 秒再试一次（背包异步稍晚完成）
-        yield return new WaitForSeconds(0.2f);
-        cs.EnsureEquipmentInitialized();
-        // 再延迟 1 秒兜底最后一次（网络慢 / Mongo 延迟场景）
-        yield return new WaitForSeconds(0.8f);
-        cs.EnsureEquipmentInitialized();
+        try
+        {
+            if (equipCtrl == null) return;
+            // 第一帧之后（等其它 OnEnable / Init 完成）
+            await UniTask.Yield(token);
+            equipCtrl.EnsureInitialized();
+            // 再延迟 0.2 秒再试一次（背包异步稍晚完成）
+            await UniTask.Delay(TimeSpan.FromSeconds(0.2f), cancellationToken: token);
+            equipCtrl.EnsureInitialized();
+            // 再延迟 1 秒兜底最后一次（网络慢 / Mongo 延迟场景）
+            await UniTask.Delay(TimeSpan.FromSeconds(0.8f), cancellationToken: token);
+            equipCtrl.EnsureInitialized();
+        }
+        catch (OperationCanceledException) { }
     }
 
     private Vector3 GetSpawnPosition(Vector3 prevPosition)

@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Linq;
 using System;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Random = UnityEngine.Random;
 
 public class GuildMemberPanel : MonoBehaviour
@@ -241,7 +242,7 @@ public class GuildMemberPanel : MonoBehaviour
     /// 测试功能：向当前公会添加随机生成的成员
     /// </summary>
     /// <param name="count">要添加的成员数量</param>
-    public async void AddRandomMembersToGuild(int count)
+    public async UniTaskVoid AddRandomMembersToGuild(int count)
     {
         if (currentGuildData == null)
         {

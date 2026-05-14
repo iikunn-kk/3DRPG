@@ -30,9 +30,10 @@ public class UIManager : Singleton<UIManager>
         {
             if (_uiRoot == null)
             {
-                if (GameObject.Find("MainCanvas"))
+                var mainCanvas = GameObject.Find("MainCanvas");
+                if (mainCanvas)
                 {
-                    _uiRoot = GameObject.Find("MainCanvas").transform;
+                    _uiRoot = mainCanvas.transform;
                 }
                 else
                 {
@@ -263,7 +264,12 @@ public class UIManager : Singleton<UIManager>
     {
         if (_mainCanvas == null)
         {
-            _mainCanvas = GameObject.FindGameObjectWithTag("MainCanvas").GetComponent<MainCanvas>();
+            _mainCanvas = FindFirstObjectByType<MainCanvas>();
+            if (_mainCanvas == null)
+            {
+                var go = GameObject.FindGameObjectWithTag("MainCanvas");
+                if (go) _mainCanvas = go.GetComponent<MainCanvas>();
+            }
         }
         return _mainCanvas;
     }

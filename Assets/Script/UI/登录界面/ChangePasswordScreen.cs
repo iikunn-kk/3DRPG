@@ -1,8 +1,9 @@
-using System.Collections;
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Text.RegularExpressions;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 修改密码界面类，处理用户修改密码逻辑
@@ -93,75 +94,51 @@ public class ChangePasswordScreen : MonoBehaviour
         string confirmNewPassword = confirmNewPasswordInputField != null ? confirmNewPasswordInputField.text : "";
 
         // 检查用户名是否存在（通过MongoDB异步检查）
-        StartCoroutine(CheckUserAndChangePassword(username, oldPassword, newPassword, confirmNewPassword));
+        CheckUserAndChangePassword(username, oldPassword, newPassword, confirmNewPassword).Forget();
         AudioManager.Instance.PlayUISound(UISoundType.按下按钮);
     }
 
-    /// <summary>
-    /// 检查用户是否存在并修改密码
-    /// </summary>
-    /// <param name="username">用户名</param>
-    /// <param name="oldPassword">旧密码</param>
-    /// <param name="newPassword">新密码</param>
-    /// <param name="confirmNewPassword">确认新密码</param>
-    /// <returns></returns>
-    private IEnumerator CheckUserAndChangePassword(string username, string oldPassword, string newPassword, string confirmNewPassword)
+    private async UniTaskVoid CheckUserAndChangePassword(string username, string oldPassword, string newPassword, string confirmNewPassword)
     {
-        // 检查用户名是否存在
-        var userExistsTask = MongoDBManager.Instance.IsUsernameExistsAsync(username);
-        yield return new WaitUntil(() => userExistsTask.IsCompleted);
+        try
+        {
+            bool userExists = await MongoDBManager.Instance.IsUsernameExistsAsync(username);
+            if (!userExists)
+            {
+                ShowPopup("修改失败", "用户名不存在");
+                return;
+            }
 
-        if (userExistsTask.Exception != null)
-        {
-            Debug.LogError($"检查用户名时发生错误: {userExistsTask.Exception.Message}");
-            ShowPopup("修改失败", "检查用户名时发生错误");
-            yield break;
-        }
+            if (newPassword != confirmNewPassword)
+            {
+                ShowPopup("修改失败", "新密码和确认密码不一致");
+                return;
+            }
 
-        if (!userExistsTask.Result)
-        {
-            ShowPopup("修改失败", "用户名不存在");
-            yield break;
-        }
+            if (!IsPasswordStrongEnough(newPassword))
+            {
+                ShowPopup("修改失败", "密码必须包含大小写字母以及数字");
+                return;
+            }
 
-        // 检查新密码和确认密码是否一致
-        if (newPassword != confirmNewPassword)
-        {
-            ShowPopup("修改失败", "新密码和确认密码不一致");
-            yield break;
-        }
+            bool changed = await MongoDBManager.Instance.ChangePlayerPasswordAsync(username, oldPassword, newPassword);
+            if (!changed)
+            {
+                ShowPopup("修改失败", "旧密码不正确");
+                return;
+            }
 
-        // 检查密码强度
-        if (!IsPasswordStrongEnough(newPassword))
-        {
-            ShowPopup("修改失败", "密码必须包含大小写字母以及数字");
-            yield break;
-        }
-
-        // 调用MongoDBManager修改密码
-        var changePasswordTask = MongoDBManager.Instance.ChangePlayerPasswordAsync(username, oldPassword, newPassword);
-        yield return new WaitUntil(() => changePasswordTask.IsCompleted);
-
-        if (changePasswordTask.Exception != null)
-        {
-            Debug.LogError($"修改密码时发生错误: {changePasswordTask.Exception.Message}");
-            ShowPopup("修改失败", "修改密码时发生错误");
-        }
-        else if (!changePasswordTask.Result)
-        {
-            ShowPopup("修改失败", "旧密码不正确");
-        }
-        else
-        {
-            // 修改密码成功逻辑
             Debug.Log("密码修改成功");
             ShowPopup("修改成功", "密码修改成功！");
-
-            // 返回登录界面
             if (loginPanel != null)
             {
                 loginPanel.ShowLoginScreen();
             }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"修改密码时发生错误: {ex.Message}");
+            ShowPopup("修改失败", "修改密码时发生错误");
         }
     }
 

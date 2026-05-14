@@ -1,7 +1,9 @@
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using System.Collections;
 
 public class TargetDetailsPanel : MonoBehaviour
 {
@@ -16,18 +18,19 @@ public class TargetDetailsPanel : MonoBehaviour
     private MonsterBase _targetMonster;
     private MonsterCombat _targetMonsterCombat;
 
-    private Coroutine _distanceCoroutine;
+    private CancellationTokenSource _distanceCts;
     private Transform _playerTransform;
     private float _distanceUpdateInterval = 1f;
 
     // --- Unity callbacks ---
     private void OnDisable()
     {
-        // Ensure coroutines and references cleaned up when panel disabled
-        if (_distanceCoroutine != null)
+        // Ensure async tasks and references cleaned up when panel disabled
+        if (_distanceCts != null)
         {
-            StopCoroutine(_distanceCoroutine);
-            _distanceCoroutine = null;
+            _distanceCts.Cancel();
+            _distanceCts.Dispose();
+            _distanceCts = null;
         }
 
         _targetMonster = null;
@@ -73,11 +76,12 @@ public class TargetDetailsPanel : MonoBehaviour
             return;
         }
 
-        // 切换目标：先清理上一个目标的协程和引用（如果有）
-        if (_distanceCoroutine != null)
+        // 切换目标：先清理上一个目标的异步任务和引用（如果有）
+        if (_distanceCts != null)
         {
-            StopCoroutine(_distanceCoroutine);
-            _distanceCoroutine = null;
+            _distanceCts.Cancel();
+            _distanceCts.Dispose();
+            _distanceCts = null;
         }
 
         _targetMonster = targetMonster;
@@ -99,8 +103,9 @@ public class TargetDetailsPanel : MonoBehaviour
         else
             _playerTransform = null;
 
-        // 启动距离显示协程
-        _distanceCoroutine = StartCoroutine(DistanceUpdateRoutine());
+        // 启动距离显示异步任务
+        _distanceCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        DistanceUpdateLoopAsync(_distanceCts.Token).Forget();
 
         Refresh();
         gameObject.SetActive(true);
@@ -154,10 +159,11 @@ public class TargetDetailsPanel : MonoBehaviour
 
     private void Hide()
     {
-        if (_distanceCoroutine != null)
+        if (_distanceCts != null)
         {
-            StopCoroutine(_distanceCoroutine);
-            _distanceCoroutine = null;
+            _distanceCts.Cancel();
+            _distanceCts.Dispose();
+            _distanceCts = null;
         }
 
         _targetMonster = null;
@@ -165,17 +171,23 @@ public class TargetDetailsPanel : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    private IEnumerator DistanceUpdateRoutine()
+    private async UniTaskVoid DistanceUpdateLoopAsync(CancellationToken token)
     {
-        while (_targetMonster != null && _targetMonsterCombat != null && !_targetMonsterCombat.IsDead && gameObject.activeInHierarchy)
+        try
         {
-            UpdateDistanceText();
-            yield return new WaitForSeconds(_distanceUpdateInterval);
-        }
+            while (_targetMonster != null && _targetMonsterCombat != null && !_targetMonsterCombat.IsDead && gameObject.activeInHierarchy)
+            {
+                UpdateDistanceText();
+                await UniTask.Delay(TimeSpan.FromSeconds(_distanceUpdateInterval), cancellationToken: token);
+            }
 
-        _distanceCoroutine = null;
-        // 由于目标失效/死亡或面板不再活动，确保隐藏
-        Hide();
+            // 由于目标失效/死亡或面板不再活动，确保隐藏
+            Hide();
+        }
+        catch (OperationCanceledException)
+        {
+            // 取消操作时无需处理
+        }
     }
 
     private void UpdateDistanceText()

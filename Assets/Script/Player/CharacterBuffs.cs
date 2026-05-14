@@ -1,8 +1,9 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 管理挂在角色上的临时/持续 Buff（数值型）与 Buff 可视化（仅保留一个可见特效）。
@@ -42,14 +43,14 @@ public class CharacterBuffs : MonoBehaviour
         public float Value;
         public float Duration; // 初始时长
         public float ExpireAt; // Time.time + Duration
-        public Coroutine ExpireCoroutine;
+        public CancellationTokenSource ExpireCts;
     }
 
     private readonly List<ActiveBuff> _activeBuffs = new List<ActiveBuff>();
 
     // Regen
     private float _totalRegenPerSecond;
-    private Coroutine _regenCoroutine;
+    private CancellationTokenSource _regenCts;
 
     [Header("Buff VFX（只显示最新添加的1个）")]
     [Tooltip("Buff特效的父节点（为空则挂到玩家对象上）")]
@@ -89,7 +90,8 @@ public class CharacterBuffs : MonoBehaviour
         RemoveBuffBySourceAndType(source, type);
 
         var b = new ActiveBuff { Source = source, Type = type, Value = value, Duration = duration, ExpireAt = Time.time + duration };
-        b.ExpireCoroutine = StartCoroutine(BuffDurationRoutine(b));
+        b.ExpireCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        BuffDurationAsync(b, b.ExpireCts.Token).Forget();
         _activeBuffs.Add(b);
 
         RecalculateAndApply();
@@ -97,12 +99,16 @@ public class CharacterBuffs : MonoBehaviour
         CleanupOrphanVisuals();
     }
 
-    private IEnumerator BuffDurationRoutine(ActiveBuff b)
+    private async UniTaskVoid BuffDurationAsync(ActiveBuff b, CancellationToken token)
     {
-        float remaining = Mathf.Max(0f, b.ExpireAt - Time.time);
-        if (remaining > 0f)
-            yield return new WaitForSeconds(remaining);
-        RemoveBuffBySourceAndType(b.Source, b.Type);
+        try
+        {
+            float remaining = Mathf.Max(0f, b.ExpireAt - Time.time);
+            if (remaining > 0f)
+                await UniTask.Delay(TimeSpan.FromSeconds(remaining), cancellationToken: token);
+            RemoveBuffBySourceAndType(b.Source, b.Type);
+        }
+        catch (OperationCanceledException) { }
     }
 
     public void RemoveBuffBySource(string source)
@@ -111,7 +117,7 @@ public class CharacterBuffs : MonoBehaviour
         var toRemove = _activeBuffs.Where(x => x.Source == source).ToList();
         foreach (var b in toRemove)
         {
-            if (b.ExpireCoroutine != null) StopCoroutine(b.ExpireCoroutine);
+            if (b.ExpireCts != null) { b.ExpireCts.Cancel(); b.ExpireCts.Dispose(); b.ExpireCts = null; }
             _activeBuffs.Remove(b);
         }
         RecalculateAndApply();
@@ -130,7 +136,7 @@ public class CharacterBuffs : MonoBehaviour
         var b = _activeBuffs.FirstOrDefault(x => x.Source == source && x.Type == type);
         if (b != null)
         {
-            if (b.ExpireCoroutine != null) StopCoroutine(b.ExpireCoroutine);
+            if (b.ExpireCts != null) { b.ExpireCts.Cancel(); b.ExpireCts.Dispose(); b.ExpireCts = null; }
             _activeBuffs.Remove(b);
             RecalculateAndApply();
             if (!_activeBuffs.Any(x => x.Source == source))
@@ -169,37 +175,44 @@ public class CharacterBuffs : MonoBehaviour
 
         if (Mathf.Approximately(regenPerSecond, 0f))
         {
-            if (_regenCoroutine != null)
+            if (_regenCts != null)
             {
-                StopCoroutine(_regenCoroutine);
-                _regenCoroutine = null;
+                _regenCts.Cancel();
+                _regenCts.Dispose();
+                _regenCts = null;
             }
         }
         else
         {
             _totalRegenPerSecond = regenPerSecond;
-            if (_regenCoroutine == null)
+            if (_regenCts == null)
             {
-                _regenCoroutine = StartCoroutine(RegenRoutine());
+                _regenCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+                RegenLoopAsync(_regenCts.Token).Forget();
             }
         }
     }
 
-    private IEnumerator RegenRoutine()
+    private async UniTaskVoid RegenLoopAsync(CancellationToken token)
     {
-        float acc = 0f;
-        while (true)
+        try
         {
-            float dt = Time.deltaTime;
-            acc += _totalRegenPerSecond * dt;
-            if (acc >= 1f)
+            float acc = 0f;
+            while (true)
             {
-                int heal = Mathf.FloorToInt(acc);
-                acc -= heal;
-                _cs?.Heal(heal);
+                token.ThrowIfCancellationRequested();
+                float dt = Time.deltaTime;
+                acc += _totalRegenPerSecond * dt;
+                if (acc >= 1f)
+                {
+                    int heal = Mathf.FloorToInt(acc);
+                    acc -= heal;
+                    _cs?.Heal(heal);
+                }
+                await UniTask.Yield(token);
             }
-            yield return null;
         }
+        catch (OperationCanceledException) { }
     }
 
     // ========== Buff 快照 ==========

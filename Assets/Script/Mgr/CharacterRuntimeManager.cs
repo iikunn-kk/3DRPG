@@ -28,6 +28,7 @@ public class CharacterRuntimeManager : Singleton<CharacterRuntimeManager>
         }
         else
         {
+            Debug.LogWarning("[CharacterRuntimeManager] CurrentPlayerCharacter 回退到 FindGameObjectWithTag，请检查 SetPlayerCharacter 是否未调用");
             var data = GameObject.FindGameObjectWithTag("Player")?.GetComponent<CharacterState>();
             _currentCharacterState = data;
             return _currentCharacterState;

@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -17,9 +19,9 @@ public class ArcaneIntellectRuntime : MonoBehaviour
     private CharacterState _cs;
     private CharacterBuffs _cb;
 
-    private Coroutine _lifeCo;
+    private CancellationTokenSource _lifeCts;
     private bool _icdActive;
-    private Coroutine _icdCo;
+    private CancellationTokenSource _icdCts;
 
     private const float DoubleDurationSeconds = 3f;
     private const float DoubleInternalCooldown = 8f;
@@ -40,8 +42,10 @@ public class ArcaneIntellectRuntime : MonoBehaviour
             _cs.OnPlayerCriticalHit += OnPlayerCriticalHit;
         }
 
-        if (_lifeCo != null) StopCoroutine(_lifeCo);
-        _lifeCo = StartCoroutine(LifeRoutine(_duration));
+        _lifeCts?.Cancel();
+        _lifeCts?.Dispose();
+        _lifeCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        LifeRoutineAsync(_duration, _lifeCts.Token).Forget();
     }
 
     public void Refresh(int baseAttackAdd, int level, float duration)
@@ -51,8 +55,10 @@ public class ArcaneIntellectRuntime : MonoBehaviour
         _level = level;
         _duration = duration;
 
-        if (_lifeCo != null) StopCoroutine(_lifeCo);
-        _lifeCo = StartCoroutine(LifeRoutine(_duration));
+        _lifeCts?.Cancel();
+        _lifeCts?.Dispose();
+        _lifeCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        LifeRoutineAsync(_duration, _lifeCts.Token).Forget();
 
         // 确保事件订阅状态与等级一致
         if (_cs != null)
@@ -64,10 +70,14 @@ public class ArcaneIntellectRuntime : MonoBehaviour
         }
     }
 
-    private IEnumerator LifeRoutine(float dur)
+    private async UniTaskVoid LifeRoutineAsync(float dur, CancellationToken token)
     {
-        yield return new WaitForSeconds(Mathf.Max(0f, dur));
-        Expire();
+        try
+        {
+            await UniTask.Delay(TimeSpan.FromSeconds(Mathf.Max(0f, dur)), cancellationToken: token);
+            Expire();
+        }
+        catch (OperationCanceledException) { }
     }
 
     private void OnPlayerCriticalHit()
@@ -82,14 +92,20 @@ public class ArcaneIntellectRuntime : MonoBehaviour
 
         // 启动内置冷却（ICD）
         _icdActive = true;
-        if (_icdCo != null) StopCoroutine(_icdCo);
-        _icdCo = StartCoroutine(ResetIcdAfter(DoubleInternalCooldown));
+        _icdCts?.Cancel();
+        _icdCts?.Dispose();
+        _icdCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        ResetIcdAfterAsync(DoubleInternalCooldown, _icdCts.Token).Forget();
     }
 
-    private IEnumerator ResetIcdAfter(float sec)
+    private async UniTaskVoid ResetIcdAfterAsync(float sec, CancellationToken token)
     {
-        yield return new WaitForSeconds(sec);
-        _icdActive = false;
+        try
+        {
+            await UniTask.Delay(TimeSpan.FromSeconds(sec), cancellationToken: token);
+            _icdActive = false;
+        }
+        catch (OperationCanceledException) { }
     }
 
     private void Expire()

@@ -1,10 +1,10 @@
-using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Text.RegularExpressions;
 using System;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 注册界面类，处理用户注册逻辑
@@ -94,28 +94,15 @@ public class RegisterScreen : MonoBehaviour
         }
 
         // 使用MongoDB异步创建账户
-        StartCoroutine(CreateAccountAsync(username, password));
+        CreateAccountAsync(username, password).Forget();
     }
 
-    /// <summary>
-    /// 异步创建账户
-    /// </summary>
-    /// <param name="username">用户名</param>
-    /// <param name="password">密码</param>
-    /// <returns></returns>
-    private IEnumerator CreateAccountAsync(string username, string password)
+    private async UniTaskVoid CreateAccountAsync(string username, string password)
     {
-        var createAccountTask = MongoDBManager.Instance.CreatePlayerAccountAsync(username, password);
-        yield return new WaitUntil(() => createAccountTask.IsCompleted || createAccountTask.IsFaulted || createAccountTask.IsCanceled);
-        if (createAccountTask.Exception != null)
+        try
         {
-            Debug.LogError($"创建账户时发生错误: {createAccountTask.Exception.Message}");
-            ShowPopup("注册失败", "注册过程中发生未知错误");
-        }
-        else
-        {
-            // 根据任务返回的结果来显示不同的提示
-            switch (createAccountTask.Result)
+            var result = await MongoDBManager.Instance.CreatePlayerAccountAsync(username, password);
+            switch (result)
             {
                 case RegistrationResult.Success:
                     Debug.Log("注册成功");
@@ -132,10 +119,14 @@ public class RegisterScreen : MonoBehaviour
                     ShowPopup("注册失败", "无法连接到服务器，请稍后重试");
                     break;
                 case RegistrationResult.InvalidInput:
-                    // 如果你在未来添加了更多输入验证
                     ShowPopup("注册失败", "输入信息不合法");
                     break;
             }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"创建账户时发生错误: {ex.Message}");
+            ShowPopup("注册失败", "注册过程中发生未知错误");
         }
     }
 

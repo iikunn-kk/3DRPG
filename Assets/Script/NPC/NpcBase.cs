@@ -1,4 +1,6 @@
-using System.Collections;
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 
@@ -15,7 +17,7 @@ public class NpcBase : MonoBehaviour, IInteractable
     [SerializeField] private bool smoothTurn = true;
     [SerializeField] private float turnSpeed = 720f; // degrees per second
 
-    private Coroutine _turnCoroutine;
+    private CancellationTokenSource _turnCts;
 
     public NpcData NpcData 
     { 
@@ -69,7 +71,7 @@ public class NpcBase : MonoBehaviour, IInteractable
         }
     }
 
-    // 启动转向玩家的协程（如果可用）
+    // 启动转向玩家的异步任务（如果可用）
     private void StartTurnToPlayer(PlayerInteraction playerInteraction)
     {
         if (playerInteraction == null) return;
@@ -78,35 +80,41 @@ public class NpcBase : MonoBehaviour, IInteractable
         Transform playerTransform = playerInteraction.transform;
         if (playerTransform == null) return;
 
-        if (_turnCoroutine != null) StopCoroutine(_turnCoroutine);
-        _turnCoroutine = StartCoroutine(RotateToFace(playerTransform));
+        _turnCts?.Cancel();
+        _turnCts?.Dispose();
+        _turnCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        RotateToFaceAsync(playerTransform, _turnCts.Token).Forget();
     }
 
     // 平滑或瞬时将 NPC 面向目标（仅在水平面转向）
-    private IEnumerator RotateToFace(Transform target)
+    private async UniTaskVoid RotateToFaceAsync(Transform target, CancellationToken token)
     {
-        if (target == null) yield break;
-
-        Vector3 direction = target.position - transform.position;
-        direction.y = 0f; // 保持在水平面上旋转
-        if (direction.sqrMagnitude < 0.0001f) yield break;
-
-        Quaternion targetRot = Quaternion.LookRotation(direction);
-
-        if (!smoothTurn)
+        try
         {
+            if (target == null) return;
+
+            Vector3 direction = target.position - transform.position;
+            direction.y = 0f; // 保持在水平面上旋转
+            if (direction.sqrMagnitude < 0.0001f) return;
+
+            Quaternion targetRot = Quaternion.LookRotation(direction);
+
+            if (!smoothTurn)
+            {
+                transform.rotation = targetRot;
+                return;
+            }
+
+            // 平滑旋转直到角度足够小
+            while (Quaternion.Angle(transform.rotation, targetRot) > 0.5f)
+            {
+                token.ThrowIfCancellationRequested();
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, turnSpeed * Time.deltaTime);
+                await UniTask.Yield(token);
+            }
+
             transform.rotation = targetRot;
-            yield break;
         }
-
-        // 平滑旋转直到角度足够小
-        while (Quaternion.Angle(transform.rotation, targetRot) > 0.5f)
-        {
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, turnSpeed * Time.deltaTime);
-            yield return null;
-        }
-
-        transform.rotation = targetRot;
-        _turnCoroutine = null;
+        catch (OperationCanceledException) { }
     }
 }

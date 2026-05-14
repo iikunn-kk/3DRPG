@@ -1,7 +1,7 @@
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;
-using System.Collections; // 新增：用于协程
 
 public class SkillController : MonoBehaviour
 {
@@ -107,8 +107,9 @@ public class SkillController : MonoBehaviour
     /// </summary>
     private void Update()
     {
-        foreach (var skill in _playerSkills.Values.Where(s => s.CooldownTimer > 0))
+        foreach (var skill in _playerSkills.Values)
         {
+            if (skill.CooldownTimer <= 0) continue;
             skill.CooldownTimer -= Time.deltaTime;
 
             // 冷却进度事件（UI用于更新遮罩与数字）
@@ -276,15 +277,21 @@ public class SkillController : MonoBehaviour
         if (!isLast)
         {
             // 等待GCD结束后开启下一段输入窗口
-            StartCoroutine(OpenChainKickNextWindowAfterGcd(caster));
+            OpenChainKickNextWindowAfterGcdAsync(caster).Forget();
         }
     }
 
-    private IEnumerator OpenChainKickNextWindowAfterGcd(Transform caster)
+    private async UniTaskVoid OpenChainKickNextWindowAfterGcdAsync(Transform caster)
     {
-        while (globalCooldown != null && globalCooldown.IsOnGCD)
-            yield return null;
-        ChainKicksSkill.RequestOpenWindow(caster);
+        try
+        {
+            await UniTask.WaitWhile(() => globalCooldown != null && globalCooldown.IsOnGCD);
+            ChainKicksSkill.RequestOpenWindow(caster);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[SkillController] OpenChainKickNextWindowAfterGcdAsync failed: {ex}");
+        }
     }
 
     private void OnChainKicksComboEnded(Transform caster)

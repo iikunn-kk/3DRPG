@@ -34,6 +34,7 @@ public class ConfirmDeleteCharacterPanel : UIPopPanelBase
                 await _onConfirmAsync.Invoke();
             }
         }
+        catch (OperationCanceledException) { }
         catch (Exception e)
         {
             Debug.LogError($"执行删除回调时发生异常: {e.Message}");

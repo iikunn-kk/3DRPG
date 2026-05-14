@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -67,7 +68,7 @@ public static class ShopPurchaseHelper
         {
             rec.purchased += quantity;
         }
-        SaveCoordinator.Instance.SaveCurrentCharacterData();
+        SaveCoordinator.Instance.SaveCurrentCharacterData().Forget();
     }
     #endregion
 

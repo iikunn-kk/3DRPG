@@ -1,6 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using Michsky.MUIP;
 using TMPro;
 using UnityEngine;
@@ -82,7 +82,7 @@ public class LoginScreen : MonoBehaviour
         else
         {
             // 使用MongoDB进行异步登录验证
-            StartCoroutine(ValidateLoginAsync(username, password));
+            ValidateLoginAsync(username, password).Forget();
         }
         AudioManager.Instance.PlayUISound(UISoundType.按下按钮);
     }
@@ -93,39 +93,30 @@ public class LoginScreen : MonoBehaviour
     /// <param name="username">用户名</param>
     /// <param name="password">密码</param>
     /// <returns></returns>
-    private IEnumerator ValidateLoginAsync(string username, string password)
+    private async UniTaskVoid ValidateLoginAsync(string username, string password)
     {
-        var findPlayerTask = MongoDBManager.Instance.AuthenticatePlayerAsync(username, password);
-        yield return new WaitUntil(() => findPlayerTask.IsCompleted);
+        try
+        {
+            loggedInPlayerData = await MongoDBManager.Instance.AuthenticatePlayerAsync(username, password);
+            if (loggedInPlayerData == null)
+            {
+                ShowPopup("验证失败", "无法验证用户名和密码");
+                return;
+            }
 
-        if (findPlayerTask.Exception != null)
-        {
-            Debug.LogError($"登录验证时发生错误: {findPlayerTask.Exception.Message}");
-            ShowPopup("登录失败", "验证过程中发生错误");
-        }
-        else if (findPlayerTask.Result == null)
-        {
-            // 用户名或密码错误
-            ShowPopup("验证失败", "无法验证用户名和密码");
-        }
-        else
-        {
-            // 登录成功，保存玩家数据
-            loggedInPlayerData = findPlayerTask.Result;
-
-            // 设置当前玩家数据
             PlayerLogInManager.Instance.SetCurrentPlayerData(loggedInPlayerData);
-
-            // 保存设置（如果需要）
             SavePlayerSettings();
-
-            // 通知PlayerLogInManager登录成功
             if (PlayerLogInManager.Instance != null)
             {
                 PlayerLogInManager.Instance.OnLoginSuccess();
             }
 
             Debug.Log($"登录成功，欢迎 {loggedInPlayerData.username}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"登录验证时发生错误: {ex.Message}");
+            ShowPopup("登录失败", "验证过程中发生错误");
         }
     }
 

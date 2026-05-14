@@ -2,6 +2,7 @@ using System;
 using Game.UI.SkillUpgrade;
 using UnityEngine;
 using System.Linq; // 添加以便使用 ToList
+using Cysharp.Threading.Tasks;
 
 public class MainCanvas : MonoBehaviour
 {
@@ -80,7 +81,7 @@ public class MainCanvas : MonoBehaviour
         var guildPanel = UIManager.Instance.OpenPanel<GuildPanel>(out var isOpen);
         if (isOpen)
         {
-            guildPanel.Init(SessionManager.Instance.CurrentCharacter);
+            guildPanel.Init(SessionManager.Instance.CurrentCharacter).Forget();
         }
     }
 

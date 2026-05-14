@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using DG.Tweening; // 1. 引入 DOTween 命名空间
 
 public class AvatarPanel : MonoBehaviour
@@ -115,7 +116,7 @@ public class AvatarPanel : MonoBehaviour
             cs.AddExp(need);
             safetyCounter++;
         }
-        SaveCoordinator.Instance.SaveCurrentCharacterData();
+        SaveCoordinator.Instance.SaveCurrentCharacterData().Forget();
         UpdateAvatar(cs);
     }
 

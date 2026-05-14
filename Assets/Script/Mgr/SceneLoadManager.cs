@@ -1,12 +1,13 @@
 // SceneLoadManager.cs
 using System;
-using System.Collections;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 using System.IO;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 统一的场景过渡与传送管理器，完全基于 Addressables。
@@ -40,7 +41,7 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
     private string _pendingTargetScene;          // 记录即将加载的目标 scene key
     private SceneLoadCallback _pendingCallback;  // 目标场景激活后的回调
     private AsyncOperationHandle<SceneInstance> _directLoadHandle; // 直接加载句柄（可用于后续扩展卸载）
-    private Coroutine _watchdogCoroutine;
+    private CancellationTokenSource _watchdogCts;
     private const float DefaultLoadWatchdogSeconds = 30f;
 
     // 事件：外部可订阅（可选）
@@ -126,8 +127,9 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
         _pendingTargetScene = sceneKey;
         _pendingCallback = onComplete;
         // start watchdog to avoid permanent stuck
-        if (_watchdogCoroutine != null) StopCoroutine(_watchdogCoroutine);
-        _watchdogCoroutine = StartCoroutine(LoadingWatchdog(DefaultLoadWatchdogSeconds));
+        CancelCts(ref _watchdogCts);
+        _watchdogCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        LoadingWatchdogAsync(DefaultLoadWatchdogSeconds, _watchdogCts.Token).Forget();
 
         OnSceneLoadStarted?.Invoke(sceneKey);
 
@@ -141,12 +143,12 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
         {
             // 通过过渡场景加载：设置目标，先加载 LoadingScene (Single)，再由 LoadingScreenController 执行真正的目标加载。
             LoadingScreenController.TargetSceneAddress = sceneKey;
-            StartCoroutine(LoadLoadingSceneThenWaitCoroutine());
+            LoadLoadingSceneThenWaitAsync(this.GetCancellationTokenOnDestroy()).Forget();
         }
         else
         {
             // 直接加载 Addressables 场景（Single, activateOnLoad = true）
-            StartCoroutine(DirectLoadCoroutine(sceneKey));
+            DirectLoadAsync(sceneKey, this.GetCancellationTokenOnDestroy()).Forget();
         }
     }
 
@@ -165,11 +167,7 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
 
         CurrentSceneName = sceneAddress;
         _isLoading = false; // 标记完成
-        if (_watchdogCoroutine != null)
-        {
-            StopCoroutine(_watchdogCoroutine);
-            _watchdogCoroutine = null;
-        }
+        CancelCts(ref _watchdogCts);
         var cb = _pendingCallback; // 缓存后清空，防止回调里再触发加载造成意外覆盖
         _pendingCallback = null;
         _pendingTargetScene = null;
@@ -184,116 +182,100 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
     /// <summary>
     /// 加载 LoadingScene，然后等待它内部（LoadingScreenController）完成目标场景加载。
     /// </summary>
-    private IEnumerator LoadLoadingSceneThenWaitCoroutine()
+    private async UniTaskVoid LoadLoadingSceneThenWaitAsync(CancellationToken token)
     {
-        // 预检查：确认 Addressables 中存在 LoadingScene 的位置，避免 InvalidKeyException 抛出
-        var locationsHandle = Addressables.LoadResourceLocationsAsync(LoadingSceneKey);
-        yield return locationsHandle;
-        bool hasLocation = locationsHandle.Status == AsyncOperationStatus.Succeeded && locationsHandle.Result != null && locationsHandle.Result.Count > 0;
-        Addressables.Release(locationsHandle);
-
-        if (!hasLocation)
-        {
-            // Addressables 中没有 LoadingScene，则尝试加载“本地（Build Settings 中）”的 LoadingScene
-            Debug.LogWarning($"[SceneLoadManager] 未在 Addressables 中找到 {LoadingSceneKey}，尝试通过 SceneManager 加载本地 Loading 场景。");
-
-            var opLocal = SceneManager.LoadSceneAsync(LoadingSceneKey, LoadSceneMode.Single);
-            if (opLocal == null)
-            {
-                Debug.LogError($"[SceneLoadManager] 无法通过 SceneManager 加载本地 LoadingScene: {LoadingSceneKey}。将回退为直接加载目标场景。");
-                StartCoroutine(DirectLoadCoroutine(_pendingTargetScene));
-                yield break;
-            }
-
-            // 等待本地 LoadingScene 加载完成并激活
-            while (!opLocal.isDone)
-            {
-                yield return null;
-            }
-            // 本地 LoadingScene 激活后，由 LoadingScreenController 继续加载目标场景
-            yield break;
-        }
-
-        // 加载过渡场景（Single 模式自动卸载当前），避免在 catch 中 yield：仅记录失败标记，然后在 catch 之外处理
-        AsyncOperationHandle<SceneInstance> loadingHandle = default;
-        bool createHandleFailed = false;
-        string createHandleError = null;
         try
         {
-            loadingHandle = Addressables.LoadSceneAsync(LoadingSceneKey);
-        }
-        catch (Exception ex)
-        {
-            createHandleFailed = true;
-            createHandleError = ex.Message;
-        }
+            // 预检查：确认 Addressables 中存在 LoadingScene 的位置，避免 InvalidKeyException 抛出
+            var locationsHandle = Addressables.LoadResourceLocationsAsync(LoadingSceneKey);
+            await locationsHandle.ToUniTask(cancellationToken: token);
+            bool hasLocation = locationsHandle.Status == AsyncOperationStatus.Succeeded && locationsHandle.Result != null && locationsHandle.Result.Count > 0;
+            Addressables.Release(locationsHandle);
 
-        if (createHandleFailed)
-        {
-            Debug.LogError($"[SceneLoadManager] 调用 Addressables.LoadSceneAsync 时异常，回退尝试本地加载或直接加载。Key={LoadingSceneKey}, 错误: {createHandleError}");
-            var opFallbackLocal = SceneManager.LoadSceneAsync(LoadingSceneKey, LoadSceneMode.Single);
-            if (opFallbackLocal == null)
+            if (!hasLocation)
             {
-                StartCoroutine(DirectLoadCoroutine(_pendingTargetScene));
-                yield break;
-            }
-            while (!opFallbackLocal.isDone) yield return null;
-            yield break;
-        }
+                // Addressables 中没有 LoadingScene，则尝试加载"本地（Build Settings 中）"的 LoadingScene
+                Debug.LogWarning($"[SceneLoadManager] 未在 Addressables 中找到 {LoadingSceneKey}，尝试通过 SceneManager 加载本地 Loading 场景。");
 
-        yield return loadingHandle;
-        if (loadingHandle.Status != AsyncOperationStatus.Succeeded)
-        {
-            Debug.LogError($"[SceneLoadManager] 无法加载 Addressables 的 LoadingScene: {LoadingSceneKey}, 错误: {loadingHandle.OperationException}");
-            Debug.LogWarning("[SceneLoadManager] 回退尝试本地加载或直接加载目标场景");
-            var op = SceneManager.LoadSceneAsync(LoadingSceneKey, LoadSceneMode.Single);
-            if (op == null)
-            {
-                StartCoroutine(DirectLoadCoroutine(_pendingTargetScene));
-                yield break;
+                var opLocal = SceneManager.LoadSceneAsync(LoadingSceneKey, LoadSceneMode.Single);
+                if (opLocal == null)
+                {
+                    Debug.LogError($"[SceneLoadManager] 无法通过 SceneManager 加载本地 LoadingScene: {LoadingSceneKey}。将回退为直接加载目标场景。");
+                    DirectLoadAsync(_pendingTargetScene, token).Forget();
+                    return;
+                }
+
+                // 等待本地 LoadingScene 加载完成并激活
+                await opLocal.ToUniTask(cancellationToken: token);
+                // 本地 LoadingScene 激活后，由 LoadingScreenController 继续加载目标场景
+                return;
             }
-            while (!op.isDone) yield return null;
-            yield break;
+
+            // 加载过渡场景（Single 模式自动卸载当前）
+            try
+            {
+                var loadingHandle = Addressables.LoadSceneAsync(LoadingSceneKey);
+                await loadingHandle.ToUniTask(cancellationToken: token);
+            }
+            catch (Exception ex) when (!(ex is OperationCanceledException))
+            {
+                Debug.LogError($"[SceneLoadManager] 无法加载 Addressables 的 LoadingScene: {LoadingSceneKey}, 错误: {ex.Message}");
+                Debug.LogWarning("[SceneLoadManager] 回退尝试本地加载或直接加载目标场景");
+                var op = SceneManager.LoadSceneAsync(LoadingSceneKey, LoadSceneMode.Single);
+                if (op == null)
+                {
+                    DirectLoadAsync(_pendingTargetScene, token).Forget();
+                    return;
+                }
+                await op.ToUniTask(cancellationToken: token);
+                return;
+            }
+            // 此时 Addressables 的 LoadingScene 已激活，LoadingScreenController 会自动开始加载 _pendingTargetScene。
+            // 剩余逻辑（最终激活、回调）在 HandleSceneActivated 中触发。
         }
-        // 此时 Addressables 的 LoadingScene 已激活，LoadingScreenController 会自动开始加载 _pendingTargetScene。
-        // 剩余逻辑（最终激活、回调）在 HandleSceneActivated 中触发。
+        catch (OperationCanceledException) { }
     }
 
     /// <summary>
     /// 直接加载目标 Addressables 场景（Single）。
     /// </summary>
-    private IEnumerator DirectLoadCoroutine(string sceneKey)
+    private async UniTaskVoid DirectLoadAsync(string sceneKey, CancellationToken token)
     {
-        _directLoadHandle = Addressables.LoadSceneAsync(sceneKey);
-        var handle = _directLoadHandle;
-        if (!handle.IsValid())
-        {
-            Debug.LogError($"[SceneLoadManager] Addressables 句柄无效: {sceneKey}");
-            FailAndReset();
-            yield break;
-        }
-        while (!handle.IsDone)
-        {
-            OnSceneLoadProgress?.Invoke(sceneKey, handle.PercentComplete);
-            yield return null;
-        }
-        if (handle.Status != AsyncOperationStatus.Succeeded)
-        {
-            Debug.LogError($"[SceneLoadManager] 直接加载场景失败: {sceneKey}, 错误: {handle.OperationException}");
-            FailAndReset();
-            yield break;
-        }
-        // 已激活 - try to use actual loaded scene name to avoid address/name mismatch
         try
         {
-            var loadedSceneName = handle.Result.Scene.name;
-            HandleSceneActivated(loadedSceneName);
+            _directLoadHandle = Addressables.LoadSceneAsync(sceneKey);
+            var handle = _directLoadHandle;
+            if (!handle.IsValid())
+            {
+                Debug.LogError($"[SceneLoadManager] Addressables 句柄无效: {sceneKey}");
+                FailAndReset();
+                return;
+            }
+            while (!handle.IsDone)
+            {
+                token.ThrowIfCancellationRequested();
+                OnSceneLoadProgress?.Invoke(sceneKey, handle.PercentComplete);
+                await UniTask.Yield(token);
+            }
+            if (handle.Status != AsyncOperationStatus.Succeeded)
+            {
+                Debug.LogError($"[SceneLoadManager] 直接加载场景失败: {sceneKey}, 错误: {handle.OperationException}");
+                FailAndReset();
+                return;
+            }
+            // 已激活 - try to use actual loaded scene name to avoid address/name mismatch
+            try
+            {
+                var loadedSceneName = handle.Result.Scene.name;
+                HandleSceneActivated(loadedSceneName);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[SceneLoadManager] 无法从句柄获取已加载场景名，回退使用 key: {sceneKey}. 错误: {ex.Message}");
+                HandleSceneActivated(sceneKey);
+            }
         }
-        catch (Exception ex)
-        {
-            Debug.LogWarning($"[SceneLoadManager] 无法从句柄获取已加载场景名，回退使用 key: {sceneKey}. 错误: {ex.Message}");
-            HandleSceneActivated(sceneKey);
-        }
+        catch (OperationCanceledException) { }
     }
 
     #endregion
@@ -318,32 +300,43 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
         }
     }
 
-    private IEnumerator LoadingWatchdog(float timeout)
+    private async UniTaskVoid LoadingWatchdogAsync(float timeout, CancellationToken token)
     {
-        float t = 0f;
-        while (t < timeout)
+        try
         {
-            if (!_isLoading) yield break;
-            t += Time.unscaledDeltaTime;
-            yield return null;
+            float t = 0f;
+            while (t < timeout)
+            {
+                token.ThrowIfCancellationRequested();
+                if (!_isLoading) return;
+                t += Time.unscaledDeltaTime;
+                await UniTask.Yield(token);
+            }
+            if (_isLoading)
+            {
+                Debug.LogError($"[SceneLoadManager] Scene load timed out after {timeout} seconds for target: {_pendingTargetScene}. Resetting state.");
+                FailAndReset();
+            }
         }
-        if (_isLoading)
-        {
-            Debug.LogError($"[SceneLoadManager] Scene load timed out after {timeout} seconds for target: {_pendingTargetScene}. Resetting state.");
-            FailAndReset();
-        }
+        catch (OperationCanceledException) { }
     }
 
     private void FailAndReset()
     {
         _isLoading = false;
-        if (_watchdogCoroutine != null)
-        {
-            StopCoroutine(_watchdogCoroutine);
-            _watchdogCoroutine = null;
-        }
+        CancelCts(ref _watchdogCts);
         _pendingCallback = null;
         _pendingTargetScene = null;
+    }
+
+    private void CancelCts(ref CancellationTokenSource cts)
+    {
+        if (cts != null)
+        {
+            cts.Cancel();
+            cts.Dispose();
+            cts = null;
+        }
     }
 
     #endregion

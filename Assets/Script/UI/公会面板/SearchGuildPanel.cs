@@ -3,6 +3,7 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using System;
+using Cysharp.Threading.Tasks;
 using Random = UnityEngine.Random;
 
 public class SearchGuildPanel : UIPopPanelBase
@@ -50,7 +51,7 @@ public class SearchGuildPanel : UIPopPanelBase
         ClearGuildList();
 
         // 加载当前服务器上的所有公会
-        LoadGuildsForCurrentServer();
+        LoadGuildsForCurrentServer().Forget();
 
         // 初始化搜索输入框
         searchInput.onValueChanged.AddListener(OnSearchInputValueChange);
@@ -60,7 +61,7 @@ public class SearchGuildPanel : UIPopPanelBase
     /// <summary>
     /// 加载当前服务器上的所有公会
     /// </summary>
-    private async void LoadGuildsForCurrentServer()
+    private async UniTask LoadGuildsForCurrentServer()
     {
         // 获取当前服务器ID
         int serverId = GameManager.Instance.CurrentCharacter.serverId;
@@ -129,7 +130,7 @@ public class SearchGuildPanel : UIPopPanelBase
         if (guildItem != null)
         {
             GuildData guildData = guildItem.GetGuildData();
-            confirmJoinGuildPanel.Init(guildData, () => OnConfirmJoinGuildButtonClick(guildId));
+            confirmJoinGuildPanel.Init(guildData, () => OnConfirmJoinGuildButtonClick(guildId).Forget());
         }
         else
         {
@@ -149,7 +150,7 @@ public class SearchGuildPanel : UIPopPanelBase
         GuildData guildData = await MongoDBManager.Instance.GetGuildData(guildId);
         if (guildData != null)
         {
-            confirmJoinGuildPanel.Init(guildData, () => OnConfirmJoinGuildButtonClick(guildId));
+            confirmJoinGuildPanel.Init(guildData, () => OnConfirmJoinGuildButtonClick(guildId).Forget());
         }
     }
 
@@ -157,28 +158,32 @@ public class SearchGuildPanel : UIPopPanelBase
     /// 当在确认面板点击确认按钮时调用
     /// </summary>
     /// <param name="guildId">公会ID</param>
-    private async void OnConfirmJoinGuildButtonClick(string guildId)
+    private async UniTaskVoid OnConfirmJoinGuildButtonClick(string guildId)
     {
-        // 调用GameManager的加入公会功能
-        bool success = await GameManager.Instance.JoinGuild(guildId);
-
-        if (success)
+        try
         {
-            Debug.Log("成功加入公会");
-            // 可以在这里添加UI反馈，比如关闭面板或显示成功消息
-            Hide(false);
+            // 调用GameManager的加入公会功能
+            bool success = await GameManager.Instance.JoinGuild(guildId);
 
-            // 如果有NotHaveGuildPanel引用，则通知它加入公会成功
-            if (notHaveGuildPanel != null)
+            if (success)
             {
-                await notHaveGuildPanel.OnJoinGuildSuccess(guildId);
+                Debug.Log("成功加入公会");
+                // 可以在这里添加UI反馈，比如关闭面板或显示成功消息
+                Hide(false);
+
+                // 如果有NotHaveGuildPanel引用，则通知它加入公会成功
+                if (notHaveGuildPanel != null)
+                {
+                    await notHaveGuildPanel.OnJoinGuildSuccess(guildId);
+                }
             }
+            else
+            {
+                Debug.LogError("加入公会失败");
+            }
+            AudioManager.Instance.PlayUISound(UISoundType.按下按钮);
         }
-        else
-        {
-            Debug.LogError("加入公会失败");
-        }
-        AudioManager.Instance.PlayUISound(UISoundType.按下按钮);
+        catch (OperationCanceledException) { }
     }
 
     public void OnSearchInputValueChange(string value)
@@ -219,7 +224,7 @@ public class SearchGuildPanel : UIPopPanelBase
     /// 测试功能：随机生成几个公会
     /// </summary>
     /// <param name="count">要生成的公会数量</param>
-    public async void GenerateRandomGuilds(int count)
+    public async UniTaskVoid GenerateRandomGuilds(int count)
     {
         if (count <= 0)
         {

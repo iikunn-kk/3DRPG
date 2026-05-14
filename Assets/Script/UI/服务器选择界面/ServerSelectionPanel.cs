@@ -2,11 +2,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 using UnityEngine.Events;
+using Cysharp.Threading.Tasks;
 
 public class ServerSelectionPanel : MonoBehaviour
 {
     #region 字段
-    
+
     #region UI组件
     [Header("服务器按钮父物体")]
     [SerializeField] private Transform serverSelectionParent;
@@ -17,28 +18,28 @@ public class ServerSelectionPanel : MonoBehaviour
     [Header("服务器分类按钮")]
     [SerializeField] private GameObject serverCategoryButton;
     #endregion
-    
+
     [Header("服务器配置文件")]
     [SerializeField] private TextAsset serverDataJson;
     [Header("登录管理器")]
     [SerializeField] private PlayerLogInManager playerLogInManager;
     [Header("登录面板")]
     [SerializeField] private LoginPanel loginPanel; // 添加登录面板引用
-    
+
     // 服务器分类数据列表
     private List<ServerCategoryData> _serverCategories;
-    
+
     // 当前选中的服务器分类索引
     private int _selectedCategoryIndex = -1;
-    
+
     // 当前显示的服务器按钮列表
     private List<ServerSelectionMod> _currentServerMods = new List<ServerSelectionMod>();
-    
+
     // 服务器选择事件
     public UnityAction<ServerData> onServerSelected;
-    
+
     #endregion
-    
+
     #region 公共方法
 
     /// <summary>
@@ -101,7 +102,7 @@ public class ServerSelectionPanel : MonoBehaviour
         // 创建分类按钮
         for (int i = 0; i < _serverCategories.Count; i++)
         {
-             ServerCategoryData categoryData = _serverCategories[i];
+            ServerCategoryData categoryData = _serverCategories[i];
 
             GameObject categoryButtonObj = Instantiate(serverCategoryButton, serverCategoryParent);
             ServerCategoryMod categoryMod = categoryButtonObj.GetComponent<ServerCategoryMod>();
@@ -133,7 +134,7 @@ public class ServerSelectionPanel : MonoBehaviour
     #endregion
 
     #region 事件处理
-    
+
     /// <summary>
     /// 处理分类选择事件
     /// </summary>
@@ -142,58 +143,58 @@ public class ServerSelectionPanel : MonoBehaviour
     {
         // 根据分类ID查找对应的索引
         int categoryIndex = _serverCategories.FindIndex(c => c.categoryId == categoryId);
-        
+
         // 如果当前已经是选中的分类索引，则不重复刷新
         if (_selectedCategoryIndex == categoryIndex)
         {
             return;
         }
-         
-         if (categoryIndex < 0 || categoryIndex >= _serverCategories.Count)
-         {
-             Debug.LogWarning("无效的分类ID: " + categoryId);
-             return;
-         }
-         
-         // 更新选中状态
-         _selectedCategoryIndex = categoryIndex;
-         
-         // 销毁当前的服务器按钮
-         ClearCurrentServerMods();
-         
-         // 创建新的服务器按钮
-         CreateServerModsForCategory(categoryIndex);
-     }
-     
-     /// <summary>
-     /// 为指定分类创建服务器按钮
-     /// </summary>
-     /// <param name="categoryIndex">分类索引</param>
-     private void CreateServerModsForCategory(int categoryIndex)
-     {
-         ServerCategoryData categoryData = _serverCategories[categoryIndex];
-         
-         var sortedServers = categoryData.servers.OrderBy(s => GetServerStatePriority(s.serverState)).ToList();
-         
-         foreach (ServerData serverData in sortedServers)
-         {
-             GameObject serverButtonObj = Instantiate(serverSelectionButton, serverSelectionParent);
-             ServerSelectionMod serverMod = serverButtonObj.GetComponent<ServerSelectionMod>();
-             
-             if (serverMod != null)
-             {
+
+        if (categoryIndex < 0 || categoryIndex >= _serverCategories.Count)
+        {
+            Debug.LogWarning("无效的分类ID: " + categoryId);
+            return;
+        }
+
+        // 更新选中状态
+        _selectedCategoryIndex = categoryIndex;
+
+        // 销毁当前的服务器按钮
+        ClearCurrentServerMods();
+
+        // 创建新的服务器按钮
+        CreateServerModsForCategory(categoryIndex);
+    }
+
+    /// <summary>
+    /// 为指定分类创建服务器按钮
+    /// </summary>
+    /// <param name="categoryIndex">分类索引</param>
+    private void CreateServerModsForCategory(int categoryIndex)
+    {
+        ServerCategoryData categoryData = _serverCategories[categoryIndex];
+
+        var sortedServers = categoryData.servers.OrderBy(s => GetServerStatePriority(s.serverState)).ToList();
+
+        foreach (ServerData serverData in sortedServers)
+        {
+            GameObject serverButtonObj = Instantiate(serverSelectionButton, serverSelectionParent);
+            ServerSelectionMod serverMod = serverButtonObj.GetComponent<ServerSelectionMod>();
+
+            if (serverMod != null)
+            {
                 // 防护：playerLogInManager 或 当前玩家数据 可能为空，传入空字符串作为 uid 回退
                 string uid = "";
                 if (playerLogInManager != null && playerLogInManager.GetCurrentPlayerData() != null)
                 {
                     uid = playerLogInManager.GetCurrentPlayerData().uid;
                 }
-                serverMod.Init(serverData, OnServerSelected, uid);
-                 _currentServerMods.Add(serverMod);
-             }
-         }
-     }
-    
+                serverMod.Init(serverData, OnServerSelected, uid).Forget();
+                _currentServerMods.Add(serverMod);
+            }
+        }
+    }
+
     /// <summary>
     /// 获取服务器状态优先级（用于排序）
     /// </summary>
@@ -211,7 +212,7 @@ public class ServerSelectionPanel : MonoBehaviour
             default: return 0;
         }
     }
-    
+
     /// <summary>
     /// 处理服务器选择事件
     /// </summary>
@@ -222,27 +223,27 @@ public class ServerSelectionPanel : MonoBehaviour
         if (playerLogInManager != null)
         {
             playerLogInManager.SetCurrentServerId(serverData.serverId);
-            
+
             // 显示角色选择面板
             if (playerLogInManager != null)
             {
                 playerLogInManager.ShowCharacterSelectPanel();
             }
         }
-        
+
         // 触发服务器选择事件
         onServerSelected?.Invoke(serverData);
-        
+
         // 隐藏服务器选择面板
         gameObject.SetActive(false);
-        
+
         Debug.Log("选择了服务器: " + serverData.serverName + " (ID: " + serverData.serverId + ")");
     }
-    
+
     #endregion
 
     #region 服务器按钮管理
-    
+
     /// <summary>
     /// 清除当前的服务器按钮
     /// </summary>
@@ -255,14 +256,14 @@ public class ServerSelectionPanel : MonoBehaviour
                 Destroy(serverMod.gameObject);
             }
         }
-        
+
         _currentServerMods.Clear();
     }
-    
+
     #endregion
 
     #region 面板控制方法
-    
+
     /// <summary>
     /// 退出登录，返回登录界面
     /// </summary>
@@ -298,11 +299,11 @@ public class ServerSelectionPanel : MonoBehaviour
 
         Debug.Log("已退出登录，返回登录界面");
     }
-    
+
     #endregion
 
     #region 辅助类
-    
+
     /// <summary>
     /// JSON辅助类，用于解析数组格式的JSON
     /// </summary>
@@ -321,6 +322,6 @@ public class ServerSelectionPanel : MonoBehaviour
             public T[] array;
         }
     }
-    
+
     #endregion
 }

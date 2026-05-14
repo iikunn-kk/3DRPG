@@ -3,7 +3,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
-using System.Collections;
+using Cysharp.Threading.Tasks;
+using System.Threading;
 
 /// <summary>
 /// 控制基础设置面板的UI交互，包括显示设置和音频设置。
@@ -30,7 +31,7 @@ public class BasicSettingsPanel : MonoBehaviour
     };
 
     private bool _listenersAdded = false;
-    private Coroutine _deferredRefreshCoroutine;
+    private CancellationTokenSource _deferredRefreshCts;
     
     // 用于缓存您在Editor中预设的分辨率选项（窗口模式下改为使用 ResolutionManager 动态生成）
     private List<TMP_Dropdown.OptionData> _presetResolutionOptions;
@@ -141,17 +142,15 @@ public class BasicSettingsPanel : MonoBehaviour
     /// </summary>
     private void DeferredRefreshDisplayUI()
     {
-        if (_deferredRefreshCoroutine != null)
-        {
-            StopCoroutine(_deferredRefreshCoroutine);
-        }
-        _deferredRefreshCoroutine = StartCoroutine(DeferredRefreshRoutine());
+        _deferredRefreshCts?.Cancel();
+        _deferredRefreshCts = new CancellationTokenSource();
+        DeferredRefreshRoutineAsync(_deferredRefreshCts.Token).Forget();
     }
 
-    private IEnumerator DeferredRefreshRoutine()
+    private async UniTaskVoid DeferredRefreshRoutineAsync(CancellationToken token)
     {
         // 等待一帧，确保Screen.SetResolution的更改已完全应用
-        yield return null;
+        await UniTask.Yield(token);
         RebuildResolutionDropdownForCurrentMode();
     }
 

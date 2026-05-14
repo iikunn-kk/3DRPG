@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Cysharp.Threading.Tasks;
 
 public class CreateCharacterPanel : MonoBehaviour
 {
@@ -320,7 +322,7 @@ public class CreateCharacterPanel : MonoBehaviour
         {
             var obj = Instantiate(inputNamePanel, transform);
             var mod = obj.GetComponent<InputCharacterNamePanel>();
-            mod.Init(OnCharacterNameConfirmed);
+            mod.Init(name => OnCharacterNameConfirmed(name).Forget());
         }
     }
 
@@ -328,15 +330,19 @@ public class CreateCharacterPanel : MonoBehaviour
     /// 当玩家确认角色名时调用
     /// </summary>
     /// <param name="characterName">角色名</param>
-    private async void OnCharacterNameConfirmed(string characterName)
+    private async UniTaskVoid OnCharacterNameConfirmed(string characterName)
     {
-        // 创建新角色
-        bool success = await CreateNewCharacter(characterName);
-
-        if (success)
+        try
         {
-            playerLogInManager.ShowCharacterSelectPanel();
+            // 创建新角色
+            bool success = await CreateNewCharacter(characterName);
+
+            if (success)
+            {
+                playerLogInManager.ShowCharacterSelectPanel();
+            }
         }
+        catch (OperationCanceledException) { }
     }
 
     /// <summary>

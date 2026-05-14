@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -64,7 +66,7 @@ public class LightningShieldSkill : Skill
         // 触发雷击（Lv5/Lv10）
         if (PlayerSkill.Level >= 10)
         {
-            StartCoroutine(DoForwardStrikes(damage));
+            DoForwardStrikesAsync(damage, this.GetCancellationTokenOnDestroy()).Forget();
         }
         else if (PlayerSkill.Level >= 5)
         {
@@ -72,7 +74,7 @@ public class LightningShieldSkill : Skill
         }
 
         // 技能主体在电球结束后销毁
-        StartCoroutine(SelfDestructAfter(orbDuration + 0.1f));
+        SelfDestructAfterAsync(orbDuration + 0.1f).Forget();
     }
 
     private void SpawnOrbs(int damage)
@@ -122,25 +124,30 @@ public class LightningShieldSkill : Skill
         DoAoEDamage(pos, strikeRadius, damage);
     }
 
-    private IEnumerator DoForwardStrikes(int damage)
+    private async UniTaskVoid DoForwardStrikesAsync(int damage, CancellationToken token)
     {
-        int count = Mathf.Max(1, strikeCountLv10);
-        float spacing = Mathf.Max(0.5f, strikeForwardSpacing);
-        float delay = Mathf.Max(0f, strikeDelayBetween);
-        for (int i = 0; i < count; i++)
+        try
         {
-            Vector3 pos = Caster.position + Caster.forward * ((i + 1) * spacing);
-            if (strikeVfxPrefab != null)
+            int count = Mathf.Max(1, strikeCountLv10);
+            float spacing = Mathf.Max(0.5f, strikeForwardSpacing);
+            float delay = Mathf.Max(0f, strikeDelayBetween);
+            for (int i = 0; i < count; i++)
             {
-                var vfx = Instantiate(strikeVfxPrefab, pos, Quaternion.identity);
-                Destroy(vfx, 3f);
-            }
-            DoAoEDamage(pos, strikeRadius, damage);
-            if (i < count - 1 && delay > 0f)
-            {
-                yield return new WaitForSeconds(delay);
+                token.ThrowIfCancellationRequested();
+                Vector3 pos = Caster.position + Caster.forward * ((i + 1) * spacing);
+                if (strikeVfxPrefab != null)
+                {
+                    var vfx = Instantiate(strikeVfxPrefab, pos, Quaternion.identity);
+                    Destroy(vfx, 3f);
+                }
+                DoAoEDamage(pos, strikeRadius, damage);
+                if (i < count - 1 && delay > 0f)
+                {
+                    await UniTask.Delay(TimeSpan.FromSeconds(delay), cancellationToken: token);
+                }
             }
         }
+        catch (OperationCanceledException) { }
     }
 
     private void DoAoEDamage(Vector3 center, float radius, int damage)
@@ -167,12 +174,16 @@ public class LightningShieldSkill : Skill
         }
     }
 
-    private IEnumerator SelfDestructAfter(float t)
+    private async UniTaskVoid SelfDestructAfterAsync(float t)
     {
-        yield return new WaitForSeconds(Mathf.Max(0f, t));
-        if (this != null && gameObject != null)
+        try
         {
-            Destroy(gameObject);
+            await UniTask.Delay(TimeSpan.FromSeconds(Mathf.Max(0f, t)));
+            if (this != null && gameObject != null)
+            {
+                Destroy(gameObject);
+            }
         }
+        catch (OperationCanceledException) { }
     }
 }

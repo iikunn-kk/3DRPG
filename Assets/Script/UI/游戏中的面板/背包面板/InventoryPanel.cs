@@ -276,17 +276,19 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
 
     public void OnUIPanelShow()
     {
-        if (MoveMent.Instance != null)
+        var movement = CharacterRuntimeManager.Instance.CurrentPlayerCharacter()?.Movement;
+        if (movement != null)
         {
-            MoveMent.Instance.LockPlayerControl();
+            movement.LockPlayerControl();
         }
     }
 
     public void OnUIPanelHide()
     {
-        if (MoveMent.Instance != null)
+        var movement = CharacterRuntimeManager.Instance.CurrentPlayerCharacter()?.Movement;
+        if (movement != null)
         {
-            MoveMent.Instance.UnlockPlayerControl();
+            movement.UnlockPlayerControl();
         }
     }
 

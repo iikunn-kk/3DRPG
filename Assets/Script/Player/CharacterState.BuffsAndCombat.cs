@@ -1,5 +1,8 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+using Random = UnityEngine.Random;
 
 // 临时 Buff / 暴击 / 伤害输出相关
 public partial class CharacterState
@@ -28,23 +31,27 @@ public partial class CharacterState
     /// </summary>
     public void ApplyTemporaryDefenceBuffPercent(float percent, float duration)
     {
-        StartCoroutine(TempDefBuffRoutine(percent, duration));
+        TempDefBuffAsync(percent, duration, this.GetCancellationTokenOnDestroy()).Forget();
     }
 
-    private IEnumerator TempDefBuffRoutine(float percent, float duration)
+    private async UniTaskVoid TempDefBuffAsync(float percent, float duration, CancellationToken token)
     {
-        int add = Mathf.Max(0, Mathf.RoundToInt(Defence * percent));
-        if (add > 0)
+        try
         {
-            Defence += add;
-            OnValueChange();
+            int add = Mathf.Max(0, Mathf.RoundToInt(Defence * percent));
+            if (add > 0)
+            {
+                Defence += add;
+                OnValueChange();
+            }
+            await UniTask.Delay(TimeSpan.FromSeconds(Mathf.Max(0f, duration)), cancellationToken: token);
+            if (add > 0)
+            {
+                Defence -= add;
+                OnValueChange();
+            }
         }
-        yield return new WaitForSeconds(Mathf.Max(0f, duration));
-        if (add > 0)
-        {
-            Defence -= add;
-            OnValueChange();
-        }
+        catch (OperationCanceledException) { }
     }
     #endregion
 

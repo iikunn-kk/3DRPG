@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using UnityEngine.SceneManagement;
 using System;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 游戏管理器 - 全局核心管理类（逐步瘦身中）
@@ -128,5 +129,5 @@ public class GameManager : Singleton<GameManager>
     // ==================== 数据保存系统（已迁移至 SaveCoordinator） ====================
 
     [System.Obsolete("请使用 SaveCoordinator.Instance.SaveCurrentCharacterData")]
-    public async void SaveCurrentCharacterData() => SaveCoordinator.Instance.SaveCurrentCharacterData();
+    public async UniTaskVoid SaveCurrentCharacterData() => SaveCoordinator.Instance.SaveCurrentCharacterData().Forget();
 }

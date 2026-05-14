@@ -1,5 +1,7 @@
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
-using System.Collections;
 using DamageNumbersPro;
 
 /// <summary>
@@ -237,19 +239,23 @@ public class MonsterCombat : MonoBehaviour, IDamageable
             TaskEvents.TriggerEnemyKilled(monsterData.monsterID);
         }
 
-        // 启动新的死亡处理协程（先等动画完成再进入尸体存在阶段）
-        StartCoroutine(DeathFlowRoutine());
+        // 启动死亡流程（先等动画完成再进入尸体存在阶段）
+        DeathFlowAsync(this.GetCancellationTokenOnDestroy()).Forget();
     }
 
-    private IEnumerator DeathFlowRoutine()
+    private async UniTaskVoid DeathFlowAsync(CancellationToken token)
     {
-        // 先等待死亡动画时间
-        if (deathAnimationDuration > 0f)
-            yield return new WaitForSeconds(deathAnimationDuration);
-        // 再等待尸体消失时间
-        if (corpseDisappearTime > 0f)
-            yield return new WaitForSeconds(corpseDisappearTime);
-        Destroy(gameObject);
+        try
+        {
+            // 先等待死亡动画时间
+            if (deathAnimationDuration > 0f)
+                await UniTask.Delay(TimeSpan.FromSeconds(deathAnimationDuration), cancellationToken: token);
+            // 再等待尸体消失时间
+            if (corpseDisappearTime > 0f)
+                await UniTask.Delay(TimeSpan.FromSeconds(corpseDisappearTime), cancellationToken: token);
+            Destroy(gameObject);
+        }
+        catch (OperationCanceledException) { }
     }
     
     // 将经验授予玩家并显示 Toast（若配置了 expReward）

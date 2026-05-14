@@ -1,12 +1,15 @@
-﻿using System.Collections;
+﻿using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 /// <summary>
 /// 连环踢Lv10：旋风行为。
 /// - 存活duration秒；
 /// - 若范围内有敌人，朝最近敌人移动；否则四处游荡；
 /// - 当与敌人接触（接近）时，每秒对其造成一次伤害（伤害值由外部Init传入）；
-/// - 可选：使用简单的OverlapSphere做“接触”判断。
+/// - 可选：使用简单的OverlapSphere做"接触"判断。
 /// </summary>
 public class WhirlwindBehavior : MonoBehaviour
 {
@@ -26,6 +29,7 @@ public class WhirlwindBehavior : MonoBehaviour
     private float _wanderTimer;
     private Vector3 _wanderDir;
     private bool _started;
+    private CancellationTokenSource _whirlwindCts;
 
     // 新增：统一伤害路径用
     private CharacterState _cs;
@@ -42,8 +46,11 @@ public class WhirlwindBehavior : MonoBehaviour
     {
         if (_started) return;
         _wanderDir = Random.insideUnitSphere; _wanderDir.y = 0f; if (_wanderDir.sqrMagnitude < 0.01f) _wanderDir = Vector3.forward;
-        StartCoroutine(LifetimeRoutine());
-        StartCoroutine(DamageRoutine());
+
+        _whirlwindCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        LifetimeAsync(_duration, _whirlwindCts.Token).Forget();
+        DamageLoopAsync(_whirlwindCts.Token).Forget();
+
         _started = true;
     }
 
@@ -114,21 +121,30 @@ public class WhirlwindBehavior : MonoBehaviour
         }
     }
 
-    private IEnumerator LifetimeRoutine()
+    private async UniTaskVoid LifetimeAsync(float duration, CancellationToken token)
     {
-        yield return new WaitForSeconds(_duration);
-        Destroy(gameObject);
+        try
+        {
+            await UniTask.Delay(TimeSpan.FromSeconds(duration), cancellationToken: token);
+            if (this != null && gameObject != null)
+                Destroy(gameObject);
+        }
+        catch (OperationCanceledException) { }
     }
 
-    private IEnumerator DamageRoutine()
+    private async UniTaskVoid DamageLoopAsync(CancellationToken token)
     {
-        var wait = new WaitForSeconds(1f);
-        while (true)
+        try
         {
-            // 每秒寻找“接触”范围内的一个敌人并造成伤害（若有多个，这里取最近一个）
-            UpdateDamageOnNearestInRadius(contactRadius);
-            yield return wait;
+            while (true)
+            {
+                token.ThrowIfCancellationRequested();
+                // 每秒寻找"接触"范围内的一个敌人并造成伤害（若有多个，这里取最近一个）
+                UpdateDamageOnNearestInRadius(contactRadius);
+                await UniTask.Delay(TimeSpan.FromSeconds(1f), cancellationToken: token);
+            }
         }
+        catch (OperationCanceledException) { }
     }
 
     private Transform FindNearestEnemy(float radius)

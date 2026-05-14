@@ -1,9 +1,11 @@
 using UnityEngine;
 
 /// <summary>
-/// 简化版泛型单例模式基类（强制手动挂载版），适用于微信小游戏等性能敏感项目
+/// 泛型单例模式基类，适用于微信小游戏等性能敏感项目。
+/// 默认通过 FindFirstObjectByType 查找场景中的实例，找不到则自动创建。
+/// 可通过 SetInstance() 显式注入实例（用于测试或手动初始化）。
 /// </summary>
-/// <typeparam stationName="T">继承此基类的类型</typeparam>
+/// <typeparam name="T">继承此基类的类型</typeparam>
 public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 {
     // 静态实例
@@ -13,7 +15,8 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
     [SerializeField] protected bool dontDestroyOnLoad = true;
 
     /// <summary>
-    /// 单例实例属性（不再自动查找或创建实例）
+    /// 单例实例属性。优先返回通过 SetInstance 注入的实例，
+    /// 其次查找场景中已有实例，均未找到则自动创建。
     /// </summary>
     public static T Instance
     {
@@ -26,6 +29,20 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
             }
             return _instance;
         }
+    }
+
+    /// <summary>
+    /// 显式注入单例实例（用于单元测试 Mock、或脚本生命周期外手动初始化）。
+    /// 注入后 Instance 将直接返回该对象，不再自动查找或创建。
+    /// </summary>
+    /// <param name="instance">要注入的实例，传入 null 可清除当前实例</param>
+    public static void SetInstance(T instance)
+    {
+        if (_instance != null && _instance != instance && _instance.gameObject != null)
+        {
+            Debug.LogWarning($"[Singleton] {typeof(T).Name} 已有实例，将被 SetInstance 替换");
+        }
+        _instance = instance;
     }
 
     // 标记应用程序是否正在退出

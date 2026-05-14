@@ -1,6 +1,9 @@
+using System;
+using System.Threading;
 using UnityEngine;
 // 移除未使用的命名空间引用，保持文件整洁
 using DamageNumbersPro;
+using Cysharp.Threading.Tasks;
 
 public partial class CharacterState : MonoBehaviour, IDamageable
 {
@@ -75,6 +78,8 @@ public partial class CharacterState : MonoBehaviour, IDamageable
     private PlayerInteraction _interaction;
     private CharacterAnimationController _anim;
     private MoveMent _movement;
+    /// <summary>获取移动组件引用（替代旧 MoveMent.Instance 静态单例）</summary>
+    public MoveMent Movement => _movement;
 
     // --- 可供 UIManager/外部调用的委托（可选，不在 Inspector 绑定事件） ---
     public System.Action OnDeathPopupShouldShow; // Die() 时调用，外部展示弹窗
@@ -127,13 +132,20 @@ public partial class CharacterState : MonoBehaviour, IDamageable
         _originalLayer = gameObject.layer;
         _originalInteractionEnabled = _interaction ? _interaction.enabled : false;
 
+        // 订阅 EquipmentController 事件（装备变化时自动重算属性）
+        var equipCtrl = GetComponent<EquipmentController>();
+        if (equipCtrl != null)
+        {
+            equipCtrl.OnEquipmentChanged += UpdateCharacterStats;
+            if (equipCtrl.IsInitialized)
+                UpdateCharacterStats();
+        }
+
         // 直接满血
         CurrentHealth = MaxHealth;
         OnValueChange();
         // 标记核心初始化完成
         _hasRunCoreInit = true;
-        // 尝试初始化装备（如果背包已经加载完会立即生效，否则等待 OnInventoryUpdated 事件）
-        TryInitializeEquipmentFromInventory();
     }
     #endregion
 
@@ -179,44 +191,49 @@ public partial class CharacterState : MonoBehaviour, IDamageable
         if (levelUpEffectPrefab == null) return;
         Vector3 spawnPos = levelUpEffectSpawnPoint != null ? levelUpEffectSpawnPoint.position : (transform.position + Vector3.up * 1.8f);
         var instance = Instantiate(levelUpEffectPrefab, spawnPos, Quaternion.identity);
-        StartCoroutine(DestroyWhenEffectFinished(instance));
+        DestroyEffectWhenFinishedAsync(instance, this.GetCancellationTokenOnDestroy()).Forget();
         // 显示升级 toast
         UIManager.Instance.ShowToast("升级！当前等级" + Level);
     }
 
-    private System.Collections.IEnumerator DestroyWhenEffectFinished(GameObject effectInstance)
+    private async UniTaskVoid DestroyEffectWhenFinishedAsync(GameObject effectInstance, CancellationToken token)
     {
-        if (effectInstance == null)
-            yield break;
-
-        var systems = effectInstance.GetComponentsInChildren<ParticleSystem>(true);
-        if (systems == null || systems.Length == 0)
+        try
         {
-            // 如果不是粒子特效，给一个安全的延迟后销毁
-            yield return new WaitForSeconds(5f);
-            if (effectInstance != null) Destroy(effectInstance);
-            yield break;
-        }
+            if (effectInstance == null)
+                return;
 
-        bool anyAlive = true;
-        // 等待所有子粒子系统播放结束
-        while (anyAlive)
-        {
-            anyAlive = false;
-            for (int i = 0; i < systems.Length; i++)
+            var systems = effectInstance.GetComponentsInChildren<ParticleSystem>(true);
+            if (systems == null || systems.Length == 0)
             {
-                var ps = systems[i];
-                if (ps == null) continue;
-                if (ps.IsAlive(true))
-                {
-                    anyAlive = true;
-                    break;
-                }
+                // 如果不是粒子特效，给一个安全的延迟后销毁
+                await UniTask.Delay(TimeSpan.FromSeconds(5f), cancellationToken: token);
+                if (effectInstance != null) Destroy(effectInstance);
+                return;
             }
-            if (anyAlive) yield return null;
-        }
 
-        if (effectInstance != null)
-            Destroy(effectInstance);
+            bool anyAlive = true;
+            // 等待所有子粒子系统播放结束
+            while (anyAlive)
+            {
+                token.ThrowIfCancellationRequested();
+                anyAlive = false;
+                for (int i = 0; i < systems.Length; i++)
+                {
+                    var ps = systems[i];
+                    if (ps == null) continue;
+                    if (ps.IsAlive(true))
+                    {
+                        anyAlive = true;
+                        break;
+                    }
+                }
+                if (anyAlive) await UniTask.Yield(token);
+            }
+
+            if (effectInstance != null)
+                Destroy(effectInstance);
+        }
+        catch (OperationCanceledException) { }
     }
 }

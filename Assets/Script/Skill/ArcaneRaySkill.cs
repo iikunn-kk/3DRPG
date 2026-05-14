@@ -1,5 +1,8 @@
+using System;
 using System.Collections;
+using System.Threading;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 持久化的奥术射线（通道）实现：
@@ -38,8 +41,11 @@ public class ArcaneRaySkill : Skill
     private ParticleSystem[] _hitVfxSystems;
     private Transform _currentHitTarget;
 
-    // VFX 关闭延迟协程
-    private Coroutine _vfxDisableCo;
+    // VFX 关闭延迟取消令牌源
+    private CancellationTokenSource _vfxDisableCts;
+
+    // 伤害 Tick 取消令牌源
+    private CancellationTokenSource _tickCts;
 
     // firePoint 由 NormalAttackController（玩家）提供
     private Transform _firePoint;
@@ -107,8 +113,10 @@ public class ArcaneRaySkill : Skill
     {
         _isChanneling = true;
         if (line != null) line.enabled = true;
-        if (_tickCo != null) StopCoroutine(_tickCo);
-        _tickCo = StartCoroutine(TickDamageRoutine());
+        _tickCts?.Cancel();
+        _tickCts?.Dispose();
+        _tickCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        TickDamageLoopAsync(_tickCts.Token).Forget();
     }
 
     /// <summary>
@@ -118,11 +126,9 @@ public class ArcaneRaySkill : Skill
     {
         if (!_isChanneling) return;
         _isChanneling = false;
-        if (_tickCo != null)
-        {
-            StopCoroutine(_tickCo);
-            _tickCo = null;
-        }
+        _tickCts?.Cancel();
+        _tickCts?.Dispose();
+        _tickCts = null;
 
         if (line != null) line.enabled = false;
 
@@ -133,11 +139,10 @@ public class ArcaneRaySkill : Skill
         }
 
         // 立即停止命中特效（因为玩家已停止射击）
-        if (_vfxDisableCo != null)
-        {
-            StopCoroutine(_vfxDisableCo);
-            _vfxDisableCo = null;
-        }
+        _vfxDisableCts?.Cancel();
+        _vfxDisableCts?.Dispose();
+        _vfxDisableCts = null;
+
         SetHitVfxActive(false);
         _currentHitTarget = null;
         _firePoint = null;
@@ -151,85 +156,88 @@ public class ArcaneRaySkill : Skill
         UpdateBeamVisual();
     }
 
-    private IEnumerator TickDamageRoutine()
+    private async UniTaskVoid TickDamageLoopAsync(CancellationToken token)
     {
-        if (PlayerSkill == null) yield break;
-        var cs = GameManager.Instance?.CurrentPlayerCharacter();
-
-        while (_isChanneling)
+        try
         {
-            Vector3 origin = _firePoint != null ? _firePoint.position : (Caster != null ? Caster.position + Vector3.up * 1.2f : transform.position);
-            Vector3 dir = ResolveDirection(_target);
+            if (PlayerSkill == null) return;
+            var cs = GameManager.Instance?.CurrentPlayerCharacter();
 
-            bool hitSomething = false;
-            // 修改：包含 Trigger 的射线检测，并且从命中的 collider 向父级查找 MonsterBase
-            if (Physics.Raycast(origin, dir, out RaycastHit hit, _range, targetLayerMask, QueryTriggerInteraction.Collide))
+            while (_isChanneling)
             {
-                var hitCol = hit.collider;
-                var monster = hitCol != null ? hitCol.GetComponent<MonsterBase>() : null;
-                if (monster != null)
+                token.ThrowIfCancellationRequested();
+                Vector3 origin = _firePoint != null ? _firePoint.position : (Caster != null ? Caster.position + Vector3.up * 1.2f : transform.position);
+                Vector3 dir = ResolveDirection(_target);
+
+                bool hitSomething = false;
+                // 修改：包含 Trigger 的射线检测，并且从命中的 collider 向父级查找 MonsterBase
+                if (Physics.Raycast(origin, dir, out RaycastHit hit, _range, targetLayerMask, QueryTriggerInteraction.Collide))
                 {
-                    var monsterCombat = monster.GetComponent<MonsterCombat>();
-                    if (monsterCombat != null && monsterCombat.CurrentHealth > 0)
+                    var hitCol = hit.collider;
+                    var monster = hitCol != null ? hitCol.GetComponent<MonsterBase>() : null;
+                    if (monster != null)
                     {
-                        hitSomething = true;
-
-                        float total = PlayerSkill.GetDamage();
-                        if (cs != null)
+                        var monsterCombat = monster.GetComponent<MonsterCombat>();
+                        if (monsterCombat != null && monsterCombat.CurrentHealth > 0)
                         {
-                            cs.DealDamageTo(monster.transform, total);
-                        }
-                        else
-                        {
-                            monsterCombat.TakeDamage(Mathf.RoundToInt(total));
-                        }
+                            hitSomething = true;
 
-                        Vector3 vfxPos = hit.point;
-                        Transform hitVfxPoint = monster.GetHitVfxPoint();
-                        if (hitVfxPoint != null)
-                        {
-                            vfxPos = hitVfxPoint.position;
-                        }
-
-                        bool shouldShowVfx = (_target == null) || (monster.transform == _target);
-
-                        if (shouldShowVfx)
-                        {
-                            if (_currentHitTarget != monster.transform)
+                            float total = PlayerSkill.GetDamage();
+                            if (cs != null)
                             {
-                                _currentHitTarget = monster.transform;
-                                if (_vfxDisableCo != null)
-                                {
-                                    StopCoroutine(_vfxDisableCo);
-                                    _vfxDisableCo = null;
-                                }
-                                AttachAndPlayHitVfx(vfxPos, monster.transform);
+                                cs.DealDamageTo(monster.transform, total);
                             }
                             else
                             {
-                                if (_hitVfxInstance != null && _hitVfxInstance.activeSelf)
+                                monsterCombat.TakeDamage(Mathf.RoundToInt(total));
+                            }
+
+                            Vector3 vfxPos = hit.point;
+                            Transform hitVfxPoint = monster.GetHitVfxPoint();
+                            if (hitVfxPoint != null)
+                            {
+                                vfxPos = hitVfxPoint.position;
+                            }
+
+                            bool shouldShowVfx = (_target == null) || (monster.transform == _target);
+
+                            if (shouldShowVfx)
+                            {
+                                if (_currentHitTarget != monster.transform)
                                 {
-                                    _hitVfxInstance.transform.position = vfxPos;
+                                    _currentHitTarget = monster.transform;
+                                    _vfxDisableCts?.Cancel();
+                                    _vfxDisableCts?.Dispose();
+                                    _vfxDisableCts = null;
+                                    AttachAndPlayHitVfx(vfxPos, monster.transform);
+                                }
+                                else
+                                {
+                                    if (_hitVfxInstance != null && _hitVfxInstance.activeSelf)
+                                    {
+                                        _hitVfxInstance.transform.position = vfxPos;
+                                    }
                                 }
                             }
-                        }
-                        else
-                        {
-                            _currentHitTarget = null;
-                            ScheduleDisableVfx();
+                            else
+                            {
+                                _currentHitTarget = null;
+                                ScheduleDisableVfx();
+                            }
                         }
                     }
                 }
-            }
 
-            if (!hitSomething)
-            {
-                _currentHitTarget = null;
-                ScheduleDisableVfx();
-            }
+                if (!hitSomething)
+                {
+                    _currentHitTarget = null;
+                    ScheduleDisableVfx();
+                }
 
-            yield return new WaitForSeconds(Mathf.Max(0.01f, tickInterval));
+                await UniTask.Delay(TimeSpan.FromSeconds(Mathf.Max(0.01f, tickInterval)), cancellationToken: token);
+            }
         }
+        catch (OperationCanceledException) { }
     }
 
     private void UpdateBeamVisual()
@@ -266,26 +274,34 @@ public class ArcaneRaySkill : Skill
     {
         if (_hitVfxInstance == null) return;
         // 如果已有倒计时正在运行，则不重复启动
-        if (_vfxDisableCo != null) return;
-        _vfxDisableCo = StartCoroutine(DisableVfxAfterDelay());
+        if (_vfxDisableCts != null) return;
+        _vfxDisableCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        DisableVfxAfterDelayAsync(_vfxDisableCts.Token).Forget();
     }
 
-    private IEnumerator DisableVfxAfterDelay()
+    private async UniTaskVoid DisableVfxAfterDelayAsync(CancellationToken token)
     {
-        float t = 0f;
-        while (t < vfxDisableDelay)
+        try
         {
-            t += Time.deltaTime;
-            // 如果在等待期间重新开始了命中特效（有新目标），则取消关闭
-            if (_currentHitTarget != null) break;
-            yield return null;
+            float t = 0f;
+            while (t < vfxDisableDelay)
+            {
+                t += Time.deltaTime;
+                // 如果在等待期间重新开始了命中特效（有新目标），则取消关闭
+                if (_currentHitTarget != null) return;
+                await UniTask.Yield(token);
+            }
+            // 仅在 _currentHitTarget 为 null 时关闭
+            if (_currentHitTarget == null)
+            {
+                SetHitVfxActive(false);
+            }
         }
-        // 仅在 _currentHitTarget 为 null 时关闭
-        if (_currentHitTarget == null)
+        catch (OperationCanceledException) { }
+        finally
         {
-            SetHitVfxActive(false);
+            _vfxDisableCts = null;
         }
-        _vfxDisableCo = null;
     }
 
     private void SetHitVfxActive(bool active)
@@ -329,10 +345,8 @@ public class ArcaneRaySkill : Skill
 
     private void OnDisable()
     {
-        if (_tickCo != null)
-        {
-            StopCoroutine(_tickCo);
-            _tickCo = null;
-        }
+        _tickCts?.Cancel();
+        _tickCts?.Dispose();
+        _tickCts = null;
     }
 }

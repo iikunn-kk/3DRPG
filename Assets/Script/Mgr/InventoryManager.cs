@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -42,10 +43,8 @@ public class InventoryManager : Singleton<InventoryManager>
     private bool _isLoaded;
     public bool IsLoaded => _isLoaded;
 
-    // 数据库并发保存相关
-    private bool _isSaving;
-    private bool _savePending;
-    private PlayerInventoryData _latestInventoryDataToSave;
+    // 数据库并发保存：SemaphoreSlim 保证同一时间只有一个保存操作，后续调用自动排队等待
+    private readonly SemaphoreSlim _saveLock = new(1, 1);
 
 
     #endregion
@@ -110,8 +109,7 @@ public class InventoryManager : Singleton<InventoryManager>
                     {
                         Debug.Log($"合并了临时背包中的 {added} 个新物品到数据库数据中。");
                         // 立即保存一次，避免丢失
-                        _latestInventoryDataToSave = inventoryData;
-                        await ProcessSave();
+                        await SaveInventoryDataAsync(inventoryData);
                     }
                 }
                 _playerInventory = inventoryData;
@@ -151,8 +149,7 @@ public class InventoryManager : Singleton<InventoryManager>
                         if (added > 0)
                         {
                             Debug.Log($"首次创建库存时合并了临时的 {added} 个物品。");
-                            _latestInventoryDataToSave = newInventory;
-                            await ProcessSave();
+                            await SaveInventoryDataAsync(newInventory);
                         }
                     }
                     _playerInventory = newInventory; // <-- 关键修复：首次创建时赋值（已合并临时物品）
@@ -177,9 +174,9 @@ public class InventoryManager : Singleton<InventoryManager>
     }
 
     /// <summary>
-    /// 异步保存当前背包状态到数据库。
+    /// 异步保存当前背包状态到数据库（SemaphoreSlim 保证并发安全，多次调用自动排队）。
     /// </summary>
-    public async void SaveInventoryAsync()
+    public async Task SaveInventoryAsync()
     {
         if (_playerInventory == null || string.IsNullOrEmpty(_playerInventory.characterId))
         {
@@ -187,28 +184,21 @@ public class InventoryManager : Singleton<InventoryManager>
             return;
         }
 
-        _latestInventoryDataToSave = _playerInventory;
-
-        if (!_isSaving)
-        {
-            await ProcessSave();
-        }
-        else
-        {
-            _savePending = true;
-        }
+        await SaveInventoryDataAsync(_playerInventory);
     }
 
-    private async Task ProcessSave()
+    /// <summary>
+    /// 内部实现：信号量保护的数据库保存操作，可指定要保存的数据对象。
+    /// </summary>
+    private async Task SaveInventoryDataAsync(PlayerInventoryData data)
     {
-        _isSaving = true;
+        if (data == null) return;
+
+        await _saveLock.WaitAsync();
         try
         {
-            if (_latestInventoryDataToSave != null)
-            {
-                bool success = await MongoDBManager.Instance.SavePlayerInventoryDataAsync(_latestInventoryDataToSave);
-                if (!success) Debug.LogError("保存背包数据失败");
-            }
+            bool success = await MongoDBManager.Instance.SavePlayerInventoryDataAsync(data);
+            if (!success) Debug.LogError("保存背包数据失败");
         }
         catch (Exception ex)
         {
@@ -216,12 +206,7 @@ public class InventoryManager : Singleton<InventoryManager>
         }
         finally
         {
-            _isSaving = false;
-            if (_savePending)
-            {
-                _savePending = false;
-                await ProcessSave();
-            }
+            _saveLock.Release();
         }
     }
 
@@ -285,7 +270,7 @@ public class InventoryManager : Singleton<InventoryManager>
         }
         if (changed)
         {
-            SaveInventoryAsync();
+            _ = SaveInventoryAsync();
             OnInventoryUpdated?.Invoke();
         }
         return true;
@@ -385,7 +370,7 @@ public class InventoryManager : Singleton<InventoryManager>
             }
         }
 
-        SaveInventoryAsync();
+        _ = SaveInventoryAsync();
         OnInventoryUpdated?.Invoke();
 
         // 显示获得物品的 Toast 提示
@@ -444,7 +429,7 @@ public class InventoryManager : Singleton<InventoryManager>
 
             AllItems.Add(preGeneratedItem);
 
-            SaveInventoryAsync();
+            _ = SaveInventoryAsync();
             OnInventoryUpdated?.Invoke();
 
             // 触发物品收集事件
@@ -473,7 +458,7 @@ public class InventoryManager : Singleton<InventoryManager>
             Sprite icon = itemData != null ? itemData.itemSprite : null;
 
             AllItems.Remove(item);
-            SaveInventoryAsync();
+            _ = SaveInventoryAsync();
             OnInventoryUpdated?.Invoke();
 
             UIManager.Instance?.ShowToast($"移除了 {itemName}", icon);
@@ -496,7 +481,7 @@ public class InventoryManager : Singleton<InventoryManager>
             AllItems.Remove(item);
         }
 
-        SaveInventoryAsync();
+        _ = SaveInventoryAsync();
         OnInventoryUpdated?.Invoke();
         return true;
     }
@@ -585,7 +570,7 @@ public class InventoryManager : Singleton<InventoryManager>
             }
         }
 
-        SaveInventoryAsync();
+        _ = SaveInventoryAsync();
         OnInventoryUpdated?.Invoke();
     }
 
@@ -667,7 +652,7 @@ public class InventoryManager : Singleton<InventoryManager>
         if (AllItems != null)
         {
             AllItems.Clear();
-            SaveInventoryAsync();
+            _ = SaveInventoryAsync();
             OnInventoryUpdated?.Invoke(); // [修正] 清空后需要通知UI刷新
         }
     }

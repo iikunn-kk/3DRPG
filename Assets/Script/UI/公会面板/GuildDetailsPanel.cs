@@ -1,7 +1,9 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 
 public class GuildDetailsPanel : MonoBehaviour
 {
@@ -118,51 +120,57 @@ public class GuildDetailsPanel : MonoBehaviour
     /// <param name="text"></param>
     public async void OnAnnouncementEndEdit(string text)
     {
-        if (!isEditingAnnouncement) return;
-        isEditingAnnouncement = false;
-
-        if (guildAnnouncementInputField != null)
-            guildAnnouncementInputField.gameObject.SetActive(false);
-        if (guildAnnouncementText != null)
-            guildAnnouncementText.gameObject.SetActive(true);
-
-        if (currentGuildData == null) return;
-
-        string newText = text?.Trim() ?? string.Empty;
-        if (newText == currentGuildData.guildAnnouncement)
+        try
         {
-            guildAnnouncementText.text = string.IsNullOrEmpty(newText) ? "欢迎加入本公会！" : newText;
-            return;
+            if (!isEditingAnnouncement) return;
+            isEditingAnnouncement = false;
+
+            if (guildAnnouncementInputField != null)
+                guildAnnouncementInputField.gameObject.SetActive(false);
+            if (guildAnnouncementText != null)
+                guildAnnouncementText.gameObject.SetActive(true);
+
+            if (currentGuildData == null) return;
+
+            string newText = text?.Trim() ?? string.Empty;
+            if (newText == currentGuildData.guildAnnouncement)
+            {
+                guildAnnouncementText.text = string.IsNullOrEmpty(newText) ? "欢迎加入本公会！" : newText;
+                return;
+            }
+
+            currentGuildData.guildAnnouncement = newText;
+
+            bool save = await MongoDBManager.Instance.SaveGuildDataAsync(currentGuildData);
+            if (!save)
+            {
+                Debug.LogError("保存公会公告失败");
+            }
+
+            if (guildAnnouncementText != null)
+                guildAnnouncementText.text = string.IsNullOrEmpty(newText) ? "欢迎加入本公会！" : newText;
+
+            if (alreadyHaveGuildPanel != null)
+            {
+                alreadyHaveGuildPanel.UpdateGuildData(currentGuildData);
+            }
         }
-
-        currentGuildData.guildAnnouncement = newText;
-
-        bool save = await MongoDBManager.Instance.SaveGuildDataAsync(currentGuildData);
-        if (!save)
-        {
-            Debug.LogError("保存公会公告失败");
-            // 恢复原来的文本（从数据库或当前GuildData即可）
-        }
-
-        if (guildAnnouncementText != null)
-            guildAnnouncementText.text = string.IsNullOrEmpty(newText) ? "欢迎加入本公会！" : newText;
-
-        // 若面板被AlreadyHaveGuildPanel管理，通知父面板刷新（以防需要同步其他 UI）
-        if (alreadyHaveGuildPanel != null)
-        {
-            alreadyHaveGuildPanel.UpdateGuildData(currentGuildData);
-        }
+        catch (OperationCanceledException) { }
     }
 
     /// <summary>
     /// 从数据库重新加载公会数据并刷新显示
     /// </summary>
-    public async void RefreshThisPanel()
+    public async UniTaskVoid RefreshThisPanel()
     {
-        if (currentGuildData == null) return;
-        var data = await MongoDBManager.Instance.GetGuildData(currentGuildData.guildId);
-        if (data == null) return;
-        Init(data);
+        try
+        {
+            if (currentGuildData == null) return;
+            var data = await MongoDBManager.Instance.GetGuildData(currentGuildData.guildId);
+            if (data == null) return;
+            Init(data);
+        }
+        catch (OperationCanceledException) { }
     }
 
     public void SetGuildAnnouncement(string announcement)

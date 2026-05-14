@@ -67,13 +67,13 @@ public class MoveMent : MonoBehaviour
     private bool rollTriggered = false;
 
     // 控制锁定相关
-    public static bool isControlLocked = false;
+    private bool isControlLocked = false;
 
     // Alt键状态
     private bool isAltKeyDown = false;
 
-    // 添加MoveMent实例的静态引用
-    public static MoveMent Instance { get; private set; }
+    // 缓存 Camera.main 引用，避免每帧 Find
+    private Camera _cachedMainCamera;
 
     [Header("动画速度设置")]
     [Tooltip("冲刺时的动画播放速度倍率")]
@@ -129,8 +129,8 @@ public class MoveMent : MonoBehaviour
 
     void Start()
     {
-        // 设置实例引用
-        Instance = this;
+        // 缓存主摄像机引用，避免每帧 Camera.main 查找
+        _cachedMainCamera = Camera.main;
 
         // 保留原有逻辑：绑定 CharacterAnimationController（如 Inspector 没写）
         if (characterAnimation == null)
@@ -272,7 +272,7 @@ public class MoveMent : MonoBehaviour
         {
             // 有移动输入时，根据输入方向翻滚
             rollDirection = new Vector3(movementInput.x, 0, movementInput.y);
-            rollDirection = Camera.main.transform.TransformDirection(rollDirection);
+            rollDirection = _cachedMainCamera.transform.TransformDirection(rollDirection);
             rollDirection.y = 0;
             rollDirection.Normalize();
         }
@@ -365,8 +365,8 @@ public class MoveMent : MonoBehaviour
         if (!isRolling)
         {
             // 计算目标旋转（始终面向摄像机前方）
-            if (Camera.main == null) return;
-            Vector3 forward = Camera.main.transform.forward;
+            if (_cachedMainCamera == null) return;
+            Vector3 forward = _cachedMainCamera.transform.forward;
             forward.y = 0f;
             forward.Normalize();
 
@@ -387,9 +387,9 @@ public class MoveMent : MonoBehaviour
         {
             // 从摇杆输入计算方向，并转换到相机视角
             Vector3 moveDir = new Vector3(movementInput.x, 0, movementInput.y);
-            if (Camera.main != null)
+            if (_cachedMainCamera != null)
             {
-                moveDir = Camera.main.transform.TransformDirection(moveDir);
+                moveDir = _cachedMainCamera.transform.TransformDirection(moveDir);
             }
             moveDir.y = 0;
             moveDir.Normalize();
@@ -588,8 +588,8 @@ public class MoveMent : MonoBehaviour
         if (isRolling || rollTriggered || rollCooldownTimer > 0) return;
 
         // ========== 始终基于相机朝向翻滚 ==========
-        Vector3 cameraForward = Camera.main.transform.forward;
-        Vector3 cameraRight = Camera.main.transform.right;
+        Vector3 cameraForward = _cachedMainCamera.transform.forward;
+        Vector3 cameraRight = _cachedMainCamera.transform.right;
         cameraForward.y = 0;
         cameraRight.y = 0;
         cameraForward.Normalize();

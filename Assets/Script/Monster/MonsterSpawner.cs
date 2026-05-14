@@ -1,7 +1,10 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 using UnityEngine.AI;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 怪物生成点类，用于在玩家靠近时生成怪物
@@ -56,8 +59,8 @@ public class MonsterSpawner : MonoBehaviour
     private bool isSpawning;
     private float playerLeaveTimer;
     private bool isPlayerLeft;
-    private Coroutine removeCoroutine;
-    private Coroutine spawnCoroutine;
+    private CancellationTokenSource removeCts;
+    private CancellationTokenSource spawnCts;
     
     // 缓存的触发距离平方，避免每帧计算开方
     private float playerTriggerDistanceSqr;
@@ -130,23 +133,15 @@ public class MonsterSpawner : MonoBehaviour
                 playerLeaveTimer = 0f;
                 
                 // 停止生成协程
-                if (spawnCoroutine != null)
-                {
-                    StopCoroutine(spawnCoroutine);
-                    spawnCoroutine = null;
-                    isSpawning = false;
-                }
+                CancelCts(ref spawnCts);
+                isSpawning = false;
             }
             // 玩家重新进入区域
             else if (!wasPlayerInRange && isPlayerInRange)
             {
                 isPlayerLeft = false;
                 // 停止移除协程
-                if (removeCoroutine != null)
-                {
-                    StopCoroutine(removeCoroutine);
-                    removeCoroutine = null;
-                }
+                CancelCts(ref removeCts);
             }
         }
     }
@@ -174,9 +169,10 @@ public class MonsterSpawner : MonoBehaviour
             if (playerLeaveTimer >= removeDelay)
             {
                 // 启动移除协程
-                if (removeCoroutine == null)
+                if (removeCts == null)
                 {
-                    removeCoroutine = StartCoroutine(RemoveMonstersOverTime());
+                    removeCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+                    RemoveMonstersOverTimeAsync(removeCts.Token).Forget();
                 }
             }
         }
@@ -185,86 +181,91 @@ public class MonsterSpawner : MonoBehaviour
     /// <summary>
     /// 随时间逐个移除怪物（软移除：优先让其回到出生点，避免战斗中硬移除）
     /// </summary>
-    private IEnumerator RemoveMonstersOverTime()
+    private async UniTaskVoid RemoveMonstersOverTimeAsync(CancellationToken token)
     {
-        while (spawnedMonsters.Count > 0 && isPlayerLeft)
+        try
         {
-            // 找到第一个适合被移除的怪物：非空、未交战、未死亡、且靠近出生点
-            MonsterBase candidate = null;
-            MonsterBase needsReturn = null;
-
-            // 用 for 避免 foreach 分配
-            for (int i = 0; i < spawnedMonsters.Count; i++)
+            while (spawnedMonsters.Count > 0 && isPlayerLeft)
             {
-                var m = spawnedMonsters[i];
-                if (m == null) continue;
+                token.ThrowIfCancellationRequested();
+                // 找到第一个适合被移除的怪物：非空、未交战、未死亡、且靠近出生点
+                MonsterBase candidate = null;
+                MonsterBase needsReturn = null;
 
-                var combat = m.GetComponent<MonsterCombat>();
-                if (combat != null && combat.IsDead)
+                // 用 for 避免 foreach 分配
+                for (int i = 0; i < spawnedMonsters.Count; i++)
                 {
-                    // 死亡尸体的清理交给自身流程，Spawner 不硬删
-                    continue;
-                }
+                    var m = spawnedMonsters[i];
+                    if (m == null) continue;
 
-                var sm = m.GetComponent<MonsterStateMachine>();
-                if (sm != null)
-                {
-                    // 交战中（Alert/Chase/Attack）的怪不删除
-                    if (sm.IsEngaged)
+                    var combat = m.GetComponent<MonsterCombat>();
+                    if (combat != null && combat.IsDead)
                     {
+                        // 死亡尸体的清理交给自身流程，Spawner 不硬删
                         continue;
                     }
-                    // 若尚未回到出生点，先强制回程，稍后再删
-                    if (!sm.IsNearSpawn)
+
+                    var sm = m.GetComponent<MonsterStateMachine>();
+                    if (sm != null)
                     {
-                        needsReturn = m;
-                        break;
-                    }
-                    // 合格：未交战、已在出生点附近
-                    candidate = m;
-                    break;
-                }
-                else
-                {
-                    // 没有状态机，退而求其次：按距离 spawner 判断
-                    if (IsWithinSpawnBounds(m.transform.position))
-                    {
+                        // 交战中（Alert/Chase/Attack）的怪不删除
+                        if (sm.IsEngaged)
+                        {
+                            continue;
+                        }
+                        // 若尚未回到出生点，先强制回程，稍后再删
+                        if (!sm.IsNearSpawn)
+                        {
+                            needsReturn = m;
+                            break;
+                        }
+                        // 合格：未交战、已在出生点附近
                         candidate = m;
                         break;
                     }
                     else
                     {
-                        needsReturn = m;
-                        break;
+                        // 没有状态机，退而求其次：按距离 spawner 判断
+                        if (IsWithinSpawnBounds(m.transform.position))
+                        {
+                            candidate = m;
+                            break;
+                        }
+                        else
+                        {
+                            needsReturn = m;
+                            break;
+                        }
                     }
                 }
-            }
 
-            if (needsReturn != null)
-            {
-                var sm = needsReturn.GetComponent<MonsterStateMachine>();
-                if (sm != null)
+                if (needsReturn != null)
                 {
-                    sm.ForceReturnToSpawn();
+                    var sm = needsReturn.GetComponent<MonsterStateMachine>();
+                    if (sm != null)
+                    {
+                        sm.ForceReturnToSpawn();
+                    }
+                    // 等待一会儿再尝试
+                    await UniTask.Delay(TimeSpan.FromSeconds(removeInterval), cancellationToken: token);
+                    continue;
                 }
-                // 等待一会儿再尝试
-                yield return new WaitForSeconds(removeInterval);
-                continue;
-            }
 
-            if (candidate != null)
-            {
-                spawnedMonsters.Remove(candidate);
-                Destroy(candidate.gameObject);
-                yield return new WaitForSeconds(removeInterval);
-                continue;
-            }
+                if (candidate != null)
+                {
+                    spawnedMonsters.Remove(candidate);
+                    Destroy(candidate.gameObject);
+                    await UniTask.Delay(TimeSpan.FromSeconds(removeInterval), cancellationToken: token);
+                    continue;
+                }
 
-            // 没有可删对象，稍后重试
-            yield return new WaitForSeconds(removeInterval);
+                // 没有可删对象，稍后重试
+                await UniTask.Delay(TimeSpan.FromSeconds(removeInterval), cancellationToken: token);
+            }
         }
+        catch (OperationCanceledException) { }
         
-        removeCoroutine = null;
+        removeCts = null;
     }
     
     /// <summary>
@@ -294,51 +295,57 @@ public class MonsterSpawner : MonoBehaviour
     /// </summary>
     private void StartSpawnMonsters()
     {
-        if (spawnCoroutine == null)
+        if (spawnCts == null)
         {
-            spawnCoroutine = StartCoroutine(SpawnMonstersOverTime());
+            spawnCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+            SpawnMonstersOverTimeAsync(spawnCts.Token).Forget();
         }
     }
     
     /// <summary>
     /// 随时间逐个生成怪物（使用 NavMesh.SamplePosition 保证落在可行走区域）
     /// </summary>
-    private IEnumerator SpawnMonstersOverTime()
+    private async UniTaskVoid SpawnMonstersOverTimeAsync(CancellationToken token)
     {
-        isSpawning = true;
-        
-        int monstersToSpawn = Mathf.Min(monsterCount, maxMonsters - spawnedMonsters.Count);
-        
-        for (int i = 0; i < monstersToSpawn; i++)
+        try
         {
-            // 检查是否仍然满足生成条件
-            if (!isPlayerInRange || spawnedMonsters.Count >= maxMonsters)
+            isSpawning = true;
+            
+            int monstersToSpawn = Mathf.Min(monsterCount, maxMonsters - spawnedMonsters.Count);
+            
+            for (int i = 0; i < monstersToSpawn; i++)
             {
-                break;
-            }
-            
-            // 在生成点半径范围内找一个 NavMesh 合法点
-            Vector3 spawnPos = GetRandomPointInBounds();
-            
-            // 生成怪物
-            GameObject monsterObj = Instantiate(monsterData.monsterModel, spawnPos, Quaternion.identity);
-            MonsterBase monster = monsterObj.GetComponent<MonsterBase>();
-            
-            if (monster != null)
-            {
-                // 初始化怪物数据
-                monster.Init(monsterData, player,this);
-                spawnedMonsters.Add(monster);
-            }
-            
-            // 等待下一次生成
-            if (i < monstersToSpawn - 1) // 如果不是最后一个怪物，则等待
-            {
-                yield return new WaitForSeconds(spawnInterval);
+                token.ThrowIfCancellationRequested();
+                // 检查是否仍然满足生成条件
+                if (!isPlayerInRange || spawnedMonsters.Count >= maxMonsters)
+                {
+                    break;
+                }
+                
+                // 在生成点半径范围内找一个 NavMesh 合法点
+                Vector3 spawnPos = GetRandomPointInBounds();
+                
+                // 生成怪物
+                GameObject monsterObj = Instantiate(monsterData.monsterModel, spawnPos, Quaternion.identity);
+                MonsterBase monster = monsterObj.GetComponent<MonsterBase>();
+                
+                if (monster != null)
+                {
+                    // 初始化怪物数据
+                    monster.Init(monsterData, player,this);
+                    spawnedMonsters.Add(monster);
+                }
+                
+                // 等待下一次生成
+                if (i < monstersToSpawn - 1) // 如果不是最后一个怪物，则等待
+                {
+                    await UniTask.Delay(TimeSpan.FromSeconds(spawnInterval), cancellationToken: token);
+                }
             }
         }
+        catch (OperationCanceledException) { }
         
-        spawnCoroutine = null;
+        spawnCts = null;
         isSpawning = false;
     }
     
@@ -370,19 +377,11 @@ public class MonsterSpawner : MonoBehaviour
     public void ClearSpawnedMonsters()
     {
         // 停止移除协程
-        if (removeCoroutine != null)
-        {
-            StopCoroutine(removeCoroutine);
-            removeCoroutine = null;
-        }
+        CancelCts(ref removeCts);
         
         // 停止生成协程
-        if (spawnCoroutine != null)
-        {
-            StopCoroutine(spawnCoroutine);
-            spawnCoroutine = null;
-            isSpawning = false;
-        }
+        CancelCts(ref spawnCts);
+        isSpawning = false;
         
         // 使用for循环而不是foreach避免enumerator分配
         for (int i = spawnedMonsters.Count - 1; i >= 0; i--)
@@ -461,19 +460,11 @@ public class MonsterSpawner : MonoBehaviour
     public void OnPlayerDeath(GameObject playerObj)
     {
         // 停止生成协程
-        if (spawnCoroutine != null)
-        {
-            StopCoroutine(spawnCoroutine);
-            spawnCoroutine = null;
-            isSpawning = false;
-        }
+        CancelCts(ref spawnCts);
+        isSpawning = false;
 
         // 停止移除协程
-        if (removeCoroutine != null)
-        {
-            StopCoroutine(removeCoroutine);
-            removeCoroutine = null;
-        }
+        CancelCts(ref removeCts);
 
         // 禁用所有已生成怪物的攻击/AI，距离玩家一定范围内的怪物播放胜利/庆祝动画
         if (spawnedMonsters != null)
@@ -539,6 +530,16 @@ public class MonsterSpawner : MonoBehaviour
     {
         Init(playerObj.GetComponent<CharacterState>());
     }
+    private void CancelCts(ref CancellationTokenSource cts)
+    {
+        if (cts != null)
+        {
+            cts.Cancel();
+            cts.Dispose();
+            cts = null;
+        }
+    }
+
     /// <summary>
     /// 在Scene视图中绘制生成范围 Gizmos
     /// </summary>

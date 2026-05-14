@@ -1,4 +1,5 @@
 using System;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -90,7 +91,7 @@ public class PlayerCurrencyManager : Singleton<PlayerCurrencyManager>
         print("减少金钱" + amount + "剩余" + Money);
         moneyChangedEvent?.RaiseEvent(Money, this);
         UIManager.Instance.ShowToast("消耗了金币" + amount, iconImage);
-        SaveCoordinator.Instance.SaveCurrentCharacterData();
+        SaveCoordinator.Instance.SaveCurrentCharacterData().Forget();
         return true;
     }
 
@@ -136,7 +137,7 @@ public class PlayerCurrencyManager : Singleton<PlayerCurrencyManager>
         Diamonds -= amount;
         diamondsChangedEvent.RaiseEvent(Diamonds, this);
         UIManager.Instance.ShowToast("消耗了钻石" + amount, gemImage);
-        SaveCoordinator.Instance.SaveCurrentCharacterData();
+        SaveCoordinator.Instance.SaveCurrentCharacterData().Forget();
         return true;
     }
 

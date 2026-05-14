@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Cysharp.Threading.Tasks;
+using UnityEngine;
 
 // 经验 / 治疗 / 消耗品相关逻辑
 public partial class CharacterState
@@ -76,7 +77,7 @@ public partial class CharacterState
         {
             PlayLevelUpEffect();
         }
-        SaveCoordinator.Instance.SaveCurrentCharacterData();
+        SaveCoordinator.Instance.SaveCurrentCharacterData().Forget();
     }
 
     private void LevelUp()

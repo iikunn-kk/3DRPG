@@ -1,29 +1,70 @@
-using System.Collections.Generic;
+using System;
 using UnityEngine;
-using UnityEngine.Events;
 
+/// <summary>
+/// ScriptableObject 事件基类（带参数）。
+/// 广播者调用 RaiseEvent，所有通过 BaseEventListener 订阅的监听者收到回调。
+/// 使用 System.Action&lt;T&gt; 替代 UnityAction&lt;T&gt; 以减少 GC 分配。
+/// </summary>
+/// <typeparam name="T">事件传递的数据类型</typeparam>
 public class BaseEventSO<T> : ScriptableObject
 {
-    /// <summary>
-    /// 此代码逻辑:
-    /// 将广播者全部收集到这个文件里,并且发送给所有的监听者
-    /// 当广播者需要广播的时候,就把自己标记给这个文件,
-    /// 触发的时候,监听者会根据文件里标记的广播者,执行所有的方法
-    /// T为需要传递的数据类型
-    /// </summary>
     [TextArea]
-    public string description;//描述
-    //这个方法里只内置了一个一键启动,触发的时候,就会执行所有的方法
-    public UnityAction<T> onEventRaised;
-    public string lastSender;
+    public string description;
+
     /// <summary>
-    /// 广播
+    /// 事件回调列表，使用 C# 原生 Action 减少 GC（替代 UnityEngine.Events.UnityAction）
     /// </summary>
-    /// <param stationName="value">事件变量</param>
-    /// <param stationName="sender">广播者</param>
-    public void RaiseEvent(T value,object sender)
+    public Action<T> onEventRaised;
+
+    [SerializeField, Tooltip("上次广播者（调试用）")]
+    private string _lastSender;
+    public string lastSender => _lastSender;
+
+    [SerializeField, Tooltip("当前订阅数（调试用）")]
+    private int _subscriberCount;
+
+    /// <summary>
+    /// 当前订阅者数量（编辑器可查看）
+    /// </summary>
+    public int SubscriberCount
+    {
+        get
+        {
+            if (onEventRaised != null)
+                _subscriberCount = onEventRaised.GetInvocationList().Length;
+            else
+                _subscriberCount = 0;
+            return _subscriberCount;
+        }
+    }
+
+    /// <summary>
+    /// 广播事件
+    /// </summary>
+    /// <param name="value">事件数据</param>
+    /// <param name="sender">广播者</param>
+    public void RaiseEvent(T value, object sender)
     {
         onEventRaised?.Invoke(value);
-        lastSender = sender.ToString();
+        _lastSender = sender?.ToString() ?? "null";
+#if UNITY_EDITOR
+        _subscriberCount = onEventRaised?.GetInvocationList().Length ?? 0;
+#endif
+    }
+
+    /// <summary>
+    /// 移除所有监听者（用于场景卸载或测试清理）
+    /// </summary>
+    public void RemoveAllListeners()
+    {
+        onEventRaised = null;
+        _subscriberCount = 0;
+    }
+
+    private void OnDisable()
+    {
+        // ScriptableObject 禁用时清理，防止残留引用
+        RemoveAllListeners();
     }
 }

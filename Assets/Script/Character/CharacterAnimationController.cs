@@ -1,6 +1,7 @@
-using System.Collections;
 using UnityEngine;
 using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 通用的玩家/角色动画控制器：
@@ -69,13 +70,13 @@ public class CharacterAnimationController : MonoBehaviour
     // 连接 MoveMent（如果有）以便在动作期间锁定/解锁玩家控制
     private MoveMent _movement;
 
-    // coroutine handle for auto-unlock（动作类）
-    private Coroutine _unlockCoroutine;
+    // cts for auto-unlock（动作类）
+    private CancellationTokenSource _unlockCts;
 
-    // 受伤层淡入淡出协程句柄
-    private Coroutine _hurtLayerCoroutine;
-    // 仅用于受伤临时锁的协程（不触发动画状态复位）
-    private Coroutine _hurtUnlockCoroutine;
+    // 受伤层淡入淡出 cts
+    private CancellationTokenSource _hurtLayerCts;
+    // 仅用于受伤临时锁的 cts（不触发动画状态复位）
+    private CancellationTokenSource _hurtUnlockCts;
 
     // 事件：通道类攻击的前摇结束（进入Loop的逻辑窗口）
     public event Action AttackPrecastComplete; // 由动画事件 OnAttackPrecastComplete 调用
@@ -151,8 +152,9 @@ public class CharacterAnimationController : MonoBehaviour
 
         if (useTimeout && lockDuration > 0f)
         {
-            if (_unlockCoroutine != null) StopCoroutine(_unlockCoroutine);
-            _unlockCoroutine = StartCoroutine(UnlockAfterDelay(lockDuration));
+            CancelCts(ref _unlockCts);
+            _unlockCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+            UnlockAfterDelayAsync(lockDuration, _unlockCts.Token).Forget();
         }
     }
 
@@ -178,8 +180,9 @@ public class CharacterAnimationController : MonoBehaviour
 
         if (useTimeout && lockDuration > 0f)
         {
-            if (_unlockCoroutine != null) StopCoroutine(_unlockCoroutine);
-            _unlockCoroutine = StartCoroutine(UnlockAfterDelay(lockDuration));
+            CancelCts(ref _unlockCts);
+            _unlockCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+            UnlockAfterDelayAsync(lockDuration, _unlockCts.Token).Forget();
         }
     }
 
@@ -205,8 +208,9 @@ public class CharacterAnimationController : MonoBehaviour
 
         if (useTimeout && lockDuration > 0f)
         {
-            if (_unlockCoroutine != null) StopCoroutine(_unlockCoroutine);
-            _unlockCoroutine = StartCoroutine(UnlockAfterDelay(lockDuration));
+            CancelCts(ref _unlockCts);
+            _unlockCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+            UnlockAfterDelayAsync(lockDuration, _unlockCts.Token).Forget();
         }
     }
 
@@ -225,11 +229,12 @@ public class CharacterAnimationController : MonoBehaviour
         if (!isChanneling && lockControlOnHurtWhenNotChanneling && _movement != null)
         {
             _movement.LockPlayerControl();
-            if (_hurtUnlockCoroutine != null) StopCoroutine(_hurtUnlockCoroutine);
+            CancelCts(ref _hurtUnlockCts);
             float duration = lockDuration > 0f ? lockDuration : hurtLockDuration;
             if (duration > 0f)
             {
-                _hurtUnlockCoroutine = StartCoroutine(UnlockOnlyAfterDelay(duration));
+                _hurtUnlockCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+                UnlockOnlyAfterDelayAsync(duration, _hurtUnlockCts.Token).Forget();
             }
             else
             {
@@ -244,8 +249,8 @@ public class CharacterAnimationController : MonoBehaviour
         if (animator == null) return;
         _isDead = true;
         // 受伤层立即归零
-        if (_hurtLayerCoroutine != null) { StopCoroutine(_hurtLayerCoroutine); _hurtLayerCoroutine = null; }
-        if (_hurtUnlockCoroutine != null) { StopCoroutine(_hurtUnlockCoroutine); _hurtUnlockCoroutine = null; }
+        CancelCts(ref _hurtLayerCts);
+        CancelCts(ref _hurtUnlockCts);
         if (hurtLayerIndex >= 0 && hurtLayerIndex < animator.layerCount) animator.SetLayerWeight(hurtLayerIndex, 0f);
 
         SetMoveSpeeds(0f, 0f);
@@ -273,8 +278,8 @@ public class CharacterAnimationController : MonoBehaviour
     public void ForceLockAfterDeath()
     {
         // 供外部（死亡逻辑）调用，确保彻底锁定并停止任何自动解锁协程
-        if (_unlockCoroutine != null) { StopCoroutine(_unlockCoroutine); _unlockCoroutine = null; }
-        if (_hurtUnlockCoroutine != null) { StopCoroutine(_hurtUnlockCoroutine); _hurtUnlockCoroutine = null; }
+        CancelCts(ref _unlockCts);
+        CancelCts(ref _hurtUnlockCts);
         _movement?.LockPlayerControl();
     }
 
@@ -325,20 +330,26 @@ public class CharacterAnimationController : MonoBehaviour
         SkillCastPointReached?.Invoke();
     }
 
-    // coroutine for auto-unlock
-    private IEnumerator UnlockAfterDelay(float seconds)
+    // async for auto-unlock
+    private async UniTaskVoid UnlockAfterDelayAsync(float seconds, CancellationToken token)
     {
-        yield return new WaitForSecondsRealtime(seconds);
-        OnActionAnimationEnd();
-        _unlockCoroutine = null;
+        try
+        {
+            await UniTask.Delay(TimeSpan.FromSeconds(seconds), ignoreTimeScale: true, cancellationToken: token);
+            OnActionAnimationEnd();
+        }
+        catch (OperationCanceledException) { }
     }
 
     // 仅用于受伤短锁的解锁，不影响通道等动画参数
-    private IEnumerator UnlockOnlyAfterDelay(float seconds)
+    private async UniTaskVoid UnlockOnlyAfterDelayAsync(float seconds, CancellationToken token)
     {
-        yield return new WaitForSecondsRealtime(seconds);
-        _movement?.UnlockPlayerControl();
-        _hurtUnlockCoroutine = null;
+        try
+        {
+            await UniTask.Delay(TimeSpan.FromSeconds(seconds), ignoreTimeScale: true, cancellationToken: token);
+            _movement?.UnlockPlayerControl();
+        }
+        catch (OperationCanceledException) { }
     }
 
     // 启动受伤叠加层（淡入-保持-淡出）
@@ -346,37 +357,42 @@ public class CharacterAnimationController : MonoBehaviour
     {
         if (animator == null) return;
         if (hurtLayerIndex < 0 || hurtLayerIndex >= animator.layerCount) return;
-        if (_hurtLayerCoroutine != null) StopCoroutine(_hurtLayerCoroutine);
-        _hurtLayerCoroutine = StartCoroutine(HurtLayerRoutine());
+        CancelCts(ref _hurtLayerCts);
+        _hurtLayerCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        HurtLayerRoutineAsync(_hurtLayerCts.Token).Forget();
     }
 
-    private IEnumerator HurtLayerRoutine()
+    private async UniTaskVoid HurtLayerRoutineAsync(CancellationToken token)
     {
-        // 淡入
-        yield return FadeLayerWeight(hurtLayerIndex, 1f, Mathf.Max(0f, hurtFadeIn));
-        // 保持
-        float hold = Mathf.Max(0f, hurtHold);
-        if (hold > 0f) yield return new WaitForSecondsRealtime(hold);
-        // 淡出
-        yield return FadeLayerWeight(hurtLayerIndex, 0f, Mathf.Max(0f, hurtFadeOut));
-        _hurtLayerCoroutine = null;
+        try
+        {
+            // 淡入
+            await FadeLayerWeightAsync(hurtLayerIndex, 1f, Mathf.Max(0f, hurtFadeIn), token);
+            // 保持
+            float hold = Mathf.Max(0f, hurtHold);
+            if (hold > 0f) await UniTask.Delay(TimeSpan.FromSeconds(hold), ignoreTimeScale: true, cancellationToken: token);
+            // 淡出
+            await FadeLayerWeightAsync(hurtLayerIndex, 0f, Mathf.Max(0f, hurtFadeOut), token);
+        }
+        catch (OperationCanceledException) { }
     }
 
-    private IEnumerator FadeLayerWeight(int layer, float target, float duration)
+    private async UniTask FadeLayerWeightAsync(int layer, float target, float duration, CancellationToken token)
     {
         float start = animator.GetLayerWeight(layer);
         if (Mathf.Approximately(duration, 0f))
         {
             animator.SetLayerWeight(layer, target);
-            yield break;
+            return;
         }
         float t = 0f;
         while (t < duration)
         {
+            token.ThrowIfCancellationRequested();
             t += Time.unscaledDeltaTime;
             float w = Mathf.Lerp(start, target, Mathf.Clamp01(t / duration));
             animator.SetLayerWeight(layer, w);
-            yield return null;
+            await UniTask.Yield(token);
         }
         animator.SetLayerWeight(layer, target);
     }
@@ -394,11 +410,7 @@ public class CharacterAnimationController : MonoBehaviour
     public void OnActionAnimationEnd()
     {
         // 如果在自动解锁协程中，停止它
-        if (_unlockCoroutine != null)
-        {
-            StopCoroutine(_unlockCoroutine);
-            _unlockCoroutine = null;
-        }
+        CancelCts(ref _unlockCts);
 
         // 结束时确保通道标志复位
         if (animator != null && _channelingBoolHash != 0)
@@ -422,11 +434,7 @@ public class CharacterAnimationController : MonoBehaviour
     public void ForceEndActionImmediate()
     {
         // Stop any pending auto-unlock
-        if (_unlockCoroutine != null)
-        {
-            StopCoroutine(_unlockCoroutine);
-            _unlockCoroutine = null;
-        }
+        CancelCts(ref _unlockCts);
 
         // 结束时确保通道标志复位
         if (animator != null && _channelingBoolHash != 0)
@@ -478,7 +486,7 @@ public class CharacterAnimationController : MonoBehaviour
         if (animator == null) return;
         // 如果处于动作锁定阶段，忽略移动速度更新（避免打断动作）
 
-        if (_movement != null && MoveMent.isControlLocked) return;
+        if (_movement != null && _movement.IsControlLocked()) return;
         // Debug.Log(horizontal + " " + vertical);
         if (_hSpeedHash != 0) animator.SetFloat(_vSpeedHash, horizontal);
         if (_vSpeedHash != 0) animator.SetFloat(_hSpeedHash, vertical);
@@ -545,7 +553,7 @@ public class CharacterAnimationController : MonoBehaviour
         // Ensure no stale lock remains if the controller gets disabled
         ForceEndActionImmediate();
         // 停止并归零受伤层
-        if (_hurtLayerCoroutine != null) { StopCoroutine(_hurtLayerCoroutine); _hurtLayerCoroutine = null; }
+        CancelCts(ref _hurtLayerCts);
         if (animator != null && hurtLayerIndex >= 0 && hurtLayerIndex < animator.layerCount) animator.SetLayerWeight(hurtLayerIndex, 0f);
     }
 
@@ -553,6 +561,16 @@ public class CharacterAnimationController : MonoBehaviour
     {
         // Ensure cleanup on destroy as well
         ForceEndActionImmediate();
-        if (_hurtLayerCoroutine != null) { StopCoroutine(_hurtLayerCoroutine); _hurtLayerCoroutine = null; }
+        CancelCts(ref _hurtLayerCts);
+    }
+
+    private void CancelCts(ref CancellationTokenSource cts)
+    {
+        if (cts != null)
+        {
+            cts.Cancel();
+            cts.Dispose();
+            cts = null;
+        }
     }
 }

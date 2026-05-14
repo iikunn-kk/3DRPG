@@ -1,8 +1,10 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
-using System.Collections;
+using Cysharp.Threading.Tasks;
+using System.Threading;
 
 public class MapRegionIcon : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
@@ -29,7 +31,7 @@ public class MapRegionIcon : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     private bool _isTracked;
     private bool _selected;
     private bool _isCurrent;
-    private Coroutine _clickRoutine;
+    private CancellationTokenSource _clickCts;
     private const float DoubleClickThreshold = 0.35f; // 双击判定时间
     #endregion
 
@@ -86,22 +88,24 @@ public class MapRegionIcon : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     #region 私有方法
     private void OnButtonClicked()
     {
-        if (_clickRoutine != null)
+        if (_clickCts != null)
         {
-            StopCoroutine(_clickRoutine);
-            _clickRoutine = null;
+            _clickCts.Cancel();
+            _clickCts.Dispose();
+            _clickCts = null;
             _onClick?.Invoke(_data, this, true); // 双击
         }
         else
         {
-            _clickRoutine = StartCoroutine(ClickRoutine()); // 等待可能的第二次点击
+            _clickCts = new CancellationTokenSource();
+            ClickRoutineAsync(_clickCts.Token).Forget();
         }
     }
 
-    private IEnumerator ClickRoutine()
+    private async UniTaskVoid ClickRoutineAsync(CancellationToken token)
     {
-        yield return new WaitForSeconds(DoubleClickThreshold);
-        _clickRoutine = null;
+        await UniTask.Delay(TimeSpan.FromSeconds(DoubleClickThreshold), cancellationToken: token);
+        _clickCts = null;
         _onClick?.Invoke(_data, this, false); // 确认单击
     }
     #endregion
@@ -119,11 +123,9 @@ public class MapRegionIcon : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     private void OnDisable()
     {
-        if (_clickRoutine != null)
-        {
-            StopCoroutine(_clickRoutine);
-            _clickRoutine = null;
-        }
+        _clickCts?.Cancel();
+        _clickCts?.Dispose();
+        _clickCts = null;
     }
     #endregion
 }

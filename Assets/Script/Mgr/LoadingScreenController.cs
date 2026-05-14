@@ -1,4 +1,4 @@
-using System.Collections;
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,6 +6,8 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.AddressableAssets;
 using UnityEngine.SceneManagement;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 控制加载界面，异步加载Addressable场景。
@@ -48,123 +50,128 @@ public class LoadingScreenController : MonoBehaviour
             return;
         }
 
-        StartCoroutine(LoadTargetSceneAsync());
+        LoadTargetSceneAsync(this.GetCancellationTokenOnDestroy()).Forget();
     }
 
     /// <summary>
     /// 异步加载场景的核心协程。
     /// </summary>
-    private IEnumerator LoadTargetSceneAsync()
+    private async UniTaskVoid LoadTargetSceneAsync(CancellationToken token)
     {
-        // 1. 记录加载开始的时间点
-        float startTime = Time.unscaledTime;
-
-        // 预检查：目标场景是否存在于 Addressables
-        var locationsHandle = Addressables.LoadResourceLocationsAsync(TargetSceneAddress);
-        yield return locationsHandle;
-        bool addressableExists = locationsHandle.Status == AsyncOperationStatus.Succeeded && locationsHandle.Result != null && locationsHandle.Result.Count > 0;
-        Addressables.Release(locationsHandle);
-
-        if (addressableExists)
+        try
         {
-            // Addressables 路径（不立即激活）
-            _loadOperationHandle = Addressables.LoadSceneAsync(TargetSceneAddress, activateOnLoad: false);
+            // 1. 记录加载开始的时间点
+            float startTime = Time.unscaledTime;
 
-            // 等待资源加载过程完成并平滑 UI
-            while (!_loadOperationHandle.IsDone)
+            // 预检查：目标场景是否存在于 Addressables
+            var locationsHandle = Addressables.LoadResourceLocationsAsync(TargetSceneAddress);
+            await locationsHandle.ToUniTask(cancellationToken: token);
+            bool addressableExists = locationsHandle.Status == AsyncOperationStatus.Succeeded && locationsHandle.Result != null && locationsHandle.Result.Count > 0;
+            Addressables.Release(locationsHandle);
+
+            if (addressableExists)
             {
-                if (_loadOperationHandle.Status == AsyncOperationStatus.Failed)
+                // Addressables 路径（不立即激活）
+                _loadOperationHandle = Addressables.LoadSceneAsync(TargetSceneAddress, activateOnLoad: false);
+
+                // 等待资源加载过程完成并平滑 UI
+                while (!_loadOperationHandle.IsDone)
                 {
-                    Debug.LogError($"[LoadingScreenController] 加载场景 '{TargetSceneAddress}' 失败: {_loadOperationHandle.OperationException}");
-                    yield break;
+                    token.ThrowIfCancellationRequested();
+                    if (_loadOperationHandle.Status == AsyncOperationStatus.Failed)
+                    {
+                        Debug.LogError($"[LoadingScreenController] 加载场景 '{TargetSceneAddress}' 失败: {_loadOperationHandle.OperationException}");
+                        return;
+                    }
+
+                    float realProgress = Mathf.Clamp01(_loadOperationHandle.PercentComplete);
+                    _displayedProgress = Mathf.MoveTowards(_displayedProgress, realProgress, smoothSpeed * Time.unscaledDeltaTime);
+                    UpdateUI();
+                    await UniTask.Yield(token);
                 }
 
-                float realProgress = Mathf.Clamp01(_loadOperationHandle.PercentComplete);
-                _displayedProgress = Mathf.MoveTowards(_displayedProgress, realProgress, smoothSpeed * Time.unscaledDeltaTime);
-                UpdateUI();
-                yield return null;
-            }
+                // 资源加载已完成，现在让UI动画播放到100%
+                while (_displayedProgress < 1f)
+                {
+                    token.ThrowIfCancellationRequested();
+                    _displayedProgress = Mathf.MoveTowards(_displayedProgress, 1f, smoothSpeed * Time.unscaledDeltaTime);
+                    UpdateUI();
+                    await UniTask.Yield(token);
+                }
 
-            // 资源加载已完成，现在让UI动画播放到100%
-            while (_displayedProgress < 1f)
+                UpdateUI(true);
+
+                // 最低显示时间
+                float elapsedTime = Time.unscaledTime - startTime;
+                if (elapsedTime < minimumTotalDisplayTime)
+                {
+                    await UniTask.Delay(TimeSpan.FromSeconds(minimumTotalDisplayTime - elapsedTime), ignoreTimeScale: true, cancellationToken: token);
+                }
+
+                // 激活新场景
+                var activateOp = _loadOperationHandle.Result.ActivateAsync();
+                await activateOp.ToUniTask(cancellationToken: token);
+
+                SceneLoadManager.Instance.HandleSceneActivated(TargetSceneAddress);
+
+                TargetSceneAddress = null;
+                if (_loadOperationHandle.IsValid())
+                {
+                    Addressables.Release(_loadOperationHandle);
+                }
+                return;
+            }
+            else
             {
-                _displayedProgress = Mathf.MoveTowards(_displayedProgress, 1f, smoothSpeed * Time.unscaledDeltaTime);
-                UpdateUI();
-                yield return null;
+                // 非 Addressables 路径：通过 SceneManager 加载本地场景（延迟激活以确保最短显示时间与平滑进度）
+                Debug.LogWarning($"[LoadingScreenController] 目标场景不在 Addressables 中，使用 SceneManager 加载: {TargetSceneAddress}");
+                var op = SceneManager.LoadSceneAsync(TargetSceneAddress, LoadSceneMode.Single);
+                if (op == null)
+                {
+                    Debug.LogError($"[LoadingScreenController] 无法通过 SceneManager 加载场景: {TargetSceneAddress}");
+                    return;
+                }
+
+                // 推迟激活来控制展示时长
+                op.allowSceneActivation = false;
+
+                // 0 ~ 0.9 的加载阶段
+                while (op.progress < 0.9f)
+                {
+                    token.ThrowIfCancellationRequested();
+                    float realProgress = Mathf.Clamp01(op.progress);
+                    _displayedProgress = Mathf.MoveTowards(_displayedProgress, realProgress, smoothSpeed * Time.unscaledDeltaTime);
+                    UpdateUI();
+                    await UniTask.Yield(token);
+                }
+
+                // 资源已准备好（~0.9），将UI缓慢推进到 100%
+                while (_displayedProgress < 1f)
+                {
+                    token.ThrowIfCancellationRequested();
+                    _displayedProgress = Mathf.MoveTowards(_displayedProgress, 1f, smoothSpeed * Time.unscaledDeltaTime);
+                    UpdateUI();
+                    await UniTask.Yield(token);
+                }
+                UpdateUI(true);
+
+                // 最低显示时间
+                float elapsedTime = Time.unscaledTime - startTime;
+                if (elapsedTime < minimumTotalDisplayTime)
+                {
+                    await UniTask.Delay(TimeSpan.FromSeconds(minimumTotalDisplayTime - elapsedTime), ignoreTimeScale: true, cancellationToken: token);
+                }
+
+                // 允许激活场景；此后本对象会因切换场景而被销毁
+                op.allowSceneActivation = true;
+
+                // 等待真正完成，避免在某些平台上发生竞态
+                await op.ToUniTask(cancellationToken: token);
+
+                // 不再显式调用 HandleSceneActivated，这会通过 SceneLoadManager.sceneLoaded 回调被检测到
             }
-
-            UpdateUI(true);
-
-            // 最低显示时间
-            float elapsedTime = Time.unscaledTime - startTime;
-            if (elapsedTime < minimumTotalDisplayTime)
-            {
-                yield return new WaitForSecondsRealtime(minimumTotalDisplayTime - elapsedTime);
-            }
-
-            // 激活新场景
-            var activateOp = _loadOperationHandle.Result.ActivateAsync();
-            yield return activateOp;
-
-            SceneLoadManager.Instance.HandleSceneActivated(TargetSceneAddress);
-
-            TargetSceneAddress = null;
-            if (_loadOperationHandle.IsValid())
-            {
-                Addressables.Release(_loadOperationHandle);
-            }
-            yield break;
         }
-        else
-        {
-            // 非 Addressables 路径：通过 SceneManager 加载本地场景（延迟激活以确保最短显示时间与平滑进度）
-            Debug.LogWarning($"[LoadingScreenController] 目标场景不在 Addressables 中，使用 SceneManager 加载: {TargetSceneAddress}");
-            var op = SceneManager.LoadSceneAsync(TargetSceneAddress, LoadSceneMode.Single);
-            if (op == null)
-            {
-                Debug.LogError($"[LoadingScreenController] 无法通过 SceneManager 加载场景: {TargetSceneAddress}");
-                yield break;
-            }
-
-            // 推迟激活来控制展示时长
-            op.allowSceneActivation = false;
-
-            // 0 ~ 0.9 的加载阶段
-            while (op.progress < 0.9f)
-            {
-                float realProgress = Mathf.Clamp01(op.progress);
-                _displayedProgress = Mathf.MoveTowards(_displayedProgress, realProgress, smoothSpeed * Time.unscaledDeltaTime);
-                UpdateUI();
-                yield return null;
-            }
-
-            // 资源已准备好（~0.9），将UI缓慢推进到 100%
-            while (_displayedProgress < 1f)
-            {
-                _displayedProgress = Mathf.MoveTowards(_displayedProgress, 1f, smoothSpeed * Time.unscaledDeltaTime);
-                UpdateUI();
-                yield return null;
-            }
-            UpdateUI(true);
-
-            // 最低显示时间
-            float elapsedTime = Time.unscaledTime - startTime;
-            if (elapsedTime < minimumTotalDisplayTime)
-            {
-                yield return new WaitForSecondsRealtime(minimumTotalDisplayTime - elapsedTime);
-            }
-
-            // 允许激活场景；此后本对象会因切换场景而被销毁
-            op.allowSceneActivation = true;
-
-            // 等待真正完成，避免在某些平台上发生竞态
-            while (!op.isDone)
-            {
-                yield return null;
-            }
-
-            // 不再显式调用 HandleSceneActivated，这会通过 SceneLoadManager.sceneLoaded 回调被检测到
-        }
+        catch (OperationCanceledException) { }
     }
 
     /// <summary>

@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -18,7 +20,7 @@ public class RejuvenationSkill : Skill
     [SerializeField] private GameObject hotVfxPrefab;
 
     private CharacterState _casterState;
-    private Coroutine _hotRoutine;
+    private CancellationTokenSource _hotCts;
 
     public override void Execute(Transform caster, PlayerSkill playerSkill)
     {
@@ -65,7 +67,10 @@ public class RejuvenationSkill : Skill
             int totalHotInt = Mathf.Max(0, Mathf.RoundToInt(baseHeal * 0.3f));
             if (totalHotInt > 0)
             {
-                _hotRoutine = StartCoroutine(ApplyHoT(_casterState, totalHotInt, 5f));
+                _hotCts?.Cancel();
+                _hotCts?.Dispose();
+                _hotCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+                ApplyHoTAsync(_casterState, totalHotInt, 5f, _hotCts.Token).Forget();
 
                 // 注册HoT的Buff特效（只显示最新的一个Buff特效）
                 if (hotVfxPrefab != null)
@@ -77,7 +82,7 @@ public class RejuvenationSkill : Skill
                     // 绑定一个0值的再生Buff，纯粹用于时序管理VFX（5秒后自动过期 -> 自动清理视觉）
                     buffs.ApplyBuff(source, CharacterBuffs.BuffType.RegenPerSecond, 0f, 5f);
                     // 兼容兜底：在HoT结束后尝试手动移除该可视化（5秒）
-                    StartCoroutine(UnregisterVfxAfter(buffs, source, 5f));
+                    UnregisterVfxAfterAsync(buffs, source, 5f).Forget();
                 }
             }
         }
@@ -89,48 +94,58 @@ public class RejuvenationSkill : Skill
         }
 
         // 自行销毁：等待所有持续效果结束（最大等待时间5.1秒）
-        StartCoroutine(SelfDestructAfter(maxWait: 5.1f));
+        SelfDestructAfterAsync(5.1f).Forget();
     }
 
-    private IEnumerator ApplyHoT(CharacterState cs, int totalIntAmount, float duration)
+    private async UniTaskVoid ApplyHoTAsync(CharacterState cs, int totalIntAmount, float duration, CancellationToken token)
     {
-        // 将整数总量均匀分配到 ticks 秒，前 remainder 秒多加1以补偿余数
-        if (cs == null || totalIntAmount <= 0)
-            yield break;
-
-        int ticks = Mathf.Max(1, Mathf.RoundToInt(duration));
-        int basePerTick = totalIntAmount / ticks;
-        int remainder = totalIntAmount % ticks; // 前 remainder 次多 +1
-
-        // 复用同一个 WaitForSeconds(1f) 实例，避免每帧分配
-        var wait = new WaitForSeconds(1f);
-
-        for (int i = 0; i < ticks; i++)
+        try
         {
+            // 将整数总量均匀分配到 ticks 秒，前 remainder 秒多加1以补偿余数
+            if (cs == null || totalIntAmount <= 0)
+                return;
+
+            int ticks = Mathf.Max(1, Mathf.RoundToInt(duration));
+            int basePerTick = totalIntAmount / ticks;
+            int remainder = totalIntAmount % ticks; // 前 remainder 次多 +1
+
+            for (int i = 0; i < ticks; i++)
+        {
+            token.ThrowIfCancellationRequested();
             int amount = basePerTick + (i < remainder ? 1 : 0);
             if (amount > 0 && cs != null)
             {
                 cs.Heal(amount);
             }
-            yield return wait;
+            await UniTask.Delay(TimeSpan.FromSeconds(1f), cancellationToken: token);
+            }
         }
+        catch (OperationCanceledException) { }
     }
 
-    private IEnumerator UnregisterVfxAfter(CharacterBuffs buffs, string source, float sec)
+    private async UniTaskVoid UnregisterVfxAfterAsync(CharacterBuffs buffs, string source, float sec)
     {
-        yield return new WaitForSeconds(Mathf.Max(0f, sec));
-        if (buffs != null && !string.IsNullOrEmpty(source))
+        try
         {
-            buffs.UnregisterBuffVisual(source);
+            await UniTask.Delay(TimeSpan.FromSeconds(Mathf.Max(0f, sec)));
+            if (buffs != null && !string.IsNullOrEmpty(source))
+            {
+                buffs.UnregisterBuffVisual(source);
+            }
         }
+        catch (OperationCanceledException) { }
     }
 
-    private IEnumerator SelfDestructAfter(float maxWait)
+    private async UniTaskVoid SelfDestructAfterAsync(float maxWait)
     {
-        yield return new WaitForSeconds(Mathf.Max(0f, maxWait));
-        if (this != null && gameObject != null)
+        try
         {
-            Destroy(gameObject);
+            await UniTask.Delay(TimeSpan.FromSeconds(Mathf.Max(0f, maxWait)));
+            if (this != null && gameObject != null)
+            {
+                Destroy(gameObject);
+            }
         }
+        catch (OperationCanceledException) { }
     }
 }

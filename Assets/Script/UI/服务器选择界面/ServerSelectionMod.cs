@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using System;
+using Cysharp.Threading.Tasks;
 
 public class ServerSelectionMod : MonoBehaviour
 {
@@ -11,18 +12,18 @@ public class ServerSelectionMod : MonoBehaviour
     [SerializeField] private Image serverStateTagImage;
     [SerializeField] private TMP_Text serverStateText;
     [SerializeField] private Button serverButton;
-    
+
     private ServerData _serverData;
     private Action<ServerData> _onServerSelected;
-    
-    public async void Init(ServerData serverData, Action<ServerData> onServerSelected,string playerUid)
+
+    public async UniTask Init(ServerData serverData, Action<ServerData> onServerSelected, string playerUid)
     {
         _serverData = serverData;
         _onServerSelected = onServerSelected;
-        var characters = await MongoDBManager.Instance.GetCharactersByPlayerUIDAndServer(playerUid,serverData.serverId);
-        if (characters.Count>0)
+        var characters = await MongoDBManager.Instance.GetCharactersByPlayerUIDAndServer(playerUid, serverData.serverId);
+        if (characters.Count > 0)
         {
-            serverNameText.text = serverData.serverName+"("+characters.Count+")";
+            serverNameText.text = serverData.serverName + "(" + characters.Count + ")";
             print(serverData.serverName);
         }
         else
@@ -41,7 +42,7 @@ public class ServerSelectionMod : MonoBehaviour
             serverButton.onClick.AddListener(() => OnServerSelected());
         }
     }
-    
+
     private string GetServerStateText(ServerState state)
     {
         switch (state)
@@ -54,7 +55,7 @@ public class ServerSelectionMod : MonoBehaviour
             default: return "未知";
         }
     }
-    
+
     private Color GetServerStateColor(ServerState state)
     {
         switch (state)
@@ -67,7 +68,7 @@ public class ServerSelectionMod : MonoBehaviour
             default: return Color.white;
         }
     }
-    
+
     public void OnServerSelected()
     {
         // 直接调用传入的Action

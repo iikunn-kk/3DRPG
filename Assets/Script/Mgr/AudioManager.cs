@@ -1,9 +1,10 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.Pool;
 using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 
 public class AudioManager : Singleton<AudioManager>
 {
@@ -25,6 +26,7 @@ public class AudioManager : Singleton<AudioManager>
     private Dictionary<int, float> _clipCooldowns = new Dictionary<int, float>();
     private Dictionary<SkillSoundType, List<AudioSource>> _activeWeaponSounds = new Dictionary<SkillSoundType, List<AudioSource>>();
     private HashSet<SkillSoundType> _loopingWeaponTypes = new HashSet<SkillSoundType>();
+    private List<int> _clipCooldownsKeysToRemove = new List<int>();
 
     [Header("对象池配置")]
     [SerializeField] private int defaultPoolCapacity = 10;
@@ -72,18 +74,18 @@ public class AudioManager : Singleton<AudioManager>
     {
         if (_clipCooldowns.Count > 0)
         {
-            List<int> keysToRemove = new List<int>();
+            _clipCooldownsKeysToRemove.Clear();
             var currentTime = Time.time;
             foreach (var kvp in _clipCooldowns)
             {
                 if (currentTime > kvp.Value)
                 {
-                    keysToRemove.Add(kvp.Key);
+                    _clipCooldownsKeysToRemove.Add(kvp.Key);
                 }
             }
-            foreach (var key in keysToRemove)
+            for (int i = 0; i < _clipCooldownsKeysToRemove.Count; i++)
             {
-                _clipCooldowns.Remove(key);
+                _clipCooldowns.Remove(_clipCooldownsKeysToRemove[i]);
             }
         }
     }
@@ -234,7 +236,7 @@ public class AudioManager : Singleton<AudioManager>
             Debug.LogError($"未找到BGM配置: {bgmType}");
             return;
         }
-        StopBGM(false); 
+        StopBGM(false).Forget(); 
 
         if (_currentBgmSource == null)
         {
@@ -248,11 +250,11 @@ public class AudioManager : Singleton<AudioManager>
         ApplyBGMSetting();
     }
 
-    public void StopBGM(bool fadeOut = true, float fadeDuration = 0.5f)
+    public async UniTask StopBGM(bool fadeOut = true, float fadeDuration = 0.5f)
     {
         if (_currentBgmSource != null && _currentBgmSource.isPlaying)
         {
-            if (fadeOut) StartCoroutine(FadeOutBGM(fadeDuration));
+            if (fadeOut) await FadeOutBGMAsync(fadeDuration, this.GetCancellationTokenOnDestroy());
             else
             {
                 _currentBgmSource.Stop();
@@ -261,26 +263,30 @@ public class AudioManager : Singleton<AudioManager>
         }
     }
     
-    private IEnumerator FadeOutBGM(float fadeDuration)
+    private async UniTask FadeOutBGMAsync(float fadeDuration, CancellationToken token)
     {
-        float startVolume = _currentBgmSource != null ? _currentBgmSource.volume : 1f;
-        float timer = 0;
-        while (timer < fadeDuration && _currentBgmSource != null)
+        try
         {
-            timer += Time.deltaTime;
-            float t = timer / fadeDuration;
-            if (_currentBgmSource != null)
-                _currentBgmSource.volume = Mathf.Lerp(startVolume, 0, t);
-            yield return null;
-        }
+            float startVolume = _currentBgmSource != null ? _currentBgmSource.volume : 1f;
+            float timer = 0;
+            while (timer < fadeDuration && _currentBgmSource != null)
+            {
+                timer += Time.deltaTime;
+                float t = timer / fadeDuration;
+                if (_currentBgmSource != null)
+                    _currentBgmSource.volume = Mathf.Lerp(startVolume, 0, t);
+                await UniTask.Yield(token);
+            }
 
-        if (_currentBgmSource != null)
-        {
-            _currentBgmSource.Stop();
-            _currentBgmSource.clip = null;
-            _currentBgmSource.volume = 1f; 
-            ApplyBGMSetting();
+            if (_currentBgmSource != null)
+            {
+                _currentBgmSource.Stop();
+                _currentBgmSource.clip = null;
+                _currentBgmSource.volume = 1f; 
+                ApplyBGMSetting();
+            }
         }
+        catch (OperationCanceledException) { }
     }
     
     public void PauseBGM() { if (_currentBgmSource != null && _currentBgmSource.isPlaying) _currentBgmSource.Pause(); }
@@ -362,17 +368,21 @@ public class AudioManager : Singleton<AudioManager>
         source.Play();
 
         onSourcePlayed?.Invoke(source);
-        StartCoroutine(ReturnToPoolAfterPlay(source, clip.length, weaponType));
+        ReturnToPoolAfterPlayAsync(source, clip.length, weaponType, this.GetCancellationTokenOnDestroy()).Forget();
     }
 
-    private IEnumerator ReturnToPoolAfterPlay(AudioSource audioSource, float delay, SkillSoundType? weaponType)
+    private async UniTaskVoid ReturnToPoolAfterPlayAsync(AudioSource audioSource, float delay, SkillSoundType? weaponType, CancellationToken token)
     {
-        yield return new WaitForSeconds(delay);
-        if (audioSource != null && audioSource.gameObject.activeInHierarchy)
+        try
         {
-            _audioSourcePool.Release(audioSource);
-            if (weaponType.HasValue) RemoveFromActiveWeaponSounds(weaponType.Value, audioSource);
+            await UniTask.Delay(TimeSpan.FromSeconds(delay), cancellationToken: token);
+            if (audioSource != null && audioSource.gameObject.activeInHierarchy)
+            {
+                _audioSourcePool.Release(audioSource);
+                if (weaponType.HasValue) RemoveFromActiveWeaponSounds(weaponType.Value, audioSource);
+            }
         }
+        catch (OperationCanceledException) { }
     }
     
     private void RemoveFromActiveWeaponSounds(SkillSoundType soundType, AudioSource source)

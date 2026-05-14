@@ -1,5 +1,7 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEditor; // 用于 Selection
 
@@ -101,7 +103,7 @@ public class ChainKicksSkill : Skill
         var sc = Caster.GetComponent<SkillController>();
         _skillController = sc; // 缓存以便触发GCD
         _animController = sc != null ? sc.AnimationController : Caster.GetComponent<CharacterAnimationController>();
-        _move = MoveMent.Instance; // keep movement reference if needed elsewhere
+        _move = Caster.GetComponent<CharacterState>()?.Movement; // 通过 CharacterState 获取 MoveMent，解耦
         _lockOn = Caster.GetComponent<LockOnController>();
 
         // 若已有编排者在运行，则仅登记“下一段按下”并立即销毁
@@ -120,7 +122,7 @@ public class ChainKicksSkill : Skill
         {
             AudioManager.Instance.PlayWeaponSound(SkillSoundType.三段踢释放);
         }
-        StartCoroutine(DoCombo());
+        DoComboAsync(this.GetCancellationTokenOnDestroy()).Forget();
     }
 
     private bool TryQueuePress()
@@ -133,7 +135,7 @@ public class ChainKicksSkill : Skill
         return false; // 不在输入窗口内则返回失败，允许外层显示GCD提示
     }
 
-    private IEnumerator DoCombo()
+    private async UniTaskVoid DoComboAsync(CancellationToken token)
     {
         // 锁定玩家控制通过动画控制器统一入口
         _animController?.LockPlayerControl();
@@ -142,6 +144,7 @@ public class ChainKicksSkill : Skill
         {
             for (int stage = 1; stage <= maxStages; stage++)
             {
+                token.ThrowIfCancellationRequested();
                 _nextPressQueued = false;
                 _inWindow = false;
                 _pendingWindowRequest = false;
@@ -160,25 +163,25 @@ public class ChainKicksSkill : Skill
 
                 float hitDelay = GetHitDelay(stage);
                 float animTime = GetAnimTime(stage);
-                if (hitDelay > 0f) yield return new WaitForSeconds(hitDelay);
+                if (hitDelay > 0f) await UniTask.Delay(TimeSpan.FromSeconds(hitDelay), cancellationToken: token);
                 DoAreaDamageForStage(stage);
                 float remain = Mathf.Max(0f, animTime - hitDelay);
-                if (remain > 0f) yield return new WaitForSeconds(remain);
+                if (remain > 0f) await UniTask.Delay(TimeSpan.FromSeconds(remain), cancellationToken: token);
 
                 bool isLast = stage >= maxStages;
                 StageCompleted?.Invoke(Caster, stage, isLast);
                 if (isLast) break;
 
                 // 等待控制器通知开启窗口
-                while (!_pendingWindowRequest)
-                    yield return null;
+                await UniTask.WaitWhile(() => !_pendingWindowRequest, cancellationToken: token);
 
                 _inWindow = true;
-                float t = 0f;
-                while (t < inputWindow)
+                float elapsed = 0f;
+                while (elapsed < inputWindow)
                 {
                     if (_nextPressQueued) break;
-                    t += Time.deltaTime; yield return null;
+                    elapsed += Time.deltaTime;
+                    await UniTask.Yield(token);
                 }
                 _inWindow = false;
                 if (!_nextPressQueued) break;
@@ -191,6 +194,10 @@ public class ChainKicksSkill : Skill
 
             if (PlayerSkill.Level >= 10 && whirlwindPrefab != null) SpawnWhirlwind();
             ComboEnded?.Invoke(Caster);
+        }
+        catch (OperationCanceledException)
+        {
+            // 技能被取消时不做特殊处理
         }
         finally
         {

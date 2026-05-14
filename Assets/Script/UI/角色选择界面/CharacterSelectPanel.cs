@@ -1,7 +1,7 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -54,30 +54,28 @@ public class CharacterSelectPanel : MonoBehaviour
         }
         characterObjects.Clear();
 
-        // 使用协程异步加载角色数据
-        StartCoroutine(LoadCharactersAsync(uid, serverId));
+        // 使用 UniTask 异步加载角色数据
+        LoadCharactersAsync(uid, serverId).Forget();
     }
-    private IEnumerator LoadCharactersAsync(string uid, int serverId)
+    private async UniTaskVoid LoadCharactersAsync(string uid, int serverId)
     {
-        var getCharactersTask = MongoDBManager.Instance.GetCharactersByPlayerUIDAndServer(uid, serverId);
-        yield return new WaitUntil(() => getCharactersTask.IsCompleted);
-        
-        if (getCharactersTask.Exception != null)
+        try
         {
-            Debug.LogError($"加载角色数据时发生错误: {getCharactersTask.Exception.Message}");
-            yield break;
-        }
-        
-        var allCharacterData = getCharactersTask.Result;
-        foreach (var data in allCharacterData)
-        {
-            var obj = Instantiate(serverSelectionObj, serverSelectionParent);
-            var mod = obj.GetComponent<CharacterSelectMod>();
-            if (mod != null && ui3DStudioArray != null)
+            var allCharacterData = await MongoDBManager.Instance.GetCharactersByPlayerUIDAndServer(uid, serverId);
+            foreach (var data in allCharacterData)
             {
-                mod.Initialized(data, ui3DStudioArray.GetRenderTexture(data.profession), OnModClicked, OnRequestDeleteCharacter);
+                var obj = Instantiate(serverSelectionObj, serverSelectionParent);
+                var mod = obj.GetComponent<CharacterSelectMod>();
+                if (mod != null && ui3DStudioArray != null)
+                {
+                    mod.Initialized(data, ui3DStudioArray.GetRenderTexture(data.profession), OnModClicked, OnRequestDeleteCharacter);
+                }
+                characterObjects.Add(obj);
             }
-            characterObjects.Add(obj);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"加载角色数据时发生错误: {ex.Message}");
         }
     }
 

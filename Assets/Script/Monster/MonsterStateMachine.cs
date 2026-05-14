@@ -1,5 +1,8 @@
+using System;
 using UnityEngine;
-using System.Collections;
+using Random = UnityEngine.Random;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 怪物状态机管理类，负责处理怪物的各种状态转换和状态更新逻辑
@@ -54,6 +57,7 @@ public class MonsterStateMachine : MonoBehaviour
     
     private MonsterBase monsterBase;           // 怪物基础组件引用
     private MonsterCombat _combat;             // 怪物战斗组件引用
+    private CancellationTokenSource _stateCts; // 状态协程取消令牌
     
     [Header("攻击高级设置")] 
     [SerializeField][Tooltip("是否开启必中攻击（攻击发动后即锁定目标，后续不再检测距离）")] private bool guaranteedHit = true;
@@ -300,45 +304,52 @@ public class MonsterStateMachine : MonoBehaviour
         if (_locomotion != null) _locomotion.FaceTarget = null; // 面向按速度
         if (!isPatrolling)
         {
-            StartCoroutine(PatrolRoutine());
+            CancelAndDisposeStateCts();
+            _stateCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+            PatrolRoutineAsync(_stateCts.Token).Forget();
         }
     }
     
-    private IEnumerator PatrolRoutine()
+    private async UniTaskVoid PatrolRoutineAsync(CancellationToken token)
     {
-        isPatrolling = true;
-        while (currentState == MonsterState.Patrol)
+        try
         {
-            if (!useCustomMovement && navMeshAgent != null)
+            isPatrolling = true;
+            while (currentState == MonsterState.Patrol)
             {
-                navMeshAgent.SetDestination(targetPatrolPosition);
-                navMeshAgent.speed = monsterBase.patrolSpeed;
-            }
-            else
-            {
-                CustomMoveTowards(targetPatrolPosition, monsterBase.patrolSpeed);
-            }
-
-            while ((transform.position - targetPatrolPosition).sqrMagnitude > 1f)
-            {
-                yield return null;
-                if (currentState != MonsterState.Patrol) { isPatrolling = false; yield break; }
-                if (useCustomMovement)
+                token.ThrowIfCancellationRequested();
+                if (!useCustomMovement && navMeshAgent != null)
+                {
+                    navMeshAgent.SetDestination(targetPatrolPosition);
+                    navMeshAgent.speed = monsterBase.patrolSpeed;
+                }
+                else
                 {
                     CustomMoveTowards(targetPatrolPosition, monsterBase.patrolSpeed);
                 }
+
+                while ((transform.position - targetPatrolPosition).sqrMagnitude > 1f)
+                {
+                    await UniTask.Yield(token);
+                    if (currentState != MonsterState.Patrol) { isPatrolling = false; return; }
+                    if (useCustomMovement)
+                    {
+                        CustomMoveTowards(targetPatrolPosition, monsterBase.patrolSpeed);
+                    }
+                }
+                if (Random.value < idleChance)
+                {
+                    ChangeState(MonsterState.Idle);
+                    return;
+                }
+                if (!useCustomMovement && navMeshAgent != null) navMeshAgent.ResetPath();
+                _animController?.PlayIdle();
+                await UniTask.Delay(TimeSpan.FromSeconds(patrolPauseDuration), cancellationToken: token);
+                SetPatrolTarget();
             }
-            if (Random.value < idleChance)
-            {
-                ChangeState(MonsterState.Idle);
-                yield break;
-            }
-            if (!useCustomMovement && navMeshAgent != null) navMeshAgent.ResetPath();
-            _animController?.PlayIdle();
-            yield return new WaitForSeconds(patrolPauseDuration);
-            SetPatrolTarget();
+            isPatrolling = false;
         }
-        isPatrolling = false;
+        catch (OperationCanceledException) { }
     }
 
     // 自定义移动 + 分离实现（使用 NonAlloc + 通过组件识别怪物，避免 Tag 依赖）
@@ -403,8 +414,8 @@ public class MonsterStateMachine : MonoBehaviour
         // 统一使用 AttackSequence，保证播放攻击动画就必定结算伤害
         if (!_attackInProgress && attackTimer >= attackCooldown)
         {
-            attackTimer = 0f;
-            StartCoroutine(AttackSequence());
+                    attackTimer = 0f;
+            AttackSequenceAsync(_stateCts != null ? _stateCts.Token : this.GetCancellationTokenOnDestroy()).Forget();
         }
     }
     
@@ -499,7 +510,7 @@ public class MonsterStateMachine : MonoBehaviour
                 break;
             case MonsterState.Death:
                 // 进入死亡：彻底停止一切行为
-                StopAllCoroutines();
+                CancelAndDisposeStateCts();
                 alertIcon?.SetActive(false);
                 attackIcon?.SetActive(false);
                 if (navMeshAgent != null && navMeshAgent.enabled)
@@ -525,7 +536,7 @@ public class MonsterStateMachine : MonoBehaviour
         switch (state)
         {
             case MonsterState.Patrol:
-                StopAllCoroutines(); isPatrolling = false; break;
+                CancelAndDisposeStateCts(); isPatrolling = false; break;
             case MonsterState.Alert:
                 alertIcon?.SetActive(false); break;
             case MonsterState.Chase:
@@ -536,6 +547,16 @@ public class MonsterStateMachine : MonoBehaviour
         }
     }
     
+    private void CancelAndDisposeStateCts()
+    {
+        if (_stateCts != null)
+        {
+            _stateCts.Cancel();
+            _stateCts.Dispose();
+            _stateCts = null;
+        }
+    }
+
     public void SetPlayerInRange(bool inRange) => isPlayerInRange = inRange;
     
     public void SetDead(bool dead)
@@ -581,47 +602,52 @@ public class MonsterStateMachine : MonoBehaviour
         }
     }
 
-    private IEnumerator AttackSequence()
+    private async UniTaskVoid AttackSequenceAsync(CancellationToken token)
     {
-        _attackInProgress = true;
-        _cachedAttackTarget = AcquireTargetDamageable();
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[Monster.AttackSequence] 锁定目标={_cachedAttackTarget?.ToString() ?? "null"} windup={attackWindup}s guaranteedHit={guaranteedHit} immediate={immediateDamageOnAttackStart}");
-#endif
-        _animController?.PlayAttack();
-        // 立刻伤害：忽略前摇
-        if (immediateDamageOnAttackStart && _cachedAttackTarget != null && _cachedAttackTarget.CurrentHealth > 0)
+        try
         {
-            ApplyLockedDamage();
-            yield return null;
+            _attackInProgress = true;
+            _cachedAttackTarget = AcquireTargetDamageable();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log($"[Monster.AttackSequence] 锁定目标={_cachedAttackTarget?.ToString() ?? "null"} windup={attackWindup}s guaranteedHit={guaranteedHit} immediate={immediateDamageOnAttackStart}");
+#endif
+            _animController?.PlayAttack();
+            // 立刻伤害：忽略前摇
+            if (immediateDamageOnAttackStart && _cachedAttackTarget != null && _cachedAttackTarget.CurrentHealth > 0)
+            {
+                ApplyLockedDamage();
+                await UniTask.Yield(token);
+                _attackInProgress = false;
+                _cachedAttackTarget = null;
+                return;
+            }
+            // 非立刻：执行前摇
+            if (!immediateDamageOnAttackStart && attackWindup > 0f)
+            {
+                float t = 0f;
+                while (t < attackWindup)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (cancelIfTargetDeadDuringWindup && (_cachedAttackTarget == null || _cachedAttackTarget.CurrentHealth <= 0))
+                    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                        Debug.Log("[Monster.AttackSequence] 目标在前摇中死亡, 取消伤害");
+#endif
+                        _attackInProgress = false;
+                        return;
+                    }
+                    t += Time.deltaTime;
+                    await UniTask.Yield(token);
+                }
+            }
+            if (guaranteedHit && _cachedAttackTarget != null && !isDead)
+            {
+                ApplyLockedDamage();
+            }
             _attackInProgress = false;
             _cachedAttackTarget = null;
-            yield break;
         }
-        // 非立刻：执行前摇
-        if (!immediateDamageOnAttackStart && attackWindup > 0f)
-        {
-            float t = 0f;
-            while (t < attackWindup)
-            {
-                if (cancelIfTargetDeadDuringWindup && (_cachedAttackTarget == null || _cachedAttackTarget.CurrentHealth <= 0))
-                {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    Debug.Log("[Monster.AttackSequence] 目标在前摇中死亡, 取消伤害");
-#endif
-                    _attackInProgress = false;
-                    yield break;
-                }
-                t += Time.deltaTime;
-                yield return null;
-            }
-        }
-        if (guaranteedHit && _cachedAttackTarget != null && !isDead)
-        {
-            ApplyLockedDamage();
-        }
-        _attackInProgress = false;
-        _cachedAttackTarget = null;
+        catch (OperationCanceledException) { }
     }
 
     private void ApplyLockedDamage()

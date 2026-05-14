@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 
 public class NotHaveGuildPanel : MonoBehaviour
 {
@@ -25,7 +26,7 @@ public class NotHaveGuildPanel : MonoBehaviour
     {
         searchGuildPanel.gameObject.SetActive(false);
         createGuildPanel.gameObject.SetActive(true);
-        createGuildPanel.Init(OnCreateGuildConfirm);
+        createGuildPanel.Init((name, desc) => OnCreateGuildConfirm(name, desc).Forget());
         AudioManager.Instance.PlayUISound(UISoundType.按下按钮);
     }
 
@@ -43,22 +44,26 @@ public class NotHaveGuildPanel : MonoBehaviour
     /// </summary>
     /// <param name="guildName">公会名称</param>
     /// <param name="guildDescription">公会描述</param>
-    private async void OnCreateGuildConfirm(string guildName, string guildDescription)
+    private async UniTaskVoid OnCreateGuildConfirm(string guildName, string guildDescription)
     {
-        // 调用GameManager的创建公会功能
-        bool success = await GuildManager.Instance.CreateGuild(guildName, guildDescription);
+        try
+        {
+            // 调用GameManager的创建公会功能
+            bool success = await GuildManager.Instance.CreateGuild(guildName, guildDescription);
 
-        if (success)
-        {
-            Debug.Log("公会创建成功");
-            // 创建或加入公会成功后，刷新角色数据并切换到公会详情面板
-            await SwitchToGuildDetailsPanel();
+            if (success)
+            {
+                Debug.Log("公会创建成功");
+                // 创建或加入公会成功后，刷新角色数据并切换到公会详情面板
+                await SwitchToGuildDetailsPanel();
+            }
+            else
+            {
+                Debug.LogError("公会创建失败");
+                // 可以在这里添加创建失败的UI反馈
+            }
         }
-        else
-        {
-            Debug.LogError("公会创建失败");
-            // 可以在这里添加创建失败的UI反馈
-        }
+        catch (OperationCanceledException) { }
     }
 
     /// <summary>

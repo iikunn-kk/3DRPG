@@ -1,7 +1,7 @@
 using UnityEngine;
-using System.Collections;
 using System.Threading.Tasks;
 using System;
+using Cysharp.Threading.Tasks;
 using Random = UnityEngine.Random;
 using MongoDB.Bson; // 用于生成 ObjectId
 
@@ -43,7 +43,7 @@ public class GuildPanel : UIPopPanelBase
         "追求极限挑战的勇者团队"
     };
 
-    public async void Init(CharacterData data)
+    public async UniTask Init(CharacterData data)
     {
         Show();
         // 根据玩家是否有公会决定显示哪个面板
@@ -97,7 +97,7 @@ public class GuildPanel : UIPopPanelBase
     /// 测试功能：向当前公会添加随机生成的成员
     /// </summary>
     /// <param name="count">要添加的成员数量</param>
-    public async void AddRandomMembersToGuild(int count)
+    public async UniTaskVoid AddRandomMembersToGuild(int count)
     {
         if (alreadyHaveGuildPanel == null)
         {
@@ -172,7 +172,7 @@ public class GuildPanel : UIPopPanelBase
     /// 测试功能：随机生成几个公会
     /// </summary>
     /// <param name="count">要生成的公会数量</param>
-    public async void GenerateRandomGuilds(int count)
+    public async UniTaskVoid GenerateRandomGuilds(int count)
     {
         if (notHaveGuildPanel == null)
         {
