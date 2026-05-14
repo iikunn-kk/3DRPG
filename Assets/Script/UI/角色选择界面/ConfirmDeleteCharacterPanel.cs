@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 
@@ -24,7 +25,12 @@ public class ConfirmDeleteCharacterPanel : UIPopPanelBase
         Show();
     }
 
-    public async void OnConfirmButtonClick()
+    public void OnConfirmButtonClick()
+    {
+        OnConfirmButtonClickAsync().Forget();
+    }
+
+    private async UniTaskVoid OnConfirmButtonClickAsync()
     {
         AudioManager.Instance.PlayUISound(UISoundType.按下按钮);
         try

@@ -118,7 +118,12 @@ public class GuildDetailsPanel : MonoBehaviour
     /// 输入框结束编辑回调 — 保存公告并隐藏输入框
     /// </summary>
     /// <param name="text"></param>
-    public async void OnAnnouncementEndEdit(string text)
+    public void OnAnnouncementEndEdit(string text)
+    {
+        OnAnnouncementEndEditAsync(text).Forget();
+    }
+
+    private async UniTaskVoid OnAnnouncementEndEditAsync(string text)
     {
         try
         {

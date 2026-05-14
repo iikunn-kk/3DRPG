@@ -3,6 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Text.RegularExpressions;
+using Cysharp.Threading.Tasks;
 
 public class InputCharacterNamePanel : UIPopPanelBase
 {
@@ -62,7 +63,12 @@ public class InputCharacterNamePanel : UIPopPanelBase
         return Regex.IsMatch(candidate, pattern);
     }
 
-    public async void OnValidateNameButtonClick()
+    public void OnValidateNameButtonClick()
+    {
+        OnValidateNameButtonClickAsync().Forget();
+    }
+
+    private async UniTaskVoid OnValidateNameButtonClickAsync()
     {
         try
         {
