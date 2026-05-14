@@ -5,12 +5,6 @@ using UnityEngine.SceneManagement;
 using DG.Tweening;
 using UnityEngine.UI;
 
-#if UNITY_EDITOR
-using UnityEditor;
-using UnityEditor.AddressableAssets;
-using UnityEditor.AddressableAssets.Settings;
-#endif
-
 /// <summary>
 /// 登录面板管理类，负责管理登录、注册和修改密码界面的切换
 /// </summary>

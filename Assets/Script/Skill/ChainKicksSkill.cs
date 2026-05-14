@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
-using UnityEditor; // 用于 Selection
 
 /// <summary>
 /// 连环踢（3段连击）：

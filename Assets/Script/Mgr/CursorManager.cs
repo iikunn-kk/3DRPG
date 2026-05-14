@@ -1,6 +1,8 @@
-﻿using UnityEditor;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// 控制鼠标光标的显示/隐藏与锁定状态。
@@ -180,6 +182,7 @@ public class CursorManager : MonoBehaviour
 // ReadOnlyInspectorAttribute 和其 PropertyDrawer 可以保持不变，无需修改
 public class ReadOnlyInspectorAttribute : PropertyAttribute { }
 #if UNITY_EDITOR
+
 [CustomPropertyDrawer(typeof(ReadOnlyInspectorAttribute))]
 public class ReadOnlyInspectorDrawer : PropertyDrawer
 {
