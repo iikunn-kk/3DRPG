@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using MongoDB.Bson;
 using MongoDB.Driver;
 using UnityEngine;
 using GameDemo.Models;
@@ -169,6 +168,71 @@ public class MongoDBManager : Singleton<MongoDBManager>
         Debug.Log("数据库索引已确认。");
     }
 
+    // ================================================================
+    //  泛型辅助方法 —— 消除 EnsureInitialized + null检查 + try-catch 样板重复
+    // ================================================================
+
+    #region 泛型辅助方法
+
+    /// <summary>初始化守卫 + 集合空检查。返回 false 表示未就绪。</summary>
+    private async Task<bool> EnsureCollection(object collection, string operationName)
+    {
+        await EnsureInitialized();
+        if (!IsInitialized || collection == null)
+        {
+            Debug.LogError($"MongoDB 尚未初始化，无法{operationName}。");
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>通用单条查询：Find + FirstOrDefaultAsync。</summary>
+    private async Task<T> FindOneAsync<T>(IMongoCollection<T> collection,
+        FilterDefinition<T> filter, string operationName) where T : class
+    {
+        if (!await EnsureCollection(collection, operationName)) return null;
+        try { return await collection.Find(filter).FirstOrDefaultAsync(); }
+        catch (Exception ex) { Debug.LogError($"{operationName}失败: {ex}"); return null; }
+    }
+
+    /// <summary>通用列表查询：Find + ToListAsync。</summary>
+    private async Task<List<T>> FindListAsync<T>(IMongoCollection<T> collection,
+        FilterDefinition<T> filter, string operationName)
+    {
+        if (!await EnsureCollection(collection, operationName)) return new List<T>();
+        try { return await collection.Find(filter).ToListAsync(); }
+        catch (Exception ex) { Debug.LogError($"{operationName}失败: {ex}"); return new List<T>(); }
+    }
+
+    /// <summary>通用 Upsert：ReplaceOneAsync + IsUpsert。</summary>
+    private async Task<bool> UpsertAsync<T>(IMongoCollection<T> collection,
+        FilterDefinition<T> filter, T document, string operationName)
+    {
+        if (!await EnsureCollection(collection, operationName)) return false;
+        try { await collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }); return true; }
+        catch (Exception ex) { Debug.LogError($"{operationName}失败: {ex}"); return false; }
+    }
+
+    /// <summary>通用删除：DeleteOneAsync。</summary>
+    private async Task<bool> DeleteOneAsync<T>(IMongoCollection<T> collection,
+        FilterDefinition<T> filter, string operationName)
+    {
+        if (!await EnsureCollection(collection, operationName)) return false;
+        try { var result = await collection.DeleteOneAsync(filter); return result.DeletedCount > 0; }
+        catch (Exception ex) { Debug.LogError($"{operationName}失败: {ex}"); return false; }
+    }
+
+    /// <summary>通用存在性检查：FirstOrDefaultAsync != null。</summary>
+    private async Task<bool> ExistsAsync<T>(IMongoCollection<T> collection,
+        FilterDefinition<T> filter, string operationName) where T : class
+    {
+        if (!await EnsureCollection(collection, operationName)) return false;
+        try { var existing = await collection.Find(filter).FirstOrDefaultAsync(); return existing != null; }
+        catch (Exception ex) { Debug.LogError($"{operationName}失败: {ex}"); return false; }
+    }
+
+    #endregion
+
     #region 玩家账户操作 (安全)
 
     /// <summary>
@@ -176,25 +240,15 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// </summary>
     public async Task<RegistrationResult> CreatePlayerAccountAsync(string username, string password)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _playerCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法创建玩家账户。");
-            return RegistrationResult.DatabaseError; // 返回更具体的错误
-        }
-        await EnsureInitialized();
-        if (!IsInitialized || _playerCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法创建玩家账户。");
-            return RegistrationResult.DatabaseError; // 返回更具体的错误
-        }
+        if (!await EnsureCollection(_playerCollection, "创建玩家账户"))
+            return RegistrationResult.DatabaseError;
 
         try
         {
             if (await IsUsernameExistsAsync(username))
             {
                 Debug.LogWarning($"用户名 {username} 已存在。");
-                return RegistrationResult.UsernameExists; // 返回用户名已存在
+                return RegistrationResult.UsernameExists;
             }
 
             PasswordHelper.CreatePasswordHash(password, out var passwordHash, out var passwordSalt);
@@ -202,12 +256,12 @@ public class MongoDBManager : Singleton<MongoDBManager>
             var newPlayer = new PlayerLoginData(username, passwordHash, passwordSalt);
 
             await _playerCollection.InsertOneAsync(newPlayer);
-            return RegistrationResult.Success; // 返回成功
+            return RegistrationResult.Success;
         }
         catch (Exception ex)
         {
             Debug.LogError($"创建玩家账户失败: {ex}");
-            return RegistrationResult.DatabaseError; // 任何异常都视为数据库错误
+            return RegistrationResult.DatabaseError;
         }
     }
 
@@ -216,30 +270,14 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// </summary>
     public async Task<PlayerLoginData> AuthenticatePlayerAsync(string username, string password)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _playerCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法验证玩家。");
-            return null;
-        }
+        var player = await FindOneAsync(_playerCollection,
+            Builders<PlayerLoginData>.Filter.Eq(p => p.username, username),
+            "验证玩家");
 
-        try
-        {
-            var filter = Builders<PlayerLoginData>.Filter.Eq(p => p.username, username);
-            var player = await _playerCollection.Find(filter).FirstOrDefaultAsync();
+        if (player != null && PasswordHelper.VerifyPasswordHash(password, player.passwordHash, player.passwordSalt))
+            return player;
 
-            if (player != null && PasswordHelper.VerifyPasswordHash(password, player.passwordHash, player.passwordSalt))
-            {
-                return player; // 验证成功
-            }
-
-            return null; // 用户名或密码错误
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"验证玩家失败: {ex}");
-            return null;
-        }
+        return null;
     }
 
     /// <summary>
@@ -247,12 +285,8 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// </summary>
     public async Task<bool> IsUsernameExistsAsync(string username)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _playerCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法检查用户名。");
+        if (!await EnsureCollection(_playerCollection, "检查用户名"))
             return true; // 保守处理，阻止创建
-        }
 
         try
         {
@@ -263,7 +297,7 @@ public class MongoDBManager : Singleton<MongoDBManager>
         catch (Exception ex)
         {
             Debug.LogError($"检查用户名失败: {ex}");
-            return true; // 在出错情况下返回true更安全，防止意外创建重复用户
+            return true;
         }
     }
     /// <summary>
@@ -283,12 +317,8 @@ public class MongoDBManager : Singleton<MongoDBManager>
             return false;
         }
 
-        await EnsureInitialized();
-        if (!IsInitialized || _playerCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法修改密码。");
+        if (!await EnsureCollection(_playerCollection, "修改密码"))
             return false;
-        }
 
         try
         {
@@ -338,33 +368,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>操作是否成功</returns>
     public async Task<bool> CreateAndSaveCharacterData(CharacterData characterData)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _characterCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法保存角色数据。");
-            return false;
-        }
-
-        try
-        {
-            // 1. 定义过滤器，用于定位要操作的文档
-            var filter = Builders<CharacterData>.Filter.Eq(c => c.Id, characterData.Id);
-
-            // 2. 设置选项，关键在于 IsUpsert = true
-            var options = new ReplaceOptions { IsUpsert = true };
-
-            // 3. 执行单次数据库操作
-            // 如果找到匹配的文档，就用 characterData 替换它。
-            // 如果没找到，就将 characterData 作为一个新文档插入。
-            await _characterCollection.ReplaceOneAsync(filter, characterData, options);
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"保存角色数据失败: {ex.Message}");
-            return false;
-        }
+        return await UpsertAsync(_characterCollection,
+            Builders<CharacterData>.Filter.Eq(c => c.Id, characterData.Id),
+            characterData, "保存角色数据");
     }
     /// <summary>
     /// 根据玩家UID获取角色列表
@@ -374,26 +380,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>角色数据列表</returns>
     public async Task<List<CharacterData>> GetCharactersByPlayerUID(string playerUid)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _characterCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法获取角色列表。");
-            return new List<CharacterData>();
-        }
-
-        try
-        {
-            // 创建过滤器，匹配指定的playerUid
-            var filter = Builders<CharacterData>.Filter.Eq(c => c.playerUid, playerUid);
-            // Find()使用过滤器查找所有匹配的文档，ToListAsync()将结果转换为List
-            return await _characterCollection.Find(filter).ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"获取角色列表失败: {ex.Message}");
-            // 发生异常时返回空列表而不是null，避免调用方出现空引用异常
-            return new List<CharacterData>();
-        }
+        return await FindListAsync(_characterCollection,
+            Builders<CharacterData>.Filter.Eq(c => c.playerUid, playerUid),
+            "获取角色列表");
     }
 
     /// <summary>
@@ -405,30 +394,11 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>角色数据列表</returns>
     public async Task<List<CharacterData>> GetCharactersByPlayerUIDAndServer(string playerUid, int serverId)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _characterCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法获取角色列表。");
-            return new List<CharacterData>();
-        }
-
-        try
-        {
-            // 创建复合过滤器，同时匹配玩家UID和服务器ID
-            var filter = Builders<CharacterData>.Filter.And(
-                Builders<CharacterData>.Filter.Eq(c => c.playerUid, playerUid),
-                Builders<CharacterData>.Filter.Eq(c => c.serverId, serverId)
-            );
-
-            // 查找匹配条件的所有角色数据
-            return await _characterCollection.Find(filter).ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"获取角色列表失败: {ex.Message}");
-            // 发生异常时返回空列表而不是null，避免调用方出现空引用异常
-            return new List<CharacterData>();
-        }
+        var filter = Builders<CharacterData>.Filter.And(
+            Builders<CharacterData>.Filter.Eq(c => c.playerUid, playerUid),
+            Builders<CharacterData>.Filter.Eq(c => c.serverId, serverId)
+        );
+        return await FindListAsync(_characterCollection, filter, "获取角色列表");
     }
 
     /// <summary>
@@ -439,25 +409,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>角色数据</returns>
     public async Task<CharacterData> GetCharacterData(string characterId)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _characterCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法获取角色数据。");
-            return null;
-        }
-
-        try
-        {
-            // 创建过滤器，匹配指定的id
-            var filter = Builders<CharacterData>.Filter.Eq(c => c.Id, characterId);
-            // 查找并返回第一个匹配的角色数据
-            return await _characterCollection.Find(filter).FirstOrDefaultAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"获取角色数据失败: {ex.Message}");
-            return null;
-        }
+        return await FindOneAsync(_characterCollection,
+            Builders<CharacterData>.Filter.Eq(c => c.Id, characterId),
+            "获取角色数据");
     }
 
     /// <summary>
@@ -467,38 +421,14 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>操作是否成功</returns>
     public async Task<bool> DeleteCharacterData(string characterId)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _characterCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法删除角色数据。");
-            return false;
-        }
-
-        try
-        {
-            // 创建过滤器，匹配指定的角色ID
-            var filter = Builders<CharacterData>.Filter.Eq(c => c.Id, characterId);
-
-            // 删除匹配的第一个文档
-            var result = await _characterCollection.DeleteOneAsync(filter);
-
-            // 检查是否成功删除了文档
-            if (result.DeletedCount > 0)
-            {
-                Debug.Log($"成功删除角色: {characterId}");
-                return true;
-            }
-            else
-            {
-                Debug.LogWarning($"未找到要删除的角色: {characterId}");
-                return false;
-            }
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"删除角色数据失败: {ex.Message}");
-            return false;
-        }
+        var result = await DeleteOneAsync(_characterCollection,
+            Builders<CharacterData>.Filter.Eq(c => c.Id, characterId),
+            "删除角色数据");
+        if (result)
+            Debug.Log($"成功删除角色: {characterId}");
+        else
+            Debug.LogWarning($"未找到要删除的角色: {characterId}");
+        return result;
     }
 
     /// <summary>
@@ -509,29 +439,11 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>角色名是否已存在</returns>
     public async Task<bool> IsCharacterNameExistsOnServer(string characterName, int serverId)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _characterCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法检查角色名。");
-            return false;
-        }
-
-        try
-        {
-            // 创建复合过滤器，同时匹配角色名和服务器ID
-            var filter = Builders<CharacterData>.Filter.And(
-                Builders<CharacterData>.Filter.Eq(c => c.characterName, characterName),
-                Builders<CharacterData>.Filter.Eq(c => c.serverId, serverId)
-            );
-
-            var existingCharacter = await _characterCollection.Find(filter).FirstOrDefaultAsync();
-            return existingCharacter != null;
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"检查角色名失败: {ex.Message}");
-            return false;
-        }
+        var filter = Builders<CharacterData>.Filter.And(
+            Builders<CharacterData>.Filter.Eq(c => c.characterName, characterName),
+            Builders<CharacterData>.Filter.Eq(c => c.serverId, serverId)
+        );
+        return await ExistsAsync(_characterCollection, filter, "检查角色名");
     }
 
     #endregion
@@ -543,25 +455,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// </summary>
     public async Task<bool> SaveGuildDataAsync(GuildData guildData)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _guildCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法保存公会数据。");
-            return false;
-        }
-
-        try
-        {
-            var filter = Builders<GuildData>.Filter.Eq(g => g.guildId, guildData.guildId);
-            var options = new ReplaceOptions { IsUpsert = true };
-            await _guildCollection.ReplaceOneAsync(filter, guildData, options);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"保存公会数据失败: {ex}");
-            return false;
-        }
+        return await UpsertAsync(_guildCollection,
+            Builders<GuildData>.Filter.Eq(g => g.guildId, guildData.guildId),
+            guildData, "保存公会数据");
     }
 
     /// <summary>
@@ -572,25 +468,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>公会数据</returns>
     public async Task<GuildData> GetGuildData(string guildId)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _guildCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法获取公会数据。");
-            return null;
-        }
-
-        try
-        {
-            // 创建过滤器，匹配指定的guildId
-            var filter = Builders<GuildData>.Filter.Eq(g => g.guildId, guildId);
-            // 查找并返回第一个匹配的公会数据
-            return await _guildCollection.Find(filter).FirstOrDefaultAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"获取公会数据失败: {ex.Message}");
-            return null;
-        }
+        return await FindOneAsync(_guildCollection,
+            Builders<GuildData>.Filter.Eq(g => g.guildId, guildId),
+            "获取公会数据");
     }
 
     /// <summary>
@@ -601,25 +481,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>公会数据</returns>
     public async Task<GuildData> GetGuildDataWithName(string guildName)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _guildCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法获取公会数据。");
-            return null;
-        }
-
-        try
-        {
-            // 创建过滤器，匹配指定的guildName
-            var filter = Builders<GuildData>.Filter.Eq(g => g.guildName, guildName);
-            // 查找并返回第一个匹配的公会数据
-            return await _guildCollection.Find(filter).FirstOrDefaultAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"根据名称获取公会数据失败: {ex.Message}");
-            return null;
-        }
+        return await FindOneAsync(_guildCollection,
+            Builders<GuildData>.Filter.Eq(g => g.guildName, guildName),
+            "根据名称获取公会数据");
     }
 
     /// <summary>
@@ -629,25 +493,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>所有公会数据的列表</returns>
     public async Task<List<GuildData>> GetAllGuilds()
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _guildCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法获取公会数据。");
-            return new List<GuildData>();
-        }
-
-        try
-        {
-            // 使用空的BsonDocument作为过滤器，匹配所有文档
-            // Find(new BsonDocument())等同于查找集合中的所有文档
-            return await _guildCollection.Find(new BsonDocument()).ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"获取所有公会数据失败: {ex.Message}");
-            // 发生异常时返回空列表而不是null，避免调用方出现空引用异常
-            return new List<GuildData>();
-        }
+        return await FindListAsync(_guildCollection,
+            Builders<GuildData>.Filter.Empty,
+            "获取所有公会数据");
     }
 
     /// <summary>
@@ -658,26 +506,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>指定服务器上的所有公会数据列表</returns>
     public async Task<List<GuildData>> GetGuildsByServerId(int serverId)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _guildCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法获取公会数据。");
-            return new List<GuildData>();
-        }
-
-        try
-        {
-            // 创建过滤器，匹配指定的serverId
-            var filter = Builders<GuildData>.Filter.Eq(g => g.serverId, serverId);
-            // 查找匹配条件的所有公会数据
-            return await _guildCollection.Find(filter).ToListAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"获取服务器公会数据失败: {ex.Message}");
-            // 发生异常时返回空列表而不是null，避免调用方出现空引用异常
-            return new List<GuildData>();
-        }
+        return await FindListAsync(_guildCollection,
+            Builders<GuildData>.Filter.Eq(g => g.serverId, serverId),
+            "获取服务器公会数据");
     }
 
     /// <summary>
@@ -688,29 +519,11 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>公会名是否已存在</returns>
     public async Task<bool> IsGuildNameExistsOnServer(string guildName, int serverId)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _guildCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法检查公会名。");
-            return false;
-        }
-
-        try
-        {
-            // 创建复合过滤器，同时匹配公会名和服务器ID
-            var filter = Builders<GuildData>.Filter.And(
-                Builders<GuildData>.Filter.Eq(g => g.guildName, guildName),
-                Builders<GuildData>.Filter.Eq(g => g.serverId, serverId)
-            );
-
-            var existingGuild = await _guildCollection.Find(filter).FirstOrDefaultAsync();
-            return existingGuild != null;
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"检查公会名失败: {ex.Message}");
-            return false;
-        }
+        var filter = Builders<GuildData>.Filter.And(
+            Builders<GuildData>.Filter.Eq(g => g.guildName, guildName),
+            Builders<GuildData>.Filter.Eq(g => g.serverId, serverId)
+        );
+        return await ExistsAsync(_guildCollection, filter, "检查公会名");
     }
 
     /// <summary>
@@ -721,12 +534,8 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>操作是否成功</returns>
     public async Task<bool> RemoveMemberFromGuild(string guildId, string characterName)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _guildCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法移除成员。");
+        if (!await EnsureCollection(_guildCollection, "移除成员"))
             return false;
-        }
 
         try
         {
@@ -791,25 +600,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// </summary>
     public async Task<bool> SavePlayerInventoryDataAsync(PlayerInventoryData inventoryData)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _inventoryCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法保存玩家物品数据。");
-            return false;
-        }
-
-        try
-        {
-            var filter = Builders<PlayerInventoryData>.Filter.Eq(i => i.characterId, inventoryData.characterId);
-            var options = new ReplaceOptions { IsUpsert = true };
-            await _inventoryCollection.ReplaceOneAsync(filter, inventoryData, options);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"保存玩家物品数据失败: {ex}");
-            return false;
-        }
+        return await UpsertAsync(_inventoryCollection,
+            Builders<PlayerInventoryData>.Filter.Eq(i => i.characterId, inventoryData.characterId),
+            inventoryData, "保存玩家物品数据");
     }
 
     /// <summary>
@@ -819,23 +612,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>玩家物品数据</returns>
     public async Task<PlayerInventoryData> GetPlayerInventoryDataAsync(string characterId)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _inventoryCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法获取玩家物品数据。");
-            return null;
-        }
-
-        try
-        {
-            var filter = Builders<PlayerInventoryData>.Filter.Eq(i => i.characterId, characterId);
-            return await _inventoryCollection.Find(filter).FirstOrDefaultAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"获取玩家物品数据失败: {ex.Message}");
-            return null;
-        }
+        return await FindOneAsync(_inventoryCollection,
+            Builders<PlayerInventoryData>.Filter.Eq(i => i.characterId, characterId),
+            "获取玩家物品数据");
     }
 
     /// <summary>
@@ -845,12 +624,8 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>新创建的玩家物品数据</returns>
     public async Task<PlayerInventoryData> CreatePlayerInventoryDataAsync(string characterId)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _inventoryCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法创建玩家物品数据。");
+        if (!await EnsureCollection(_inventoryCollection, "创建玩家物品数据"))
             return null;
-        }
 
         try
         {
@@ -860,7 +635,7 @@ public class MongoDBManager : Singleton<MongoDBManager>
         }
         catch (Exception ex)
         {
-            Debug.LogError($"创建玩家物品数据失败: {ex.Message}");
+            Debug.LogError($"创建玩家物品数据失败: {ex}");
             return null;
         }
     }
@@ -877,26 +652,10 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>操作是否成功</returns>
     public async Task<bool> SaveTaskProgressDataAsync(string characterId, string taskDataJson)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _taskProgressCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法保存任务进度数据。");
-            return false;
-        }
-
-        try
-        {
-            var filter = Builders<TaskProgressData>.Filter.Eq(t => t.characterId, characterId);
-            var taskProgressData = new TaskProgressData(characterId, taskDataJson);
-            var options = new ReplaceOptions { IsUpsert = true };
-            await _taskProgressCollection.ReplaceOneAsync(filter, taskProgressData, options);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"保存角色任务进度数据失败: {ex}");
-            return false;
-        }
+        var taskProgressData = new TaskProgressData(characterId, taskDataJson);
+        return await UpsertAsync(_taskProgressCollection,
+            Builders<TaskProgressData>.Filter.Eq(t => t.characterId, characterId),
+            taskProgressData, "保存角色任务进度数据");
     }
 
     /// <summary>
@@ -906,23 +665,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>任务进度数据</returns>
     public async Task<TaskProgressData> GetTaskProgressDataAsync(string characterId)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _taskProgressCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法获取任务进度数据。");
-            return null;
-        }
-
-        try
-        {
-            var filter = Builders<TaskProgressData>.Filter.Eq(t => t.characterId, characterId);
-            return await _taskProgressCollection.Find(filter).FirstOrDefaultAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"获取角色任务进度数据失败: {ex.Message}");
-            return null;
-        }
+        return await FindOneAsync(_taskProgressCollection,
+            Builders<TaskProgressData>.Filter.Eq(t => t.characterId, characterId),
+            "获取角色任务进度数据");
     }
 
     /// <summary>
@@ -932,24 +677,9 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>操作是否成功</returns>
     public async Task<bool> DeleteTaskProgressDataAsync(string characterId)
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _taskProgressCollection == null)
-        {
-            Debug.LogError("MongoDB 尚未初始化，无法删除任务进度数据。");
-            return false;
-        }
-
-        try
-        {
-            var filter = Builders<TaskProgressData>.Filter.Eq(t => t.characterId, characterId);
-            var result = await _taskProgressCollection.DeleteOneAsync(filter);
-            return result.DeletedCount > 0;
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"删除角色任务进度数据失败: {ex.Message}");
-            return false;
-        }
+        return await DeleteOneAsync(_taskProgressCollection,
+            Builders<TaskProgressData>.Filter.Eq(t => t.characterId, characterId),
+            "删除角色任务进度数据");
     }
 
     #endregion
@@ -963,11 +693,8 @@ public class MongoDBManager : Singleton<MongoDBManager>
     /// <returns>连接是否成功</returns>
     public async Task<bool> TestConnection()
     {
-        await EnsureInitialized();
-        if (!IsInitialized || _client == null)
-        {
+        if (!await EnsureCollection(_client, "测试连接"))
             return false;
-        }
 
         try
         {
