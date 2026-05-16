@@ -30,6 +30,12 @@ public class MonsterAnimationController : MonoBehaviour
     [Tooltip("播放一次性动作（Hit/Attack/Death/Alert）前，是否先将 V/H Speed 置 0 回 Idle")]
     [SerializeField] private bool stopMovementOnOneShot = true;
 
+    [Header("攻击随机动画")]
+    [Tooltip("攻击动画索引参数名（用于随机选择攻击动画）")]
+    [SerializeField] private string attackIndexParam = "AttackIndex";
+    [Tooltip("攻击动画数量")]
+    [SerializeField] private int attackAnimationCount = 3;
+
     private int _hitTriggerHash;
     private int _attackTriggerHash;
     private int _deathTriggerHash;
@@ -38,6 +44,7 @@ public class MonsterAnimationController : MonoBehaviour
     private int _alertTriggerHash;
     private int _vSpeedHash;
     private int _hSpeedHash;
+    private int _attackIndexHash;
 
     private void Awake()
     {
@@ -54,6 +61,7 @@ public class MonsterAnimationController : MonoBehaviour
         _alertTriggerHash = string.IsNullOrEmpty(alertTrigger) ? 0 : Animator.StringToHash(alertTrigger);
         _vSpeedHash = string.IsNullOrEmpty(verticalSpeedParam) ? 0 : Animator.StringToHash(verticalSpeedParam);
         _hSpeedHash = string.IsNullOrEmpty(horizontalSpeedParam) ? 0 : Animator.StringToHash(horizontalSpeedParam);
+        _attackIndexHash = string.IsNullOrEmpty(attackIndexParam) ? 0 : Animator.StringToHash(attackIndexParam);
     }
 
     // 置零 V/H 速度，确保回 Idle
@@ -76,11 +84,16 @@ public class MonsterAnimationController : MonoBehaviour
         }
     }
 
-    // 播放攻击
+    // 播放攻击（随机选择攻击动画）
     public void PlayAttack()
     {
         if (animator == null) return;
         if (stopMovementOnOneShot) ZeroSpeeds();
+        // 随机选择攻击动画索引 0～attackAnimationCount-1
+        if (_attackIndexHash != 0 && attackAnimationCount > 1)
+        {
+            animator.SetInteger(_attackIndexHash, Random.Range(0, attackAnimationCount));
+        }
         if (_attackTriggerHash != 0)
         {
             animator.ResetTrigger(_attackTriggerHash);

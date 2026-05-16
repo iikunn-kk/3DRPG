@@ -44,7 +44,7 @@ public class AudioManager : Singleton<AudioManager>
         base.Awake();
         InitAudioSystem();
     }
-    
+
     private void InitAudioSystem()
     {
         if (audioConfig == null)
@@ -113,7 +113,7 @@ public class AudioManager : Singleton<AudioManager>
         _bgmVolume = Mathf.Clamp01(_playerSettingCache.bgmVolume);
         _sfxVolume = Mathf.Clamp01(_playerSettingCache.soundVolume);
     }
-    
+
     private void SaveAudioSettings()
     {
         if (_playerSettingCache == null) _playerSettingCache = new PlayerSetting();
@@ -236,7 +236,7 @@ public class AudioManager : Singleton<AudioManager>
             Debug.LogError($"未找到BGM配置: {bgmType}");
             return;
         }
-        StopBGM(false).Forget(); 
+        StopBGM(false).Forget();
 
         if (_currentBgmSource == null)
         {
@@ -262,7 +262,7 @@ public class AudioManager : Singleton<AudioManager>
             }
         }
     }
-    
+
     private async UniTask FadeOutBGMAsync(float fadeDuration, CancellationToken token)
     {
         try
@@ -282,13 +282,13 @@ public class AudioManager : Singleton<AudioManager>
             {
                 _currentBgmSource.Stop();
                 _currentBgmSource.clip = null;
-                _currentBgmSource.volume = 1f; 
+                _currentBgmSource.volume = 1f;
                 ApplyBGMSetting();
             }
         }
         catch (OperationCanceledException) { }
     }
-    
+
     public void PauseBGM() { if (_currentBgmSource != null && _currentBgmSource.isPlaying) _currentBgmSource.Pause(); }
     public void ResumeBGM() { if (_currentBgmSource != null && !_currentBgmSource.isPlaying && _isBGMEnabled) _currentBgmSource.UnPause(); }
     public bool IsBGMPlaying() => _currentBgmSource != null && _currentBgmSource.isPlaying;
@@ -300,18 +300,19 @@ public class AudioManager : Singleton<AudioManager>
         if (!_isSFXEnabled) return;
         var clip = audioConfig.GetWeaponSoundClip(soundType);
         if (clip == null) return;
-        PlayPooledSound(clip, source => {
+        PlayPooledSound(clip, source =>
+        {
             if (!_activeWeaponSounds.ContainsKey(soundType)) _activeWeaponSounds[soundType] = new List<AudioSource>();
             _activeWeaponSounds[soundType].Add(source);
         }, soundType);
     }
-    
+
     public void PlayLoopingWeaponSound(SkillSoundType soundType)
     {
         if (!_isSFXEnabled) return;
         var clip = audioConfig.GetWeaponSoundClip(soundType);
         if (clip == null) return;
-        
+
         if (_activeWeaponSounds.TryGetValue(soundType, out var list))
         {
             foreach (var s in list)
@@ -384,7 +385,7 @@ public class AudioManager : Singleton<AudioManager>
         }
         catch (OperationCanceledException) { }
     }
-    
+
     private void RemoveFromActiveWeaponSounds(SkillSoundType soundType, AudioSource source)
     {
         if (_activeWeaponSounds.TryGetValue(soundType, out var sourceList))
@@ -394,7 +395,7 @@ public class AudioManager : Singleton<AudioManager>
         }
     }
     #endregion
-    
+
     #region 停止音效
     public void StopWeaponSound(SkillSoundType soundType, bool fadeOut = false, float fadeDuration = 0.2f)
     {
@@ -404,7 +405,7 @@ public class AudioManager : Singleton<AudioManager>
         {
             if (source == null) continue;
             if (source.isPlaying) source.Stop();
-            
+
             if (source.loop || _loopingWeaponTypes.Contains(soundType))
             {
                 if (source.gameObject.activeInHierarchy)
