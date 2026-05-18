@@ -7,6 +7,11 @@ using UnityEngine.UI;
 /// 抽卡面板类 - 管理抽卡界面的核心逻辑
 /// 继承自UIPopPanelBase，实现抽卡功能的UI交互
 /// </summary>
+/// <summary>
+/// 抽卡模式枚举：外部调用者通过 Initialize 指定初始行为
+/// </summary>
+public enum LotteryMode { Single, Ten }
+
 public class LotteryPanel : UIPopPanelBase
 {
     // ==================== UI组件引用 ====================
@@ -57,14 +62,21 @@ public class LotteryPanel : UIPopPanelBase
         InitPrefab();
     }
 
+
     /// <summary>
-    /// Start方法 - 在第一帧更新前调用
-    /// 面板打开时自动执行一次十连抽，显示初始抽卡结果
+    /// 外部入口：根据抽卡模式初始化面板行为，由 DrawCardPanel 在 OpenPanel 后调用
     /// </summary>
-    private void Start()
+    public void Initialize(LotteryMode mode)
     {
-        // 面板打开时就自动执行十连抽，展示初始抽卡结果
-        OnLottery10Btn();
+        switch (mode)
+        {
+            case LotteryMode.Single:
+                OnLottery1Btn();
+                break;
+            case LotteryMode.Ten:
+                OnLottery10Btn();
+                break;
+        }
     }
 
     /// <summary>

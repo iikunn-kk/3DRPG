@@ -8,7 +8,7 @@ public class ChooseProfessionMod : MonoBehaviour
     [SerializeField] private Image titleImage;
     [SerializeField] private TMP_Text professionName;
     [SerializeField] private Image selectionImage;
-    
+
     private CharacterProfession _profession;
     private System.Action<CharacterProfession> _onProfessionSelected;
 
@@ -21,14 +21,14 @@ public class ChooseProfessionMod : MonoBehaviour
     {
         _onProfessionSelected = onProfessionSelected;
         _profession = data.profession;
-        
+
         // 设置显示内容
         if (titleImage != null && data.titleImage != null)
             titleImage.sprite = data.titleImage;
-            
+
         if (professionName != null)
             professionName.text = _profession.ToString();
-            
+
         // 默认隐藏选中状态
         if (selectionImage != null)
             selectionImage.gameObject.SetActive(false);
@@ -42,7 +42,7 @@ public class ChooseProfessionMod : MonoBehaviour
         _onProfessionSelected?.Invoke(_profession);
         AudioManager.Instance.PlayUISound(UISoundType.按下按钮);
     }
-    
+
     /// <summary>
     /// 设置选中状态
     /// </summary>
@@ -52,7 +52,7 @@ public class ChooseProfessionMod : MonoBehaviour
         if (selectionImage != null)
             selectionImage.gameObject.SetActive(selected);
     }
-    
+
     /// <summary>
     /// 获取职业枚举
     /// </summary>
