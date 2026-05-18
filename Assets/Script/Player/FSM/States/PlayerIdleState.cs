@@ -4,6 +4,7 @@ namespace PlayerFSM
 {
     /// <summary>
     /// 待机状态：无移动输入。
+    /// 物理行为：减速到停止 + 面向摄像机前方。
     /// 可切换到：Walk（有移动输入）、Sprint（移动 + Sprint）、Jump、Roll。
     /// </summary>
     public class PlayerIdleState : PlayerStateBase
@@ -17,9 +18,24 @@ namespace PlayerFSM
 
         public override void Update() { }
 
+        /// <summary>
+        /// 物理更新：减速到停止
+        /// </summary>
+        public override void FixedUpdate()
+        {
+            Decelerate();
+        }
+
+        /// <summary>
+        /// 动画后处理：面向摄像机前方（在 Animator 更新后执行，避免动画帧引入的旋转偏移）
+        /// </summary>
+        public override void LateUpdate()
+        {
+            RotateTowardCameraForward();
+        }
+
         public override void CheckTransitions()
         {
-            // 跳跃/翻滚检测（由 MoveMent 输入回调触发标志）
             if (movement.IsJumping)
             {
                 owner.ChangeState(PlayerState.Jump);

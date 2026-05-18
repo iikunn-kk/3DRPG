@@ -74,5 +74,82 @@ namespace PlayerFSM
                 return movement.IsSprintingNow();
             return false;
         }
+
+        // ---- 物理访问帮助属性 ----
+
+        /// <summary>玩家 Rigidbody（供 FSM 状态直接操作物理）</summary>
+        protected Rigidbody Rb
+        {
+            get
+            {
+                if (movement != null)
+                    return movement.PlayerRigidbody;
+                return null;
+            }
+        }
+
+        /// <summary>主摄像机缓存</summary>
+        protected Camera MainCamera
+        {
+            get
+            {
+                if (movement != null)
+                    return movement.CachedCamera;
+                return null;
+            }
+        }
+
+        /// <summary>控制是否锁定</summary>
+        protected bool IsControlLocked
+        {
+            get
+            {
+                if (movement != null)
+                    return movement.IsControlLocked();
+                return true;
+            }
+        }
+
+        // ---- 物理操作便捷方法 ----
+
+        /// <summary>
+        /// 面向摄像机前方平滑旋转
+        /// </summary>
+        protected void RotateTowardCameraForward()
+        {
+            movement?.RotateTowardCameraForward(movement.TurnSpeed);
+        }
+
+        /// <summary>
+        /// 应用目标速度（加速/减速）
+        /// </summary>
+        protected void ApplyMovementVelocity(Vector3 targetVelocity, float acceleration)
+        {
+            movement?.ApplyMovement(targetVelocity, acceleration);
+        }
+
+        /// <summary>
+        /// 减速到停止
+        /// </summary>
+        protected void Decelerate()
+        {
+            movement?.Decelerate(movement.MovementDeceleration);
+        }
+
+        /// <summary>
+        /// 锁定玩家控制
+        /// </summary>
+        protected void LockControl()
+        {
+            movement?.LockPlayerControl();
+        }
+
+        /// <summary>
+        /// 解锁玩家控制
+        /// </summary>
+        protected void UnlockControl()
+        {
+            movement?.UnlockPlayerControl();
+        }
     }
 }

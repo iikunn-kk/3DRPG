@@ -84,6 +84,43 @@ public class MoveMent : MonoBehaviour
     // 缓存 Camera.main 引用，避免每帧 Find
     private Camera _cachedMainCamera;
 
+    // ---- FSM 物理访问属性 ----
+
+    /// <summary>刚体引用（供 FSM 状态读取）</summary>
+    public Rigidbody PlayerRigidbody => rb;
+
+    /// <summary>主摄像机缓存（供 FSM 状态读取）</summary>
+    public Camera CachedCamera => _cachedMainCamera;
+
+    /// <summary>翻滚计时器（供 FSM RollState 读写）</summary>
+    public float RollTimer { get => rollTimer; set => rollTimer = value; }
+
+    /// <summary>翻滚方向（供 FSM RollState 读写）</summary>
+    public Vector3 RollDirection { get => rollDirection; set => rollDirection = value; }
+
+    /// <summary>已翻滚距离（供 FSM RollState 读写）</summary>
+    public float RollDistanceTraveled { get => rollDistanceTraveled; set => rollDistanceTraveled = value; }
+
+    /// <summary>翻滚持续时间（供 FSM RollState 读取）</summary>
+    public float RollDuration => rollDuration;
+
+    /// <summary>翻滚速度曲线（供 FSM RollState 读取）</summary>
+    public AnimationCurve RollSpeedCurve => rollSpeedCurve;
+
+    /// <summary>翻滚冷却时间（供 FSM RollState 读取）</summary>
+    public float RollCooldown => rollCooldown;
+
+    /// <summary>翻滚冷却结束标记（供 FSM RollState 读写）</summary>
+    public bool RollTriggered { get => rollTriggered; set => rollTriggered = value; }
+
+    /// <summary>运动参数（供 FSM 状态读取）</summary>
+    public float MoveSpeed => moveSpeed;
+    public float MaxSpeedMultiplier => maxSpeedMultiplier;
+    public float MovementAcceleration => movementAcceleration;
+    public float MovementDeceleration => movementDeceleration;
+    public float JumpForce => jumpForce;
+    public float TurnSpeed => turnSpeed;
+
     [Header("动画速度设置")]
     [Tooltip("冲刺时的动画播放速度倍率")]
     public float sprintMultiplier = 1.6f;
@@ -169,53 +206,31 @@ public class MoveMent : MonoBehaviour
             rollTriggered = false;
         }
 
-        if (isRolling)
-        {
-            HandleRoll();
-        }
-
         // 如果当前处于由刚体驱动的跳跃中，检测落地并重置状态
         if (isJumping)
         {
-            // 先递减最短滞空时间，防止与跳跃触发在同一帧被判定为落地
             if (jumpAirTimer > 0f)
             {
                 jumpAirTimer -= Time.deltaTime;
             }
-            // else if (IsGrounded())
-            // {
-            //     isJumping = false;
-            //     // 落地后恢复动画器的移动参数
-            //     if (characterAnimation != null)
-            //         UpdateAnimatorSpeedsFromInput(movementInput);
-            // }
-            // 在 Update() 的落地检测附近添加
-
             else if (IsGrounded())
             {
                 isJumping = false;
-
-                // 落地时平滑恢复移动速度
-                if (rb != null && movementInput.sqrMagnitude > 0.0001f)
-                {
-                    // 让物理系统自然过渡到新速度
-                }
-
                 UpdateAnimatorSpeedsFromInput(movementInput);
             }
         }
 
-        // 处理角色转向
-        HandleRotation();
+        // 物理移动和转向已迁移至各 FSM 状态的 FixedUpdate()
     }
 
     /// <summary>
-    /// 【纯代码驱动】物理更新 - 处理走路/跑动的移动
-    /// 动画只负责视觉表现，不参与物理计算
+    /// 物理更新 — 由 FSM 各状态的 FixedUpdate() 接管。
+    /// 移动/翻滚/跳跃物理已迁移至 FSM 状态类。
+    /// 此方法保留为空，仅作为组件生命周期占位。
     /// </summary>
     void FixedUpdate()
     {
-        Move();
+        // 物理移动已迁移至各 FSM 状态类的 FixedUpdate()
     }
 
     // 供外部（CharacterAnimationController）查询当前是否有移动输入
@@ -231,205 +246,48 @@ public class MoveMent : MonoBehaviour
         return isSprinting && movementInput.y > 0;
     }
 
-    //陈子旧翻滚代码
-    // private void HandleRoll()
-    // {
-    //     // 如果控制被锁定，则不处理翻滚
-    //     if (isControlLocked)
-    //     {
-    //         if (isRolling)
-    //         {
-    //             isRolling = false;
-    //             characterAnimation?.OnRollEnd();
-    //         }
-    //         return;
-    //     }
-
-    //     // 更新翻滚计时器
-    //     rollTimer -= Time.deltaTime;
-
-    //     // 检查翻滚是否结束
-    //     if (rollTimer <= 0)
-    //     {
-    //         isRolling = false;
-    //         rollTimer = 0f;
-    //         // 翻滚结束后启动冷却计时器
-    //         rollCooldownTimer = rollCooldown;
-    //         rollTriggered = true; // 设置触发锁
-    //         characterAnimation?.OnRollEnd();
-    //     }
-    // }
 
 
 
-    private void HandleRoll()
+
+    // HandleRoll 已迁移至 PlayerRollState.FixedUpdate()
+    // HandleRotation 已迁移至各移动状态类的 FixedUpdate()
+
+    /// <summary>
+    /// 应用带速度的物理移动（供 FSM 状态调用）。
+    /// targetVelocity: 目标速度向量
+    /// acceleration: 加速系数
+    /// </summary>
+    public void ApplyMovement(Vector3 targetVelocity, float acceleration)
     {
-        if (isControlLocked)
-        {
-            isRolling = false;
-            rollDistanceTraveled = 0f;
-            characterAnimation?.OnRollEnd();
-            return;
-        }
-
-        if (!isRolling) return;
-
-        // 递减计时器
-        rollTimer -= Time.deltaTime;
-
-        // ========== 实时计算翻滚方向（边翻滚边转向） ==========
-
-        // // 根据当前输入实时更新翻滚方向
-        if (movementInput.sqrMagnitude > 0.01f)
-        {
-            // 有移动输入时，根据输入方向翻滚
-            rollDirection = new Vector3(movementInput.x, 0, movementInput.y);
-            rollDirection = _cachedMainCamera.transform.TransformDirection(rollDirection);
-            rollDirection.y = 0;
-            rollDirection.Normalize();
-        }
-        // // 优化：基于角色朝向（更像传统动作游戏）
-        // Vector3 inputDir = new Vector3(movementInput.x, 0, movementInput.y);
-        // if (inputDir.sqrMagnitude > 0.01f)
-        // {
-        //     // 角色自己的左右前后方向
-        //     rollDirection = transform.TransformDirection(inputDir);
-        //     rollDirection.y = 0;
-        //     rollDirection.Normalize();
-        // }
-
-        // else 保持初始方向（无输入时沿初始方向翻滚）
-
-        // ========== 核心翻滚逻辑 ==========
-
-        // 计算当前进度 (0 → 1)
-        float progress = 1f - (rollTimer / rollDuration);
-
-        // 从曲线获取速度倍率
-        float speedMultiplier = rollSpeedCurve.Evaluate(progress);
-
-        // 计算最大速度：distance = avgSpeed × duration
-        // 用曲线积分近似：maxSpeed ≈ baseSpeed × 2
-        float maxSpeed = (rollDistance / rollDuration) * 1.5f;
-
-        // 当前速度
-        float currentSpeed = maxSpeed * speedMultiplier;
-
-        // 本帧位移
-        float frameDistance = currentSpeed * Time.deltaTime;
-        rollDistanceTraveled += frameDistance;
-
-        // ========== 应用位移和旋转 ==========
-
-        if (rb != null)
-        {
-            // 设置刚体速度
-            rb.linearVelocity = rollDirection * currentSpeed;
-
-            // 翻滚过程中面向翻滚方向
-            if (rollDirection.sqrMagnitude > 0.001f)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(rollDirection);
-                rb.MoveRotation(Quaternion.Slerp(rb.rotation, targetRotation, turnSpeed * 3f));
-            }
-        }
-        else
-        {
-            transform.position += rollDirection * frameDistance;
-
-            // 翻滚过程中面向翻滚方向
-            if (rollDirection.sqrMagnitude > 0.001f)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(rollDirection);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, turnSpeed * 3f);
-            }
-        }
-
-        // ========== 结束判定 ==========
-
-        bool distanceReached = rollDistanceTraveled >= rollDistance;
-        bool timeEnded = rollTimer <= 0f;
-
-        if (distanceReached || timeEnded)
-        {
-            isRolling = false;
-            rollTimer = 0f;
-            rollDistanceTraveled = 0f;
-            rollCooldownTimer = rollCooldown;
-            rollTriggered = true;
-
-            // 翻滚结束后平滑减速
-            if (rb != null)
-            {
-                rb.linearVelocity = Vector3.zero;
-            }
-
-            characterAnimation?.OnRollEnd();
-        }
+        if (rb == null || isControlLocked || isAltKeyDown) return;
+        float t = acceleration * Time.fixedDeltaTime;
+        rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, targetVelocity, t);
     }
-    private void HandleRotation()
+
+    /// <summary>
+    /// 减速到停止（供 FSM 状态调用）。
+    /// </summary>
+    public void Decelerate(float deceleration)
     {
-        // 如果控制被锁定，则不处理转向
-        if (isControlLocked) return;
+        if (rb == null || isControlLocked || isAltKeyDown) return;
+        float t = deceleration * Time.fixedDeltaTime;
+        rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, Vector3.zero, t);
+    }
 
-        // 角色始终保持面向摄像机前方，不根据移动方向转向
-        // 只有在不在翻滚状态时才进行转向
-        if (!isRolling)
+    /// <summary>
+    /// 平滑转向面向摄像机前方（供 FSM 状态调用）。
+    /// </summary>
+    public void RotateTowardCameraForward(float turnSpeed)
+    {
+        if (_cachedMainCamera == null || isControlLocked) return;
+        Vector3 forward = _cachedMainCamera.transform.forward;
+        forward.y = 0f;
+        forward.Normalize();
+        if (forward.sqrMagnitude > 0.001f)
         {
-            // 计算目标旋转（始终面向摄像机前方）
-            if (_cachedMainCamera == null) return;
-            Vector3 forward = _cachedMainCamera.transform.forward;
-            forward.y = 0f;
-            forward.Normalize();
-
             Quaternion targetRotation = Quaternion.LookRotation(forward);
-
-            // 平滑转向
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, turnSpeed);
-        }
-    }
-
-    public void Move()
-    {
-        // 翻滚/跳跃/控制锁定时不处理普通移动
-        if (isRolling || isJumping || isControlLocked || isAltKeyDown) return;
-
-        // 根据输入计算移动方向（纯代码计算）
-        if (movementInput.sqrMagnitude > 0.0001f)
-        {
-            // 从摇杆输入计算方向，并转换到相机视角
-            Vector3 moveDir = new Vector3(movementInput.x, 0, movementInput.y);
-            if (_cachedMainCamera != null)
-            {
-                moveDir = _cachedMainCamera.transform.TransformDirection(moveDir);
-            }
-            moveDir.y = 0;
-            moveDir.Normalize();
-
-            // 计算目标速度（代码完全控制）
-            float currentSpeed = moveSpeed;
-            if (isSprinting && movementInput.y > 0)
-                currentSpeed *= maxSpeedMultiplier;
-            if (isCrouching)
-                currentSpeed *= 0.5f;
-
-            Vector3 targetVelocity = moveDir * currentSpeed;
-
-            if (rb != null)
-            {
-                // 有输入 → 加速
-                float t = movementAcceleration * Time.fixedDeltaTime;
-                rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, targetVelocity, t);
-            }
-        }
-        else
-        {
-            // 无输入时，减速到停止
-            if (rb != null)
-            {
-                float t = movementDeceleration * Time.fixedDeltaTime;
-                rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, Vector3.zero, t);
-            }
         }
     }
     // 输入回调方法
@@ -514,22 +372,7 @@ public class MoveMent : MonoBehaviour
         }
     }
 
-    // /// <summary>
-    // /// 跳跃过程中保持水平速度，实现抛物线运动
-    // /// </summary>
-    // private System.Collections.IEnumerator PreserveHorizontalVelocityDuringJump(Vector3 horizontalVel)
-    // {
-    //     while (isJumping && !IsGrounded())
-    //     {
-    //         if (rb != null)
-    //         {
-    //             // 保持 Y 轴速度（由重力控制），固定 XZ 平面速度
-    //             rb.linearVelocity = new Vector3(horizontalVel.x, rb.linearVelocity.y, horizontalVel.z);
-    //         }
-    //         yield return null;
-    //     }
-    //     // 落地后停止协程，自然过渡到地面移动
-    // }
+
 
     public void OnSprinting(InputAction.CallbackContext value)
     {
@@ -573,26 +416,7 @@ public class MoveMent : MonoBehaviour
         }
     }
 
-    //陈子旧翻滚代码
-    // private void Roll()
-    // {
-    //     // 如果控制被锁定，或者Alt键被按下则不处理翻滚
-    //     if (isControlLocked || isAltKeyDown) return;
 
-    //     // 双重检查确保不会重复触发翻滚
-    //     if (isRolling || rollTriggered || rollCooldownTimer > 0)
-    //         return;
-
-    //     isRolling = true;
-    //     rollTimer = rollDuration;
-    //     rollTriggered = true;
-
-    //     // 通知动画控制器：翻滚开始（启用根运动）并触发翻滚动画
-    //     characterAnimation?.OnRollStart();
-    //     characterAnimation?.TriggerRoll();
-
-    //     // 翻滚位移由动画 root motion 驱动，无需额外方向矢量
-    // }
     private void Roll()
     {
         // 条件检查（保持原有）
@@ -753,77 +577,6 @@ public class MoveMent : MonoBehaviour
     }
 
 
-    // // 应用根运动：优先使用 CharacterController.Move 保持碰撞
-    // // 若没有 CharacterController 但有刚体，则通过刚体的 MovePosition/MoveRotation 与物理系统协同
-    // public void ApplyRootMotion(Vector3 deltaPosition, Quaternion deltaRotation)
-    // {
-
-    //     // 若有刚体，则使用 MovePosition/MoveRotation 与物理系统协同
-    //     if (rb != null)
-    //     {
-    //         rb.MovePosition(rb.position + deltaPosition);
-    //         rb.MoveRotation(deltaRotation);
-    //         return;
-    //     }
-
-    //     // 回退：若无 CharacterController 和刚体，则直接修改 transform
-    //     transform.position += deltaPosition;
-    //     transform.rotation = deltaRotation;
-    // }
-
-    // public void ApplyRootMotion(Vector3 deltaPosition, Quaternion deltaRotation)
-    // {
-    //     // 1. 保留转向
-    //     if (deltaRotation != Quaternion.identity)
-    //     {
-    //         // 可以选择是否使用根运动的旋转
-    //         // transform.rotation = deltaRotation; // 选项A：直接用根运动旋转
-    //         // 或保持你自己的转向逻辑（HandleRotation）已处理
-    //     }
-
-    //     // 2. 计算移动方向（从根运动提取）
-    //     Vector3 moveDirection = deltaPosition;
-    //     moveDirection.y = 0f; // 忽略垂直分量
-    //     if (moveDirection.sqrMagnitude > 0.0001f)
-    //     {
-    //         moveDirection.Normalize();
-
-    //         // 3. 计算目标速度
-    //         float currentSpeed = moveSpeed;
-
-    //         // 如果在冲刺，应用倍率
-    //         if (IsSprintingNow() && movementInput.y > 0)
-    //         {
-    //             currentSpeed *= maxSpeedMultiplier;
-    //         }
-
-    //         // 如果在蹲伏，降低速度
-    //         if (isCrouching)
-    //         {
-    //             currentSpeed *= 0.5f;
-    //         }
-
-    //         Vector3 targetVelocity = moveDirection * currentSpeed;
-
-    //         // 4. 应用到刚体
-    //         if (rb != null)
-    //         {
-    //             // 方法A：平滑加速到目标速度
-    //             rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, targetVelocity, movementAcceleration * Time.fixedDeltaTime);
-
-    //             // 保持旋转控制
-    //             rb.MoveRotation(deltaRotation);
-    //             return;
-    //         }
-
-    //         // 5. 回退到 CharacterController 或 Transform
-    //         // 如果有 CharacterController：
-    //         // controller.Move(targetVelocity * Time.deltaTime);
-
-    //         // 如果都没有，直接修改 transform：
-    //         // transform.position += targetVelocity * Time.deltaTime;
-    //     }
-    // }
 
 
 }

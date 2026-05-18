@@ -48,6 +48,12 @@ namespace PlayerFSM
             FixedUpdateStateMachine();
         }
 
+        private void LateUpdate()
+        {
+            if (_currentStateInstance == null) return;
+            _currentStateInstance.LateUpdate();
+        }
+
         private void OnDestroy()
         {
             foreach (var kvp in _stateDict)
