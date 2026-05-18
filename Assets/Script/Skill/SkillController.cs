@@ -2,6 +2,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using System.Collections.Generic;
+using PlayerFSM;
 
 public class SkillController : MonoBehaviour
 {
@@ -35,9 +36,20 @@ public class SkillController : MonoBehaviour
 
     // 缓存对 SkillManager 的引用
     private SkillManager _skillManager;
+    private PlayerStateMachine _playerFsm;
+
+    // 延迟获取 FSM（在 Awake 时组件可能尚未添加，因此每次调用时尝试获取）
+    private PlayerStateMachine GetPlayerFsm()
+    {
+        if (_playerFsm == null)
+            _playerFsm = GetComponent<PlayerStateMachine>();
+        return _playerFsm;
+    }
+
     private void Awake()
     {
         _skillManager = SkillManager.Instance;
+        // 注意：_playerFsm 不在 Awake 中获取——PlayerStateMachine 组件此时可能还未添加
         // 尝试自动获取动画控制器
         if (characterAnimationController == null)
         {
@@ -227,17 +239,17 @@ public class SkillController : MonoBehaviour
                 switch (ps.SkillSO.skillType)
                 {
                     case SkillEffectType.法术:
-                        characterAnimationController.PlaySkill(defaultSkillLockDuration);
+                        GetPlayerFsm()?.RequestAction(PlayerFSM.PlayerState.Skill);
                         break;
                     case SkillEffectType.Buff:
                     case SkillEffectType.持续性技能:
-                        characterAnimationController.PlayBuff(defaultBuffLockDuration);
+                        GetPlayerFsm()?.RequestAction(PlayerFSM.PlayerState.Buff);
                         break;
                     case SkillEffectType.普通攻击:
-                        characterAnimationController.PlayAttack(defaultAttackLockDuration);
+                        GetPlayerFsm()?.RequestAction(PlayerFSM.PlayerState.Attack);
                         break;
                     default:
-                        characterAnimationController.PlaySkill(defaultSkillLockDuration);
+                        GetPlayerFsm()?.RequestAction(PlayerFSM.PlayerState.Skill);
                         break;
                 }
             }

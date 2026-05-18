@@ -136,26 +136,13 @@ public class CharacterAnimationController : MonoBehaviour
     private void PlayAttackInternal(float lockDuration, bool useTimeout)
     {
         if (animator == null) return;
-        // 清除移动/奔跑状态 -> since blend tree uses V/H speeds, set speeds to zero to return to idle
         SetMoveSpeeds(0f, 0f);
         if (_attackTriggerHash != 0) animator.SetTrigger(_attackTriggerHash);
 
         // 强制站立、取消翻滚
         _movement?.ForceStandUp();
         _movement?.CancelRoll();
-
-        // 锁定控制
-        if (_movement != null)
-        {
-            _movement.LockPlayerControl();
-        }
-
-        if (useTimeout && lockDuration > 0f)
-        {
-            CancelCts(ref _unlockCts);
-            _unlockCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
-            UnlockAfterDelayAsync(lockDuration, _unlockCts.Token).Forget();
-        }
+        // Lock/Unlock 已迁移至 PlayerFSM 状态类
     }
 
     public void PlaySkill(float lockDuration)
@@ -171,19 +158,7 @@ public class CharacterAnimationController : MonoBehaviour
 
         _movement?.ForceStandUp();
         _movement?.CancelRoll();
-
-        // 锁定控制
-        if (_movement != null)
-        {
-            _movement.LockPlayerControl();
-        }
-
-        if (useTimeout && lockDuration > 0f)
-        {
-            CancelCts(ref _unlockCts);
-            _unlockCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
-            UnlockAfterDelayAsync(lockDuration, _unlockCts.Token).Forget();
-        }
+        // Lock/Unlock 已迁移至 PlayerFSM 状态类
     }
 
     public void PlayBuff(float lockDuration)
@@ -199,19 +174,7 @@ public class CharacterAnimationController : MonoBehaviour
 
         _movement?.ForceStandUp();
         _movement?.CancelRoll();
-
-        // 锁定控制
-        if (_movement != null)
-        {
-            _movement.LockPlayerControl();
-        }
-
-        if (useTimeout && lockDuration > 0f)
-        {
-            CancelCts(ref _unlockCts);
-            _unlockCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
-            UnlockAfterDelayAsync(lockDuration, _unlockCts.Token).Forget();
-        }
+        // Lock/Unlock 已迁移至 PlayerFSM 状态类
     }
 
     public void PlayHurt(float lockDuration = 0.25f)
@@ -292,22 +255,14 @@ public class CharacterAnimationController : MonoBehaviour
     public void BeginChannelAttack()
     {
         if (animator == null) return;
-        // 清除移动/奔跑状态
         SetMoveSpeeds(0f, 0f);
 
-        // 通知 Animator 进入 Attack-Pre；并声明意图：希望进入Loop
         if (_channelingBoolHash != 0) animator.SetBool(_channelingBoolHash, true);
         if (_attackTriggerHash != 0) animator.SetTrigger(_attackTriggerHash);
 
-        // 强制站立与取消翻滚
         _movement?.ForceStandUp();
         _movement?.CancelRoll();
-
-        // 锁定控制
-        if (_movement != null)
-        {
-            _movement.LockPlayerControl();
-        }
+        // Lock/Unlock 已迁移至 PlayerFSM 状态类
     }
 
     // 松开按键或被打断时调用：将 IsChanneling 置为 false，驱动动画从 Pre 或 Loop 进入 End
@@ -406,10 +361,10 @@ public class CharacterAnimationController : MonoBehaviour
     }
 
     // Animation Event / 回调：在动作动画（攻击/法术/Buff）播放结束时调用
-    // 推荐在动画剪辑最后帧添加此 Event，确保移动与控制正确恢复
+    // 推荐在动画剪辑最后帧添加此 Event，确保动画状态正确恢复
+    // 注：Lock/Unlock 已迁移至 PlayerFSM 状态类，此处仅做动画状态清理
     public void OnActionAnimationEnd()
     {
-        // 如果在自动解锁协程中，停止它
         CancelCts(ref _unlockCts);
 
         // 结束时确保通道标志复位
@@ -418,22 +373,17 @@ public class CharacterAnimationController : MonoBehaviour
             animator.SetBool(_channelingBoolHash, false);
         }
 
-        // 恢复 Animator 的移动/奔跑参数为当前输入状态（如果移动脚本可用）
+        // 恢复 Animator 的移动/奔跑参数
         if (_movement != null)
         {
-            // Do not set move bool; restore speeds and running flag
-            float h = 0f, v = 0f; // rely on MoveMent to push speeds next frame
-            SetMoveSpeeds(h, v);
+            SetMoveSpeeds(0f, 0f);
         }
-
-        // 解除控制锁，使移动脚本重新接管（注意：移动脚本的 OnMove 会在下一帧更新 Animator 参数）
-        _movement?.UnlockPlayerControl();
     }
 
-    // 强制结束当前动作并立即解锁控制（用于外部打断时调用）
+    // 强制结束当前动作并复位动画参数（用于外部打断时调用）
+    // 注：Lock/Unlock 已迁移至 PlayerFSM 状态类，此处仅做动画状态清理
     public void ForceEndActionImmediate()
     {
-        // Stop any pending auto-unlock
         CancelCts(ref _unlockCts);
 
         // 结束时确保通道标志复位
@@ -442,15 +392,11 @@ public class CharacterAnimationController : MonoBehaviour
             animator.SetBool(_channelingBoolHash, false);
         }
 
-        // 恢复 Animator 的移动/奔跑参数为当前输入状态（如果移动脚本可用）
+        // 恢复 Animator 的移动/奔跑参数
         if (_movement != null)
         {
-            float h = 0f, v = 0f; // rely on MoveMent cached inputs; SetMoveSpeeds will be updated in UnlockPlayerControl
-            SetMoveSpeeds(h, v);
+            SetMoveSpeeds(0f, 0f);
         }
-
-        // 立即解除控制锁
-        _movement?.UnlockPlayerControl();
     }
 
     // 触发任意 Trigger（仅触发，不处理解锁定时器）

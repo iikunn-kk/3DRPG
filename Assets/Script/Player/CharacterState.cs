@@ -4,6 +4,7 @@ using UnityEngine;
 // 移除未使用的命名空间引用，保持文件整洁
 using DamageNumbersPro;
 using Cysharp.Threading.Tasks;
+using PlayerFSM;
 
 public partial class CharacterState : MonoBehaviour, IDamageable
 {
@@ -63,6 +64,9 @@ public partial class CharacterState : MonoBehaviour, IDamageable
 
     // 状态与复活相关标记（其它 partial 复用）
     private bool _isDead;
+
+    /// <summary>供 FSM 查询死亡状态</summary>
+    public bool IsDead => _isDead;
     private Vector3 _plannedRespawnPosition;
     private bool _penaltyApplied;
     private bool _pendingRuntimeRespawn; // 仅运行时标记（不持久化）
@@ -132,6 +136,9 @@ public partial class CharacterState : MonoBehaviour, IDamageable
         _originalLayer = gameObject.layer;
         _originalInteractionEnabled = _interaction ? _interaction.enabled : false;
 
+        // 初始化玩家 FSM（阶段一：观察模式）
+        InitializeFSM();
+
         // 订阅 EquipmentController 事件（装备变化时自动重算属性）
         var equipCtrl = GetComponent<EquipmentController>();
         if (equipCtrl != null)
@@ -146,6 +153,25 @@ public partial class CharacterState : MonoBehaviour, IDamageable
         OnValueChange();
         // 标记核心初始化完成
         _hasRunCoreInit = true;
+    }
+
+    /// <summary>
+    /// 初始化玩家 FSM 状态机。
+    /// 阶段一：附加 PlayerStateMachine 组件，状态机在观察模式下运行（仅日志，不修改游戏状态）。
+    /// </summary>
+    private void InitializeFSM()
+    {
+        var fsm = GetComponent<PlayerStateMachine>();
+        if (fsm == null)
+        {
+            fsm = gameObject.AddComponent<PlayerStateMachine>();
+            fsm.enabled = true;
+            Debug.Log("[CharacterState] PlayerStateMachine 已附加到玩家 GameObject（阶段一：观察模式）");
+        }
+        else if (!fsm.enabled)
+        {
+            fsm.enabled = true;
+        }
     }
     #endregion
 

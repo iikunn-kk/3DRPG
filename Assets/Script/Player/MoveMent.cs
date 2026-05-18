@@ -47,11 +47,17 @@ public class MoveMent : MonoBehaviour
     [SerializeField] private CharacterAnimationController characterAnimation; // 作为唯一动画入口
     // [Tooltip("是否使用动画的根运动控制移动。关闭时使用物理系统移动。")]
     // public bool useRootMotion = true;
-    private Vector2 movementInput;
-    private bool isCrouching = false;
+    [HideInInspector] public Vector2 movementInput;
+    [HideInInspector] public bool isCrouching = false;
     private bool isRolling = false;
+
+    /// <summary>供 FSM 查询翻滚状态</summary>
+    public bool IsRolling => isRolling;
     private bool isSprinting = false;
     private bool isJumping = false;
+
+    /// <summary>供 FSM 查询跳跃状态</summary>
+    public bool IsJumping => isJumping;
 
     // 地面检测（替代 CharacterController.isGrounded）
     [Header("地面检测")]
@@ -72,6 +78,9 @@ public class MoveMent : MonoBehaviour
     // Alt键状态
     private bool isAltKeyDown = false;
 
+    /// <summary>供外部查询 Alt 键状态（FSM 通道检测使用）</summary>
+    public bool IsAltKeyPressed() => isAltKeyDown;
+
     // 缓存 Camera.main 引用，避免每帧 Find
     private Camera _cachedMainCamera;
 
@@ -84,6 +93,9 @@ public class MoveMent : MonoBehaviour
     [SerializeField] private float jumpForce = 5f; // 跳跃冲量强度
     [Tooltip("跳跃后最短滞空时间（秒），用于避免按下瞬间被判定为已经着地）")]
     [SerializeField] private float minJumpAirTime = 0.12f;
+
+    /// <summary>供 FSM 查询最小滞空时间</summary>
+    public float MinJumpAirTime => minJumpAirTime;
     // 运行时的滞空计时器
     private float jumpAirTimer = 0f;
 
@@ -707,7 +719,8 @@ public class MoveMent : MonoBehaviour
     /// <summary>
     /// 检查角色是否接触地面（替代 CharacterController.isGrounded）
     /// </summary>
-    private bool IsGrounded()
+    /// <summary>供 FSM 查询着地状态</summary>
+    public bool IsGrounded()
     {
         // 从角色位置向下做一个短射线检测地面
         Vector3 origin = transform.position + Vector3.up * 0.1f; // 稍微抬高起点，避免嵌入地面

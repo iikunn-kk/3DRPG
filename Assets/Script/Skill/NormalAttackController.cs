@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using PlayerFSM;
 
 /*
 普通攻击（奥术射线）输入转发（前摇-持续-后摇版本）：
@@ -53,12 +54,22 @@ public class NormalAttackController : MonoBehaviour
     // 对外状态
     public bool IsChanneling => _activeRay != null && _activeRay.IsActive;
     private InputSystem_Actions playerInput;
+    private PlayerStateMachine _playerFsm;
+
+    // 延迟获取 FSM（Awake 时组件可能尚未添加）
+    private PlayerStateMachine GetPlayerFsm()
+    {
+        if (_playerFsm == null)
+            _playerFsm = GetComponent<PlayerStateMachine>();
+        return _playerFsm;
+    }
 
     private void Awake()
     {
         //新输入系统的配置
         playerInput = new InputSystem_Actions();
         playerInput.Player.Enable();
+        // 注意：_playerFsm 不在 Awake 中获取——PlayerStateMachine 组件此时可能还未添加
 
         if (lockOnController == null)
         {
@@ -241,8 +252,8 @@ public class NormalAttackController : MonoBehaviour
             _rayInstance.gameObject.SetActive(false);
         }
 
-        // 通知动画控制器进入前摇（并自动锁定移动、启用根运动）
-        characterAnimationController.BeginChannelAttack();
+        // 通知 FSM 进入通道攻击状态（由状态类统一处理动画播放和锁定）
+        GetPlayerFsm()?.RequestAction(PlayerFSM.PlayerState.ChannelAttack);
 
         // 目标缓存到本次激活流程（在前摇回调中取用）
         _cachedPlayerSkill = playerSkill;
@@ -259,6 +270,7 @@ public class NormalAttackController : MonoBehaviour
     {
         if (!_isHolding) // 前摇完成时已松手：不启动射线，直接请求进入后摇
         {
+            GetPlayerFsm()?.RequestEndChannel();
             characterAnimationController.EndChannelAttackRequest();
             return;
         }
@@ -299,9 +311,10 @@ public class NormalAttackController : MonoBehaviour
             _isRaySoundPlaying = false;
         }
 
-        // 请求动画从 Pre/Loop 进入 End（后摇）；真正解锁在 End 动画事件中完成
+        // 请求动画从 Pre/Loop 进入 End（后摇）；通知 FSM 释放通道锁定
         if (characterAnimationController != null)
         {
+            GetPlayerFsm()?.RequestEndChannel();
             characterAnimationController.EndChannelAttackRequest();
         }
         characterAnimationController.ForceEndActionImmediate();
@@ -330,6 +343,7 @@ public class NormalAttackController : MonoBehaviour
         // 请求后摇（如果当前仍在前摇或持续）
         if (characterAnimationController != null)
         {
+            GetPlayerFsm()?.RequestEndChannel();
             characterAnimationController.EndChannelAttackRequest();
             // immediately force end action to ensure movement is unlocked when interrupted
             characterAnimationController.ForceEndActionImmediate();
