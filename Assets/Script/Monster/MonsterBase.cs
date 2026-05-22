@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -12,7 +13,7 @@ public class MonsterBase : MonoBehaviour
     [Header("移动设置")]
     [SerializeField] public float patrolSpeed = 2f;
     [SerializeField] public float chaseSpeed = 4f;
-    
+
     [Header("被锁定了以后的白点所在位置")]
     [SerializeField] protected Transform _lockedOnPosition;
     public Transform lockedOnPosition => _lockedOnPosition;
@@ -23,17 +24,30 @@ public class MonsterBase : MonoBehaviour
 
     // 新增：全局当前被锁定的怪物（确保同一时间只有一个怪物显示锁定标志）
     private static MonsterBase s_currentLocked;
-    
+
     private Vector3 spawnPosition;
     private Transform player;
     private NavMeshAgent navMeshAgent;
     private MonsterSpawner monsterSpawner;
-    
+
     private MonsterStateMachine stateMachine;
     private MonsterDetection detection;
     private MonsterCombat combat;
     private MonsterAnimationController _animController;
-    
+
+    /// <summary>MMO 网络 ID（服务端实体 ID），0 表示未注册</summary>
+    public uint NetworkId { get; set; }
+
+    /// <summary>静态计数器，每个客户端独立</summary>
+    private static uint _nextNetId = 1000;
+    public static uint GetNextNetworkId() => _nextNetId++;
+
+    /// <summary>网络 ID → MonsterBase 查找表，供 EntitySyncManager 匹配本地怪物</summary>
+    private static readonly Dictionary<uint, MonsterBase> _networkRegistry = new();
+    public static MonsterBase FindByNetworkId(uint id) => _networkRegistry.TryGetValue(id, out var m) ? m : null;
+    public static void RegisterNetwork(MonsterBase m) { if (m != null && m.NetworkId > 0) _networkRegistry[m.NetworkId] = m; }
+    void OnDestroy() { if (NetworkId > 0) _networkRegistry.Remove(NetworkId); }
+
     public MonsterData monsterData { get; private set; }
 
     // Start is intentionally removed. Initialization must be done via Init(...).
@@ -204,7 +218,7 @@ public class MonsterBase : MonoBehaviour
         detection?.UpdateDetection();
         stateMachine?.UpdateStateMachine();
     }
-    
+
     /// <summary>
     /// 获取命中特效挂点位置
     /// </summary>
@@ -217,5 +231,5 @@ public class MonsterBase : MonoBehaviour
         }
         return null;
     }
-    
+
 }

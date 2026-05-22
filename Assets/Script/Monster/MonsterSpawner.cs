@@ -14,34 +14,34 @@ public class MonsterSpawner : MonoBehaviour
     [Header("生成设置")]
     [Tooltip("关联的怪物数据")]
     public MonsterData monsterData;
-    
+
     [Tooltip("生成怪物的数量")]
     public int monsterCount = 3;
-    
+
     [Tooltip("最大生成的怪物数量")]
     public int maxMonsters = 5;
-    
+
     [Tooltip("生成范围半径")]
     public float spawnRadius = 5f;
-    
+
     [Header("刷新设置")]
     [Tooltip("怪物刷新间隔（秒）")]
     public float respawnTime = 30f;
-    
+
     [Tooltip("玩家触发生成的距离")]
     public float playerTriggerDistance = 10f;
-    
+
     [Header("生成间隔设置")]
     [Tooltip("每个怪物生成之间的间隔时间（秒）")]
     public float spawnInterval = 3f;
-    
+
     [Header("移除设置")]
     [Tooltip("玩家离开区域后延迟移除怪物的时间（秒）")]
     public float removeDelay = 5f;
-    
+
     [Tooltip("移除怪物的间隔时间（秒）")]
     public float removeInterval = 3f;
-    
+
     [Header("生成点设置")]
     [Tooltip("是否在游戏开始时生成怪物")]
     public bool spawnOnStart = false;
@@ -51,7 +51,7 @@ public class MonsterSpawner : MonoBehaviour
     public float playerDeathAffectRadius = 10f;
 
     // 私有变量
-    private List<MonsterBase> spawnedMonsters=new();
+    private List<MonsterBase> spawnedMonsters = new();
     private Transform player;
     private bool isPlayerInRange;
     private float playerCheckTimer;
@@ -61,13 +61,13 @@ public class MonsterSpawner : MonoBehaviour
     private bool isPlayerLeft;
     private CancellationTokenSource removeCts;
     private CancellationTokenSource spawnCts;
-    
+
     // 缓存的触发距离平方，避免每帧计算开方
     private float playerTriggerDistanceSqr;
-    
+
     // 上次清理列表的时间
     private float lastCleanupTime;
-    
+
     // 清理间隔（秒）
     private const float CLEANUP_INTERVAL = 5f;
 
@@ -93,7 +93,7 @@ public class MonsterSpawner : MonoBehaviour
             StartSpawnMonsters();
         }
     }
-    
+
     void Update()
     {
         // 定时检查玩家是否在范围内
@@ -103,17 +103,17 @@ public class MonsterSpawner : MonoBehaviour
             playerCheckTimer = 0f;
             CheckPlayerInRange();
         }
-        
+
         // 处理怪物生成和刷新
         HandleMonsterSpawning();
-        
+
         // 处理玩家离开区域后的怪物移除
         HandlePlayerLeaveRegion();
-        
+
         // 定期更新已生成怪物列表，移除已被销毁的怪物
         UpdateSpawnedMonstersListPeriodically();
     }
-    
+
     /// <summary>
     /// 检查玩家是否在触发范围内
     /// </summary>
@@ -125,13 +125,13 @@ public class MonsterSpawner : MonoBehaviour
             float distanceToPlayerSqr = Vector3.SqrMagnitude(transform.position - player.position);
             bool wasPlayerInRange = isPlayerInRange;
             isPlayerInRange = distanceToPlayerSqr <= playerTriggerDistanceSqr;
-            
+
             // 检测玩家是否离开了区域
             if (wasPlayerInRange && !isPlayerInRange)
             {
                 isPlayerLeft = true;
                 playerLeaveTimer = 0f;
-                
+
                 // 停止生成协程
                 CancelCts(ref spawnCts);
                 isSpawning = false;
@@ -145,7 +145,7 @@ public class MonsterSpawner : MonoBehaviour
             }
         }
     }
-    
+
     /// <summary>
     /// 是否在生成范围内（忽略高度）
     /// </summary>
@@ -164,7 +164,7 @@ public class MonsterSpawner : MonoBehaviour
         if (isPlayerLeft && spawnedMonsters.Count > 0)
         {
             playerLeaveTimer += Time.deltaTime;
-            
+
             // 延迟时间到后开始移除怪物
             if (playerLeaveTimer >= removeDelay)
             {
@@ -177,7 +177,7 @@ public class MonsterSpawner : MonoBehaviour
             }
         }
     }
-    
+
     /// <summary>
     /// 随时间逐个移除怪物（软移除：优先让其回到出生点，避免战斗中硬移除）
     /// </summary>
@@ -264,10 +264,10 @@ public class MonsterSpawner : MonoBehaviour
             }
         }
         catch (OperationCanceledException) { }
-        
+
         removeCts = null;
     }
-    
+
     /// <summary>
     /// 处理怪物生成和刷新逻辑
     /// </summary>
@@ -289,7 +289,7 @@ public class MonsterSpawner : MonoBehaviour
             }
         }
     }
-    
+
     /// <summary>
     /// 开始生成怪物
     /// </summary>
@@ -301,7 +301,7 @@ public class MonsterSpawner : MonoBehaviour
             SpawnMonstersOverTimeAsync(spawnCts.Token).Forget();
         }
     }
-    
+
     /// <summary>
     /// 随时间逐个生成怪物（使用 NavMesh.SamplePosition 保证落在可行走区域）
     /// </summary>
@@ -310,9 +310,9 @@ public class MonsterSpawner : MonoBehaviour
         try
         {
             isSpawning = true;
-            
+
             int monstersToSpawn = Mathf.Min(monsterCount, maxMonsters - spawnedMonsters.Count);
-            
+
             for (int i = 0; i < monstersToSpawn; i++)
             {
                 token.ThrowIfCancellationRequested();
@@ -321,21 +321,27 @@ public class MonsterSpawner : MonoBehaviour
                 {
                     break;
                 }
-                
+
                 // 在生成点半径范围内找一个 NavMesh 合法点
                 Vector3 spawnPos = GetRandomPointInBounds();
-                
+
                 // 生成怪物
                 GameObject monsterObj = Instantiate(monsterData.monsterModel, spawnPos, Quaternion.identity);
                 MonsterBase monster = monsterObj.GetComponent<MonsterBase>();
-                
+
                 if (monster != null)
                 {
                     // 初始化怪物数据
-                    monster.Init(monsterData, player,this);
+                    monster.Init(monsterData, player, this);
                     spawnedMonsters.Add(monster);
+
+
+                    // // Phase 5: 注册怪物到 MMO 服务端
+                    // RegisterMonsterToMMO(monster, spawnPos);
+
+
                 }
-                
+
                 // 等待下一次生成
                 if (i < monstersToSpawn - 1) // 如果不是最后一个怪物，则等待
                 {
@@ -344,11 +350,11 @@ public class MonsterSpawner : MonoBehaviour
             }
         }
         catch (OperationCanceledException) { }
-        
+
         spawnCts = null;
         isSpawning = false;
     }
-    
+
     /// <summary>
     /// 定期更新已生成怪物列表，移除已被销毁的怪物
     /// </summary>
@@ -361,7 +367,7 @@ public class MonsterSpawner : MonoBehaviour
             spawnedMonsters.RemoveAll(monster => monster == null);
         }
     }
-    
+
     /// <summary>
     /// 手动刷新怪物（可用于外部调用）
     /// </summary>
@@ -370,7 +376,7 @@ public class MonsterSpawner : MonoBehaviour
         respawnTimer = 0f;
         StartSpawnMonsters();
     }
-    
+
     /// <summary>
     /// 清理所有生成的怪物
     /// </summary>
@@ -378,11 +384,11 @@ public class MonsterSpawner : MonoBehaviour
     {
         // 停止移除协程
         CancelCts(ref removeCts);
-        
+
         // 停止生成协程
         CancelCts(ref spawnCts);
         isSpawning = false;
-        
+
         // 使用for循环而不是foreach避免enumerator分配
         for (int i = spawnedMonsters.Count - 1; i >= 0; i--)
         {
@@ -393,7 +399,7 @@ public class MonsterSpawner : MonoBehaviour
         }
         spawnedMonsters.Clear();
     }
-    
+
     /// <summary>
     /// 获取当前生成的怪物数量
     /// </summary>
@@ -403,7 +409,7 @@ public class MonsterSpawner : MonoBehaviour
         UpdateSpawnedMonstersListPeriodically();
         return spawnedMonsters.Count;
     }
-    
+
     /// <summary>
     /// 获取最大可生成的怪物数量
     /// </summary>
@@ -412,7 +418,7 @@ public class MonsterSpawner : MonoBehaviour
     {
         return maxMonsters;
     }
-    
+
     /// <summary>
     /// 设置最大怪物数量
     /// </summary>
@@ -421,7 +427,7 @@ public class MonsterSpawner : MonoBehaviour
     {
         maxMonsters = Mathf.Max(0, newMax);
     }
-    
+
     /// <summary>
     /// 在生成范围内获取一个随机点（保证在 NavMesh 上）
     /// </summary>
@@ -444,7 +450,7 @@ public class MonsterSpawner : MonoBehaviour
         }
         return transform.position; // 最终兜底
     }
-    
+
     /// <summary>
     /// 当一个怪物死亡时由怪物实例调用
     /// </summary>
@@ -530,6 +536,17 @@ public class MonsterSpawner : MonoBehaviour
     {
         Init(playerObj.GetComponent<CharacterState>());
     }
+    private void RegisterMonsterToMMO(MonsterBase monster, Vector3 pos)
+    {
+        if (NetworkManager.Instance == null || !NetworkManager.Instance.IsConnected) return;
+        // 分配唯一网络 ID（本地递增）并注册到全局查找表
+        monster.NetworkId = MonsterBase.GetNextNetworkId();
+        MonsterBase.RegisterNetwork(monster);
+        var hp = monster.GetComponent<MonsterCombat>();
+        int maxHp = hp != null ? hp.MaxHealth : monster.monsterData.health;
+        NetworkManager.Instance.SendMonsterSpawn(monster.NetworkId, maxHp, pos);
+    }
+
     private void CancelCts(ref CancellationTokenSource cts)
     {
         if (cts != null)
@@ -548,7 +565,7 @@ public class MonsterSpawner : MonoBehaviour
         // 绘制触发范围
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, playerTriggerDistance);
-        
+
         // 绘制生成范围
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, spawnRadius);

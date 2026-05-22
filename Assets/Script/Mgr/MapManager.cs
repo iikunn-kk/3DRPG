@@ -64,6 +64,12 @@ public class MapManager : MonoBehaviour
         Vector3 spawnPosition = GetSpawnPosition(characterData.position);
 
         GameObject playerInstance = Instantiate(characterPrefabData.model, spawnPosition, Quaternion.identity);
+
+
+        // Phase 4: 运行时自动挂载位置同步组件
+        // playerInstance.AddComponent<NetworkPlayerMover>();
+
+
         var playerCharacter = playerInstance.GetComponent<CharacterState>();
         if (playerCharacter != null)
         {
@@ -77,6 +83,13 @@ public class MapManager : MonoBehaviour
             // 恢复跨场景保存的临时 Buff
             CharacterRuntimeManager.Instance.RestoreTransientPlayerState(playerCharacter);
             cameraController.SetTarget(playerInstance.transform);
+
+
+            // Phase 4: 自动连接 MMO 网络层（使用游戏用户名作为 MMO uid）
+            // AutoConnectMMO();
+
+
+
             // 事件最后广播，保证监听方能立即读取到已初始化的任务数据
             playerSpawned.RaiseEvent(playerCharacter, this);
             // 生成完成后保存一次（含任务初始化结果）
@@ -108,6 +121,20 @@ public class MapManager : MonoBehaviour
             equipCtrl.EnsureInitialized();
         }
         catch (OperationCanceledException) { }
+    }
+
+    /// <summary>角色实例化后自动连接 MMO 网络层</summary>
+    private void AutoConnectMMO()
+    {
+        if (NetworkManager.Instance == null || NetworkManager.Instance.IsConnected) return;
+        var username = PlayerLogInManager.Instance.GetLoggedInUsername();
+        if (string.IsNullOrEmpty(username))
+        {
+            Debug.LogWarning("[MapManager] 无法获取游戏用户名，跳过 MMO 自动连接");
+            return;
+        }
+        Debug.Log($"[MapManager] 自动连接 MMO: {username}");
+        _ = NetworkManager.Instance.ConnectAsync(username, "123");
     }
 
     private Vector3 GetSpawnPosition(Vector3 prevPosition)

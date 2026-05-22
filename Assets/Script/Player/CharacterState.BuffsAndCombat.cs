@@ -87,6 +87,26 @@ public partial class CharacterState
 
         if (isCrit) RaiseCriticalHit();
         OnDamageDealt?.Invoke(target, finalDamage, isCrit);
+
+        // Phase 5: 发送攻击到 MMO 服务端
+        // SendAttackToMMO(target, baseDamage);
+    }
+
+    private void SendAttackToMMO(Transform target, float baseDamage)
+    {
+        if (NetworkManager.Instance == null || !NetworkManager.Instance.IsConnected) return;
+        var monster = target.GetComponent<MonsterBase>();
+        if (monster == null || monster.NetworkId == 0) return;
+        var mc = target.GetComponent<MonsterCombat>();
+        var entityId = EntitySyncManager.Instance?.GetLocalPlayerEntityId() ?? 0;
+        if (entityId == 0) return;
+
+        var skillMultiplier = Attack > 0 ? baseDamage / Attack : 1f;
+        float dist = Vector3.Distance(transform.position, target.position);
+
+        NetworkManager.Instance.SendAttack(entityId, monster.NetworkId, Attack,
+            mc != null ? mc.CurrentHealth : 100, Defence, CritChancePercent,
+            skillMultiplier, dist);
     }
     #endregion
 }
