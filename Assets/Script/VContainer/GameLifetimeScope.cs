@@ -30,11 +30,12 @@ public class GameLifetimeScope : LifetimeScope
         RegisterSingletonIfExists<GuildManager>(builder, GuildManager.Instance);
         RegisterSingletonIfExists<CharacterDataManager>(builder, CharacterDataManager.Instance);
         RegisterSingletonIfExists<SaveManager>(builder, SaveManager.Instance);
+        RegisterSingletonIfExists<GameDataConfig>(builder, GameDataConfig.Instance);
+        RegisterSingletonIfExists<TaskEventBridge>(builder, TaskEventBridge.Instance);
 
         // 非 Singleton 的实例 — 运行时自动查找
         builder.RegisterComponentInHierarchy<LoadingScreenController>();
         builder.RegisterComponentInHierarchy<CursorManager>();
-        builder.RegisterComponentInHierarchy<GameManager>();
         builder.RegisterComponentInHierarchy<MapManager>();
     }
 

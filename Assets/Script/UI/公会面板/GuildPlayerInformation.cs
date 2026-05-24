@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -67,7 +67,7 @@ public class GuildPlayerInformation : MonoBehaviour
         {
             lastLoginText.text = FormatLastOnline(memberInfo.lastOnlineTime);
         }
-        var headIcon = GameManager.Instance.playerCharacterStateDataSo.GetPlayerCharacterStateBaseData(memberInfo.profession)
+        var headIcon = GameDataConfig.Instance.PlayerCharacterStateDataSo.GetPlayerCharacterStateBaseData(memberInfo.profession)
             .proHeadIcon;
         if (professionIcon != null && headIcon != null)
         {

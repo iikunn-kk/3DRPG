@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -32,7 +32,7 @@ public class SetGuildFunctionPanel : UIPopPanelBase
         nameText.text = memberInfo.characterName;
         if (headIcon != null)
         {
-            headIcon.sprite = GameManager.Instance.playerCharacterStateDataSo.GetPlayerCharacterStateBaseData(memberInfo.profession)
+            headIcon.sprite = GameDataConfig.Instance.PlayerCharacterStateDataSo.GetPlayerCharacterStateBaseData(memberInfo.profession)
                 .proHeadIcon;
         }
 

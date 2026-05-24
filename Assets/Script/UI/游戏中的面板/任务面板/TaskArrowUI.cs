@@ -72,11 +72,11 @@ public class TaskArrowUI : MonoBehaviour
 
     private void OnEnable()
     {
-        TaskEvents.OnTaskTrackedChanged += OnTrackedChanged;
+        TaskEventBridge.Instance.OnTaskTrackedChanged += OnTrackedChanged;
     }
     private void OnDisable()
     {
-        TaskEvents.OnTaskTrackedChanged -= OnTrackedChanged;
+        TaskEventBridge.Instance.OnTaskTrackedChanged -= OnTrackedChanged;
 
     }
 
@@ -97,7 +97,7 @@ public class TaskArrowUI : MonoBehaviour
             return;
         }
 
-        var playerState = GameManager.Instance?.CurrentPlayerCharacter();
+        var playerState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
         if (playerState == null)
         {
             SetVisible(false);

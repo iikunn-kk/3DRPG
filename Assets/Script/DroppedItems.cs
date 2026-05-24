@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public class DroppedItems : MonoBehaviour, IInteractable
@@ -17,7 +17,7 @@ public class DroppedItems : MonoBehaviour, IInteractable
         var first = _itemIDs.Count > 0 ? _itemIDs[0] : (Vector2Int?)null;
         if (first != null)
         {
-            var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(first.Value.x);
+            var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(first.Value.x);
             if (itemData != null)
             {
                 // 中央化提示将根据 GetInteractionPrompt 返回的字符串显示
@@ -33,7 +33,7 @@ public class DroppedItems : MonoBehaviour, IInteractable
         var first = _itemIDs.Count > 0 ? _itemIDs[0] : (Vector2Int?)null;
         if (first != null)
         {
-            var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(first.Value.x);
+            var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(first.Value.x);
             if (itemData != null)
                 return $"拾取 {itemData.itemName} x{first.Value.y}";
         }

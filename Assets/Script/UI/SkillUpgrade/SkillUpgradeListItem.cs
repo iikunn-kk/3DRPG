@@ -29,7 +29,7 @@ namespace Game.UI.SkillUpgrade
         {
             if (string.IsNullOrEmpty(SkillID)) return;
             var so = SkillManager.Instance?.GetSkillSo(SkillID);
-            if (GameManager.Instance != null)
+            if (GameDataConfig.Instance!=null)
             {
                 var skills = CharacterRuntimeManager.Instance.CurrentPlayerCharacter()?.GetComponent<SkillController>()?.GetAllSkillsSnapshot();
                 if (so != null && skills != null && skills.TryGetValue(SkillID, out var ps))

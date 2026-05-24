@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Threading;
 using UnityEngine;
@@ -161,7 +161,7 @@ public class ArcaneRaySkill : Skill
         try
         {
             if (PlayerSkill == null) return;
-            var cs = GameManager.Instance?.CurrentPlayerCharacter();
+            var cs = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
 
             while (_isChanneling)
             {

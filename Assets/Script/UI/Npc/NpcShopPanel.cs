@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
@@ -99,7 +99,7 @@ public class NpcShopPanel : UIPopPanelBase
         List<NpcShopItem> shopItems = new List<NpcShopItem>();
         foreach (var shopItemInfo in _currentNpc.NpcData.npcShopData.shopItems)
         {
-            ItemData itemData = GameManager.Instance?.ItemDataSo?.GetItemDataById(shopItemInfo.itemId);
+            ItemData itemData = GameDataConfig.Instance?.ItemDataSo?.GetItemDataById(shopItemInfo.itemId);
             if (itemData != null)
             {
                 var npcItem = new NpcShopItem
@@ -235,8 +235,8 @@ public class NpcShopPanel : UIPopPanelBase
             }
             
             // 按物品类型排序
-            var aItemData = GameManager.Instance?.ItemDataSo?.GetItemDataById(a.itemId);
-            var bItemData = GameManager.Instance?.ItemDataSo?.GetItemDataById(b.itemId);
+            var aItemData = GameDataConfig.Instance?.ItemDataSo?.GetItemDataById(a.itemId);
+            var bItemData = GameDataConfig.Instance?.ItemDataSo?.GetItemDataById(b.itemId);
             
             int aTypePriority = GetItemTypePriority(aItemData);
             int bTypePriority = GetItemTypePriority(bItemData);
@@ -391,7 +391,7 @@ public class NpcShopPanel : UIPopPanelBase
     public void ShowDetails(InventoryItem item)
     {
         if (item == null) return;
-        var data = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
+        var data = GameDataConfig.Instance.ItemDataSo.GetItemDataById(item.itemId);
         bool isEquipment = data is EquipmentData;
         if (isEquipment)
         {

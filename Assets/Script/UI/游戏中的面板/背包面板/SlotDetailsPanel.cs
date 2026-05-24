@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -126,7 +126,7 @@ public class SlotDetailsPanel : MonoBehaviour
     {
         if (item == null) return;
 
-        var template = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
+        var template = GameDataConfig.Instance.ItemDataSo.GetItemDataById(item.itemId);
         if (template == null)
         {
             // 如果找不到模板，仍然尝试显示基础数据

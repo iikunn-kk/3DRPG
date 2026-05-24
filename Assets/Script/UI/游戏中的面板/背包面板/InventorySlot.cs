@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -50,7 +50,7 @@ public class InventorySlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
             return;
         }
 
-        var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(Item.itemId);
+        var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(Item.itemId);
         if (itemData == null)
         {
             ClearSlot();
@@ -135,7 +135,7 @@ public class InventorySlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         // 右键点击：使用或装备
         if (eventData.button == PointerEventData.InputButton.Right)
         {
-            var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(Item.itemId);
+            var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(Item.itemId);
             if (itemData == null) return;
 
             switch (itemData.itemType)

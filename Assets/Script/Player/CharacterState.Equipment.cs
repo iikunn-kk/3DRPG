@@ -24,7 +24,7 @@ public partial class CharacterState
     public void UpdateCharacterStats()
     {
         var equipCtrl = GetEquipmentController();
-        var baseData = GameManager.Instance.playerCharacterStateDataSo.GetPlayerCharacterStateBaseData(Profession);
+        var baseData = GameDataConfig.Instance.PlayerCharacterStateDataSo.GetPlayerCharacterStateBaseData(Profession);
 
         int oldMaxHp = MaxHealth;
         int oldCurrentHp = CurrentHealth;
@@ -46,7 +46,7 @@ public partial class CharacterState
         {
             foreach (var equipment in equipCtrl.GetAllEquippedItems())
             {
-                var equipmentData = GameManager.Instance.ItemDataSo.GetEquipmentDataById(equipment.itemId);
+                var equipmentData = GameDataConfig.Instance.ItemDataSo.GetEquipmentDataById(equipment.itemId);
                 if (equipmentData == null) continue;
                 foreach (var property in equipment.generatedProperties)
                 {

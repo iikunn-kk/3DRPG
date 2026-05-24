@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -31,7 +31,7 @@ public class EquipmentControllerTests
     public void EquipItem_ValidEquipment_ReturnsNullForFirstEquip()
     {
         var se = new StoredEquipment { itemId = 1001, generatedProperties = new List<EquipmentProperty>() };
-        // 需要 Mock GameManager.Instance.ItemDataSo 才能获取 EquipmentData
+        // 需要 Mock GameDataConfig.Instance.ItemDataSo 才能获取 EquipmentData
         // 此处验证初始化状态
         Assert.That(_controller.IsInitialized, Is.False);
         Assert.That(_controller.EquippedItems, Is.Empty);

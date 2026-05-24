@@ -64,7 +64,7 @@ public class SearchGuildPanel : UIPopPanelBase
     private async UniTask LoadGuildsForCurrentServer()
     {
         // 获取当前服务器ID
-        int serverId = GameManager.Instance.CurrentCharacter.serverId;
+        int serverId = SessionManager.Instance.CurrentCharacter.serverId;
 
         // 从数据库获取该服务器上的所有公会
         List<GuildData> guilds = await MongoDBManager.Instance.GetGuildsByServerId(serverId);
@@ -162,8 +162,8 @@ public class SearchGuildPanel : UIPopPanelBase
     {
         try
         {
-            // 调用GameManager的加入公会功能
-            bool success = await GameManager.Instance.JoinGuild(guildId);
+            // 调用加入公会功能
+            bool success = await GuildManager.Instance.JoinGuild(guildId);
 
             if (success)
             {

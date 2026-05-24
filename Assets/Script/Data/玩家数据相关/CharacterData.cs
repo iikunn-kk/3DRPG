@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using MongoDB.Bson;
@@ -52,7 +52,7 @@ public class CharacterData
         this.characterName = characterName;
         guildId = String.Empty;
         iconID = 0; // 默认头像ID
-        hp = GameManager.Instance.playerCharacterStateDataSo.
+        hp = GameDataConfig.Instance.PlayerCharacterStateDataSo.
             GetPlayerCharacterStateBaseData(profession).GetMaxHp(level);
         taskList = new List<TaskLiteData>();
         completedTaskIds = new List<int>();

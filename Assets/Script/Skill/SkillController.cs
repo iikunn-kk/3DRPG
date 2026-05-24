@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using System.Collections.Generic;
@@ -111,7 +111,7 @@ public class SkillController : MonoBehaviour
         _skillManager?.RebuildCurrentPlayerSkillsFromGame();
     }
 
-    public int GetPlayerLevel() => GameManager.Instance?.CurrentPlayerCharacter()?.PlayerCharacterData?.level ?? 0;
+    public int GetPlayerLevel() => CharacterRuntimeManager.Instance?.CurrentPlayerCharacter()?.PlayerCharacterData?.level ?? 0;
 
     /// <summary>
     /// 冷却计时驱动：对所有处于冷却期的技能做逐帧倒计时，并广播冷却更新/结束事件。

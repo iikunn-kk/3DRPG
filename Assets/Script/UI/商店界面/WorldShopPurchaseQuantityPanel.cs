@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
@@ -23,7 +23,7 @@ public class WorldShopPurchaseQuantityPanel : UIPopPanelBase
         _itemPrice = shopItem.price; // 使用商店物品配置的价格
         _onBuyButtonClick = onBuyButtonClick;
         
-        var itemData = GameManager.Instance.ItemDataSo.GetEquipmentDataById(shopItem.itemId);
+        var itemData = GameDataConfig.Instance.ItemDataSo.GetEquipmentDataById(shopItem.itemId);
         if (itemData != null && iconImage != null)
         {
             iconImage.sprite = itemData.itemSprite;

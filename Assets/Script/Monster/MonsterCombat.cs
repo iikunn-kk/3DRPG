@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -265,7 +265,7 @@ public class MonsterCombat : MonoBehaviour, IDamageable
         int exp = monsterData.expReward;
         if (exp <= 0) return;
 
-        var player = GameManager.Instance?.CurrentPlayerCharacter();
+        var player = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
         if (player == null)
         {
             Debug.LogWarning("[MonsterCombat] 无法找到当前玩家，经验未发放。");

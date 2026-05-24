@@ -1,4 +1,4 @@
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -37,7 +37,7 @@ public class InventoryManagerTests
     {
         _inventoryMgr.Initialize("test_char_001");
 
-        // 注：此测试依赖于 GameManager.Instance.ItemDataSo ，
+        // 注：此测试依赖于 GameDataConfig.Instance.ItemDataSo ，
         // 在 CI/CD 中需要 Mock；此处作为手动验证用。
         // 实际项目中会通过 SetUp 注入 Mock ItemDataSO。
         Assert.Pass("需要 Mock ItemDataSO 才能运行完整流程");

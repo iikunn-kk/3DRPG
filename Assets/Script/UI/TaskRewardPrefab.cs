@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,9 +23,9 @@ public class TaskRewardPrefab : MonoBehaviour
                 {
                     // 默认图标（兜底）
                     if (coinIcon != null) icon.sprite = coinIcon;
-                    if (GameManager.Instance != null && GameManager.Instance.ItemDataSo != null)
+                    if (GameDataConfig.Instance!=null && GameDataConfig.Instance.ItemDataSo != null)
                     {
-                        var data = GameManager.Instance.ItemDataSo.GetItemDataById(itemId);
+                        var data = GameDataConfig.Instance.ItemDataSo.GetItemDataById(itemId);
                         if (data != null && data.itemSprite != null)
                             icon.sprite = data.itemSprite;
                     }

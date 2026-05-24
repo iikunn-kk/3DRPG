@@ -136,6 +136,8 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
         // 登录场景或普通 gameplay 进入前，把玩家数据保存并销毁（登录除外）
         if (!treatAsLogin)
         {
+            // 场景切换前断开任务事件桥接，防止旧 UI 实例泄漏
+            TaskEventBridge.Instance.Detach();
             SaveAndDestroyCurrentPlayer();
         }
 

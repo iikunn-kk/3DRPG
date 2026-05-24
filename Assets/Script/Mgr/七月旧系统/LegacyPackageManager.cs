@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -192,12 +192,12 @@ public class LegacyPackageManager : Singleton<LegacyPackageManager>
         ItemQuality quality = ConvertStarToQuality(packageItem.star);
         newItem.quantity = quality;
 
-        var equipmentData = GameManager.Instance.ItemDataSo.GetEquipmentDataById(packageItem.id);
+        var equipmentData = GameDataConfig.Instance.ItemDataSo.GetEquipmentDataById(packageItem.id);
         if (equipmentData != null && equipmentData.isRandomlyAttributes)
         {
             var originalQuality = equipmentData.quantity;
             equipmentData.quantity = quality;
-            equipmentData.GenerateBaseProperties(GameManager.Instance.PropertyScalingData);
+            equipmentData.GenerateBaseProperties(GameDataConfig.Instance.PropertyScalingData);
 
             newItem.generatedProperties = equipmentData.GetAllProperties()
                 .Select(p => p.DeepClone())

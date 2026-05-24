@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using UnityEngine;
 // 移除未使用的命名空间引用，保持文件整洁
@@ -113,7 +113,7 @@ public partial class CharacterState : MonoBehaviour, IDamageable
         CurrentHealth = 0; // 初始化后再赋满血
         CharacterName = data.characterName;
         Profession = data.profession;
-        var baseData = GameManager.Instance.playerCharacterStateDataSo.GetPlayerCharacterStateBaseData(data.profession);
+        var baseData = GameDataConfig.Instance.PlayerCharacterStateDataSo.GetPlayerCharacterStateBaseData(data.profession);
         MaxHealth = baseData.GetMaxHp(data.level);
         Attack = baseData.GetAttack(data.level);
         _attackBeforeBuffs = Attack; // 初始化基础攻击（供后续 Buff 计算使用）

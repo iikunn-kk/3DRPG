@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -119,7 +119,7 @@ public class PlayerStatePanel : UIPopPanelBase
         var equippedItems = InventoryManager.Instance.GetEquippedItems();
         foreach (var item in equippedItems)
         {
-            var equipmentData = GameManager.Instance.ItemDataSo.GetEquipmentDataById(item.itemId);
+            var equipmentData = GameDataConfig.Instance.ItemDataSo.GetEquipmentDataById(item.itemId);
             if (equipmentData != null && _equipmentSlotsUI.TryGetValue(equipmentData.equipmentType, out var slotUI))
             {
                 slotUI.Init(item, ShowDetails, HideDetails);

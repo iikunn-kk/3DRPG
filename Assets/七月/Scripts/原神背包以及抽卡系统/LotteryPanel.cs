@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -137,8 +137,8 @@ public class LotteryPanel : UIPopPanelBase
 
         // ==================== 执行单抽逻辑 ====================
         // 调用GameManager的单抽方法，获取随机抽取的物品数据
-        // PackageLocalItem item = GameManager.Instance.GetLotteryRandom1();
-        InventoryItem item = GameManager.Instance.GetLotteryRandom1();
+        // PackageLocalItem item = LegacyPackageManager.Instance.GetLotteryRandom1();
+        InventoryItem item = LegacyPackageManager.Instance.GetLotteryRandom1();
 
         // ==================== 生成卡片并显示 ====================
         // 实例化卡片预制体，并设置父物体为展示区域
@@ -164,8 +164,8 @@ public class LotteryPanel : UIPopPanelBase
         // ==================== 执行十连抽逻辑 ====================
         // 调用GameManager的十连抽方法，传入sort:true表示结果需要排序
         // 返回一个包含10个物品的列表
-        // List<PackageLocalItem> packageLocalItems = GameManager.Instance.GetLotteryRandom10(sort: true);
-        List<InventoryItem> items = GameManager.Instance.GetLotteryRandom10(sort: true);
+        // List<PackageLocalItem> packageLocalItems = LegacyPackageManager.Instance.GetLotteryRandom10(sort: true);
+        List<InventoryItem> items = LegacyPackageManager.Instance.GetLotteryRandom10(sort: true);
 
 
         // ==================== 清空原有卡片 ====================

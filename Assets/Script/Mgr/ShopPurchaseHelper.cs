@@ -7,7 +7,7 @@ using UnityEngine;
 /// </summary>
 public static class ShopPurchaseHelper
 {
-    private static CharacterData CurrentCharacter => GameManager.Instance?.CurrentCharacter;
+    private static CharacterData CurrentCharacter => SessionManager.Instance?.CurrentCharacter;
 
     #region 初始化防御
     private static void EnsureLists()

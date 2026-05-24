@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem; // 添加对新输入系统的引用
 
@@ -49,7 +49,7 @@ public class QuickInventoryBar : MonoBehaviour
                 if (slot != null && slot.Item != null)
                 {
                     var item = slot.Item;
-                    var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
+                    var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(item.itemId);
                     if (itemData == null) continue;
 
                     switch (itemData.itemType)
@@ -136,7 +136,7 @@ public class QuickInventoryBar : MonoBehaviour
     {
         if (slotDetailsPanel != null && item != null)
         {
-            var data = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
+            var data = GameDataConfig.Instance.ItemDataSo.GetItemDataById(item.itemId);
             slotDetailsPanel.ShowDetails(data);
         }
     }

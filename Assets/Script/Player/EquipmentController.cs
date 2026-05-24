@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -45,7 +45,7 @@ public class EquipmentController : MonoBehaviour
     /// <summary>装备物品并触发属性重算</summary>
     public StoredEquipment EquipItem(StoredEquipment equipmentData)
     {
-        var itemData = GameManager.Instance.ItemDataSo.GetEquipmentDataById(equipmentData.itemId);
+        var itemData = GameDataConfig.Instance.ItemDataSo.GetEquipmentDataById(equipmentData.itemId);
         if (itemData == null)
         {
             Debug.LogError($"无法找到ID为 {equipmentData.itemId} 的装备数据");
@@ -107,7 +107,7 @@ public class EquipmentController : MonoBehaviour
         int equipCount = 0;
         foreach (var invItem in allItems.Where(i => i.location == ItemLocation.Equipped))
         {
-            var equipData = GameManager.Instance.ItemDataSo.GetEquipmentDataById(invItem.itemId);
+            var equipData = GameDataConfig.Instance.ItemDataSo.GetEquipmentDataById(invItem.itemId);
             if (equipData == null) continue;
             var stored = BuildStoredEquipmentFromInventoryItem(invItem);
             _equippedItems[equipData.equipmentType] = stored;
@@ -153,7 +153,7 @@ public class EquipmentController : MonoBehaviour
             quantity = invItem.quantity
         };
 
-        var templateData = GameManager.Instance?.ItemDataSo?.GetEquipmentDataById(invItem.itemId);
+        var templateData = GameDataConfig.Instance?.ItemDataSo?.GetEquipmentDataById(invItem.itemId);
         if (templateData != null && templateData.customProperties != null && templateData.customProperties.Count > 0)
         {
             foreach (var tProp in templateData.customProperties)

@@ -94,20 +94,20 @@ public class TaskTrackerPanel : MonoBehaviour
     {
         // 避免重复订阅
         UnsubscribeTaskEvents();
-        TaskEvents.OnObjectiveProgress += HandleObjectiveProgress;
-        TaskEvents.OnTaskStarted += HandleTaskStarted;
-        TaskEvents.OnTaskCompleted += HandleTaskCompletedEvent;
-        TaskEvents.OnTaskRewardsClaimed += HandleTaskRewardsClaimed;
-        TaskEvents.OnTaskTrackedChanged += HandleTaskTrackedChanged; // 新增
+        TaskEventBridge.Instance.OnObjectiveProgress += HandleObjectiveProgress;
+        TaskEventBridge.Instance.OnTaskStarted += HandleTaskStarted;
+        TaskEventBridge.Instance.OnTaskCompleted += HandleTaskCompletedEvent;
+        TaskEventBridge.Instance.OnTaskRewardsClaimed += HandleTaskRewardsClaimed;
+        TaskEventBridge.Instance.OnTaskTrackedChanged += HandleTaskTrackedChanged;
     }
 
     private void UnsubscribeTaskEvents()
     {
-        TaskEvents.OnObjectiveProgress -= HandleObjectiveProgress;
-        TaskEvents.OnTaskStarted -= HandleTaskStarted;
-        TaskEvents.OnTaskCompleted -= HandleTaskCompletedEvent;
-        TaskEvents.OnTaskRewardsClaimed -= HandleTaskRewardsClaimed;
-        TaskEvents.OnTaskTrackedChanged -= HandleTaskTrackedChanged; // 新增
+        TaskEventBridge.Instance.OnObjectiveProgress -= HandleObjectiveProgress;
+        TaskEventBridge.Instance.OnTaskStarted -= HandleTaskStarted;
+        TaskEventBridge.Instance.OnTaskCompleted -= HandleTaskCompletedEvent;
+        TaskEventBridge.Instance.OnTaskRewardsClaimed -= HandleTaskRewardsClaimed;
+        TaskEventBridge.Instance.OnTaskTrackedChanged -= HandleTaskTrackedChanged;
     }
     #endregion
 

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -156,9 +156,9 @@ public class NpcShopSystem : MonoBehaviour
     private ItemData GetItemDataById(int itemId)
     {
         // 通过GameManager获取ItemDataSO引用
-        if (GameManager.Instance != null && GameManager.Instance.ItemDataSo != null)
+        if (GameDataConfig.Instance!=null && GameDataConfig.Instance.ItemDataSo != null)
         {
-            return GameManager.Instance.ItemDataSo.GetItemDataById(itemId);
+            return GameDataConfig.Instance.ItemDataSo.GetItemDataById(itemId);
         }
         
         Debug.LogError("无法获取物品数据，GameManager或ItemDataSO未正确初始化");

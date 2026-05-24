@@ -83,7 +83,7 @@ public partial class CharacterState
     private void LevelUp()
     {
         Level++;
-        var baseData = GameManager.Instance.playerCharacterStateDataSo.GetPlayerCharacterStateBaseData(Profession);
+        var baseData = GameDataConfig.Instance.PlayerCharacterStateDataSo.GetPlayerCharacterStateBaseData(Profession);
         MaxHealth = baseData.GetMaxHp(Level);
         Attack = baseData.GetAttack(Level);
         Defence = baseData.GetDefence(Level);

@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -96,7 +96,7 @@ public class LotteryCell : MonoBehaviour
         this.inventoryItem = item;
 
         // 通过物品ID从GameManager获取物品配置数据
-        this.itemData = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
+        this.itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(item.itemId);
 
         // 保存父级面板引用
         this.uiParent = panel;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -88,7 +88,7 @@ public class NpcShopQuantityPanel : UIPopPanelBase
         switch (currentMode)
         {
             case PanelMode.Purchase when shopItem != null:
-                itemData = GameManager.Instance.ItemDataSo.GetItemDataById(shopItem.itemId);
+                itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(shopItem.itemId);
                 itemName = itemData != null ? itemData.itemName : "未知物品";
                 itemPrice = shopItem.price;
                 
@@ -108,7 +108,7 @@ public class NpcShopQuantityPanel : UIPopPanelBase
                 break;
                 
             case PanelMode.Sell when inventoryItem != null:
-                itemData = GameManager.Instance.ItemDataSo.GetItemDataById(inventoryItem.itemId);
+                itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(inventoryItem.itemId);
                 itemName = itemData != null ? itemData.itemName : "未知物品";
                 
                 // 设定出售价格

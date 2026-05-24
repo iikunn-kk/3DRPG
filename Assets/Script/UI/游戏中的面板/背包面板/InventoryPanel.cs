@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
@@ -153,7 +153,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
         var equippedItems = InventoryManager.Instance.GetEquippedItems();
         foreach (var item in equippedItems)
         {
-            var equipmentData = GameManager.Instance.ItemDataSo.GetEquipmentDataById(item.itemId);
+            var equipmentData = GameDataConfig.Instance.ItemDataSo.GetEquipmentDataById(item.itemId);
             if (equipmentData != null && _equipmentSlotsUI.ContainsKey(equipmentData.equipmentType))
             {
                 _equipmentSlotsUI[equipmentData.equipmentType].Init(item, ShowDetails, HideDetails);
@@ -208,7 +208,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
     private void ShowDetails(InventoryItem item)
     {
         if (item == null) return;
-        var data = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
+        var data = GameDataConfig.Instance.ItemDataSo.GetItemDataById(item.itemId);
         bool isEquipment = data is EquipmentData;
 
         if (isEquipment)
@@ -301,7 +301,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
     /// </summary>
     public void GenerateRandomItems()
     {
-        GameManager.Instance.ItemDataSo.GenerateRandomItems(randomSlotCount);
+        GameDataConfig.Instance.ItemDataSo.GenerateRandomItems(randomSlotCount);
     }
 
     /// <summary>
@@ -309,7 +309,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
     /// </summary>
     public void GenerateRandomEquipment()
     {
-        GameManager.Instance.ItemDataSo.GenerateRandomEquipment(randomSlotCount);
+        GameDataConfig.Instance.ItemDataSo.GenerateRandomEquipment(randomSlotCount);
     }
 
     public void AddMoney()

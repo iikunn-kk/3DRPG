@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
@@ -90,7 +90,7 @@ public class WorldShopPanel : UIPopPanelBase
     private int GetItemTypePriority(WorldShopItem shopItem)
     {
         // 获取物品数据（使用通用的 GetItemDataById，支持所有物品类型）
-        var itemData = GameManager.Instance?.ItemDataSo?.GetItemDataById(shopItem.itemId);
+        var itemData = GameDataConfig.Instance?.ItemDataSo?.GetItemDataById(shopItem.itemId);
         if (itemData != null)
         {
             // 装备类型优先级为0（排在前面）

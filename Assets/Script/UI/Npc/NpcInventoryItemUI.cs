@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
@@ -67,7 +67,7 @@ public class NpcInventoryItemUI : MonoBehaviour, IPointerEnterHandler, IPointerE
     private void CommonInit()
     {
         // 获取物品数据
-        itemData = GameManager.Instance.ItemDataSo.GetItemDataById(inventoryItem.itemId);
+        itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(inventoryItem.itemId);
         
         // 设置物品图标
         if (itemIcon != null && itemData != null && itemData.itemSprite != null)

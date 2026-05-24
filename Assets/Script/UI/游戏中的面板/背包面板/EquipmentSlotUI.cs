@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using System;
@@ -94,7 +94,7 @@ public class EquipmentSlotUI : MonoBehaviour, IPointerEnterHandler, IPointerExit
             return;
         }
 
-        var equipmentData = GameManager.Instance.ItemDataSo.GetEquipmentDataById(Item.itemId);
+        var equipmentData = GameDataConfig.Instance.ItemDataSo.GetEquipmentDataById(Item.itemId);
         if (equipmentData != null)
         {
             icon.enabled = true;

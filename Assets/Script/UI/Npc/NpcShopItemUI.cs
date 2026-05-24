@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
@@ -42,7 +42,7 @@ public class NpcShopItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         if (_shopItem == null) return;
 
         // 获取物品数据
-        _itemData = GameManager.Instance.ItemDataSo.GetItemDataById(_shopItem.itemId);
+        _itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(_shopItem.itemId);
 
         // 设置物品图标
         if (itemIcon != null && _itemData != null && _itemData.itemSprite != null)

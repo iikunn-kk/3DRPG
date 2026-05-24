@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -64,7 +64,7 @@ public class TaskManager : Singleton<TaskManager>
     public void InitializeMainMissions()
     {
         if (taskDataSo == null || taskDataSo.mainMission == null || taskDataSo.mainMission.Count == 0) return;
-        var curChar = GameManager.Instance?.CurrentCharacter;
+        var curChar = SessionManager.Instance?.CurrentCharacter;
         bool hasRuntimeMainQuest = tasks.Values.Any(t => t.taskCategory == TaskCategory.MainQuest);
         bool hasPersistedAny = curChar != null && curChar.taskList != null && curChar.taskList.Count > 0;
         if (hasRuntimeMainQuest || hasPersistedAny) return;
@@ -81,7 +81,7 @@ public class TaskManager : Singleton<TaskManager>
             Debug.LogError($"未找到任务数据 ID={taskId}");
             return;
         }
-        var curChar = GameManager.Instance?.CurrentCharacter;
+        var curChar = SessionManager.Instance?.CurrentCharacter;
         // 若已完成过（在 completedTaskIds 中）则不再接受
         if (curChar != null && curChar.completedTaskIds != null && curChar.completedTaskIds.Contains(taskId))
         {
@@ -186,7 +186,7 @@ public class TaskManager : Singleton<TaskManager>
             return list;
         }
         var all = (taskDataSo.mainMission ?? new List<TaskData>()).Concat(taskDataSo.sideMission ?? new List<TaskData>());
-        var curChar = GameManager.Instance?.CurrentCharacter;
+        var curChar = SessionManager.Instance?.CurrentCharacter;
         foreach (var td in all)
         {
             if (td == null) continue;
@@ -235,7 +235,7 @@ public class TaskManager : Singleton<TaskManager>
         var list = new List<TaskData>();
         if (taskDataSo == null) return list;
         var all = (taskDataSo.mainMission ?? new List<TaskData>()).Concat(taskDataSo.sideMission ?? new List<TaskData>());
-        var curChar = GameManager.Instance?.CurrentCharacter;
+        var curChar = SessionManager.Instance?.CurrentCharacter;
         foreach (var td in all)
         {
             if (td == null) continue;
@@ -277,7 +277,7 @@ public class TaskManager : Singleton<TaskManager>
 
     private void HandleObjectiveProgress(ObjectiveType objectiveType, int targetId, int amount)
     {
-        var curChar = GameManager.Instance?.CurrentCharacter;
+        var curChar = SessionManager.Instance?.CurrentCharacter;
         // 避免遍历过程中结构变化
         var snapshot = tasks.Values.ToArray();
         foreach (var task in snapshot)
@@ -342,7 +342,7 @@ public class TaskManager : Singleton<TaskManager>
         // 移除已完成并已领取奖励的任务，记录到 completedTaskIds
         if (!tasks.TryGetValue(taskId, out var finished)) return;
         if (!finished.isCompleted || !finished.isRewardClaimed) return; // 保护
-        var curChar = GameManager.Instance?.CurrentCharacter;
+        var curChar = SessionManager.Instance?.CurrentCharacter;
         if (curChar != null)
         {
             if (curChar.completedTaskIds == null) curChar.completedTaskIds = new System.Collections.Generic.List<int>();
@@ -362,7 +362,7 @@ public class TaskManager : Singleton<TaskManager>
 
     public void LoadTasksFromCharacterData()
     {
-        var gm = GameManager.Instance;
+        var gm = SessionManager.Instance;
         if (gm == null || gm.CurrentCharacter == null) return;
         var cd = gm.CurrentCharacter;
         if (cd.taskList == null || cd.taskList.Count == 0) return;
@@ -404,7 +404,7 @@ public class TaskManager : Singleton<TaskManager>
 
     public void SaveTaskProgressToMongoDB(string characterId)
     {
-        var gm = GameManager.Instance;
+        var gm = SessionManager.Instance;
         if (gm == null || gm.CurrentCharacter == null) return;
         PopulateCharacterDataTasks(gm.CurrentCharacter);
         _ = MongoDBManager.Instance.CreateAndSaveCharacterData(gm.CurrentCharacter);

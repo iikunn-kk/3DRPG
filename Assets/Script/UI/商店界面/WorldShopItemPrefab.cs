@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -23,7 +23,7 @@ public class WorldShopItemPrefab : MonoBehaviour
         if (price != null) price.text = itemPrice.ToString();
 
         // 获取物品数据（使用通用的 GetItemDataById，支持所有物品类型）
-        var itemData = GameManager.Instance?.ItemDataSo?.GetItemDataById(item.itemId);
+        var itemData = GameDataConfig.Instance?.ItemDataSo?.GetItemDataById(item.itemId);
         if (itemData != null)
         {
             // 设置物品显示信息

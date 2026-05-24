@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -297,7 +297,7 @@ public class InventoryManager : Singleton<InventoryManager>
             _playerInventory.allItems = new List<InventoryItem>();
         }
 
-        var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(itemId);
+        var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(itemId);
         if (itemData == null)
         {
             Debug.LogWarning($"未找到ID为 {itemId} 的物品数据");
@@ -359,7 +359,7 @@ public class InventoryManager : Singleton<InventoryManager>
                         slotIndex = emptySlot
                     };
 
-                    equipmentData.GenerateBaseProperties(GameManager.Instance.PropertyScalingData);
+                    equipmentData.GenerateBaseProperties(GameDataConfig.Instance.PropertyScalingData);
                     // 深拷贝属性，避免后续再次调用 GenerateBaseProperties 导致已有物品属性被修改
                     newItem.generatedProperties = equipmentData.GetAllProperties()
                         .Select(p => p.DeepClone())
@@ -406,7 +406,7 @@ public class InventoryManager : Singleton<InventoryManager>
             _playerInventory.allItems = new List<InventoryItem>();
         }
 
-        var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(itemId);
+        var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(itemId);
         if (itemData == null)
         {
             Debug.LogWarning($"未找到ID为 {itemId} 的物品数据");
@@ -453,7 +453,7 @@ public class InventoryManager : Singleton<InventoryManager>
         if (item != null)
         {
             // 获取物品信息以便显示提示
-            var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
+            var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(item.itemId);
             string itemName = itemData != null && !string.IsNullOrEmpty(itemData.itemName) ? itemData.itemName : "物品";
             Sprite icon = itemData != null ? itemData.itemSprite : null;
 
@@ -494,7 +494,7 @@ public class InventoryManager : Singleton<InventoryManager>
         var item = GetItemByInstanceId(instanceId);
         if (item == null) return;
 
-        var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
+        var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(item.itemId);
         if (itemData == null) return;
 
         // 根据物品类型执行不同操作
@@ -555,7 +555,7 @@ public class InventoryManager : Singleton<InventoryManager>
         itemToMove.slotIndex = newSlotIndex;
 
         // 检查是否发生了装备或卸下行为，并触发相应事件
-        var equipmentData = GameManager.Instance.ItemDataSo.GetEquipmentDataById(itemToMove.itemId);
+        var equipmentData = GameDataConfig.Instance.ItemDataSo.GetEquipmentDataById(itemToMove.itemId);
         if (equipmentData != null)
         {
             if (newLocation == ItemLocation.Equipped && originalLocation != ItemLocation.Equipped)
@@ -677,7 +677,7 @@ public class InventoryManager : Singleton<InventoryManager>
     public bool PickupItems(List<Vector2Int> droppedItemList)
     {
         bool allPicked = true;
-        var itemDataDict = GameManager.Instance.ItemDataSo;
+        var itemDataDict = GameDataConfig.Instance.ItemDataSo;
         foreach (var item in droppedItemList)
         {
             int itemId = item.x;

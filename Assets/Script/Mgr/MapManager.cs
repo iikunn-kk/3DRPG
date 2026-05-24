@@ -80,6 +80,8 @@ public class MapManager : MonoBehaviour
             {
                 TaskManager.Instance.InitializeForCurrentCharacter();
             }
+            // 任务事件桥接：玩家生成后激活事件转发
+            TaskEventBridge.Instance.Attach();
             // 恢复跨场景保存的临时 Buff
             CharacterRuntimeManager.Instance.RestoreTransientPlayerState(playerCharacter);
             cameraController.SetTarget(playerInstance.transform);

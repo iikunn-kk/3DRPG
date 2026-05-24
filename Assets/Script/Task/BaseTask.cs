@@ -1,4 +1,4 @@
-// 基础任务类
+﻿// 基础任务类
 
 using System;
 using System.Collections.Generic;
@@ -150,7 +150,7 @@ public class BaseTask
                 foreach (var cost in completionCosts)
                 {
                     if (cost == null || cost.amount <= 0) continue;
-                    var itemData = GameManager.Instance?.ItemDataSo?.GetItemDataById(cost.itemId);
+                    var itemData = GameDataConfig.Instance?.ItemDataSo?.GetItemDataById(cost.itemId);
                     string itemName = itemData != null && !string.IsNullOrEmpty(itemData.itemName) ? itemData.itemName : $"物品{cost.itemId}";
                     parts.Add($"{itemName} x{cost.amount}");
                 }
@@ -249,7 +249,7 @@ public class BaseTask
                         }
                         case RewardType.Exp:
                         {
-                            var cs = GameManager.Instance?.CurrentPlayerCharacter();
+                            var cs = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
                             if (cs == null)
                             {
                                 Debug.LogWarning("玩家角色不存在，无法发放经验奖励");

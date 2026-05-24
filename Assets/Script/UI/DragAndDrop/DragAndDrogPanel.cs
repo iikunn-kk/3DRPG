@@ -1,4 +1,4 @@
-// 文件名: DragAndDropPanel.cs
+﻿// 文件名: DragAndDropPanel.cs
 using UnityEngine;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
@@ -128,7 +128,7 @@ public class DragAndDropPanel : Singleton<DragAndDropPanel>
             if (_dragVisualInstance != null)
             {
                 _dragVisualInstance.Initialize(parentCanvas);
-                var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
+                var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(item.itemId);
                 if (itemData != null)
                 {
                     _dragVisualInstance.SetSprite(itemData.itemSprite);

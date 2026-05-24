@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public class WorldDroppedItems : MonoBehaviour,IInteractable
@@ -14,7 +14,7 @@ public class WorldDroppedItems : MonoBehaviour,IInteractable
     // 由 PlayerInteraction 的中央提示负责显示/隐藏。
     public string GetInteractionPrompt()
     {
-        var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(itemID);
+        var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(itemID);
         if (itemData != null)
             return $"拾取 {itemData.itemName} x{amount}";
         return "F";

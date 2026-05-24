@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -69,7 +69,7 @@ public class NpcShopSlotDetailsPanel : MonoBehaviour
     public void ShowDetails(InventoryItem item)
     {
         if (item == null) return;
-        var template = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
+        var template = GameDataConfig.Instance.ItemDataSo.GetItemDataById(item.itemId);
         if (template == null)
         {
             if (nameText != null) nameText.text = "Unknown Item";

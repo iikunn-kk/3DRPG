@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
@@ -23,7 +23,7 @@ public class EquipSlotDetailsPanel : SlotDetailsPanel
             HideExtra();
             return;
         }
-        var template = GameManager.Instance.ItemDataSo.GetItemDataById(item.itemId);
+        var template = GameDataConfig.Instance.ItemDataSo.GetItemDataById(item.itemId);
         if (template is not EquipmentData)
         {
             // 非装备隐藏额外区域

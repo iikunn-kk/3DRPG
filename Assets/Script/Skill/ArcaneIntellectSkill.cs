@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// 奥术智慧（Arcane Intellect）技能入口：
@@ -32,7 +32,7 @@ public class ArcaneIntellectSkill : Skill
             AudioManager.Instance.PlayWeaponSound(SkillSoundType.Buff释放);
         }
 
-        var cs = GameManager.Instance != null ? CharacterRuntimeManager.Instance.CurrentPlayerCharacter() : null;
+        var cs = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
         if (cs == null)
         {
             Debug.LogWarning("ArcaneIntellectSkill: 未找到玩家角色");

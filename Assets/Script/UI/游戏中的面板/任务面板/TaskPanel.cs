@@ -20,11 +20,11 @@ public class TaskPanel : UIPopPanelBase
 
     private void OnEnable()
     {
-        // 订阅全局任务事件
-        TaskEvents.OnObjectiveProgress += HandleObjectiveProgress;
-        TaskEvents.OnTaskStarted += HandleTaskStarted;
-        TaskEvents.OnTaskCompleted += HandleTaskCompleted;
-        TaskEvents.OnTaskRewardsClaimed += HandleTaskRewardsClaimed;
+        // 通过 TaskEventBridge 订阅任务事件（统一生命周期管理）
+        TaskEventBridge.Instance.OnObjectiveProgress += HandleObjectiveProgress;
+        TaskEventBridge.Instance.OnTaskStarted += HandleTaskStarted;
+        TaskEventBridge.Instance.OnTaskCompleted += HandleTaskCompleted;
+        TaskEventBridge.Instance.OnTaskRewardsClaimed += HandleTaskRewardsClaimed;
         // 初次打开时构建列表
         if (TaskManager.Instance != null)
         {
@@ -32,12 +32,12 @@ public class TaskPanel : UIPopPanelBase
         }
     }
 
-    private new void OnDisable()
+    private void OnDisable()
     {
-        TaskEvents.OnObjectiveProgress -= HandleObjectiveProgress;
-        TaskEvents.OnTaskStarted -= HandleTaskStarted;
-        TaskEvents.OnTaskCompleted -= HandleTaskCompleted;
-        TaskEvents.OnTaskRewardsClaimed -= HandleTaskRewardsClaimed;
+        TaskEventBridge.Instance.OnObjectiveProgress -= HandleObjectiveProgress;
+        TaskEventBridge.Instance.OnTaskStarted -= HandleTaskStarted;
+        TaskEventBridge.Instance.OnTaskCompleted -= HandleTaskCompleted;
+        TaskEventBridge.Instance.OnTaskRewardsClaimed -= HandleTaskRewardsClaimed;
     }
     
     /// <summary>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -39,7 +39,7 @@ public class QuickSlot : InventorySlot
 
         if (eventData.button == PointerEventData.InputButton.Left)
         {
-            var itemData = GameManager.Instance.ItemDataSo.GetItemDataById(Item.itemId);
+            var itemData = GameDataConfig.Instance.ItemDataSo.GetItemDataById(Item.itemId);
             if (itemData == null) return;
 
             switch (itemData.itemType)

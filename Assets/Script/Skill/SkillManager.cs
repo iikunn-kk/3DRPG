@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using System;
@@ -75,7 +75,7 @@ public class SkillManager : Singleton<SkillManager>
     public void RebuildCurrentPlayerSkillsFromGame()
     {
         _currentPlayerSkills.Clear();
-        var characterState = GameManager.Instance?.CurrentPlayerCharacter();
+        var characterState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
         var data = characterState?.PlayerCharacterData;
 
         if (data != null)
@@ -245,7 +245,7 @@ public class SkillManager : Singleton<SkillManager>
         ps.UpgradeLevel();
 
         // 确保写入到可持久化的 CharacterData 中
-        var data = characterData ?? GameManager.Instance?.CurrentCharacter;
+        var data = characterData ?? SessionManager.Instance?.CurrentCharacter;
         if (data == null)
         {
             // 无法获取到角色数据（理论上不应该发生），返回失败以便上层处理
@@ -265,7 +265,7 @@ public class SkillManager : Singleton<SkillManager>
         }
 
         // 同步到运行时 PlayerCharacterData（如果存在），保证 UI/运行时逻辑读取到最新等级
-        var runtimePlayer = GameManager.Instance?.CurrentPlayerCharacter();
+        var runtimePlayer = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
         var runtimeData = runtimePlayer?.PlayerCharacterData;
         if (runtimeData != null)
         {
@@ -298,7 +298,7 @@ public class SkillManager : Singleton<SkillManager>
     /// </summary>
     public bool TryUpgradeSkill(string skillID, out string failReason)
     {
-        var characterState = GameManager.Instance?.CurrentPlayerCharacter();
+        var characterState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
         var data = characterState?.PlayerCharacterData;
         int playerLevel = data?.level ?? 0;
 
@@ -342,7 +342,7 @@ public class SkillManager : Singleton<SkillManager>
         }
 
         // 2) 来自运行时 PlayerCharacterData（如果存在）
-        var runtimePlayer = GameManager.Instance?.CurrentPlayerCharacter();
+        var runtimePlayer = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
         var runtimeData = runtimePlayer?.PlayerCharacterData;
         if (runtimeData != null && runtimeData.skills != null)
         {
