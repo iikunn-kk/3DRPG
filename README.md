@@ -34,16 +34,19 @@
 
 ## 🎮 项目简介
 
-这是一个基于 Unity 引擎开发的 3D RPG 游戏框架项目，采用模块化架构设计，包含完整的 MMORPG 核心系统。项目展示了扎实的 Unity 开发能力、系统架构设计能力和大型项目管理经验。
+这是一个基于 Unity 引擎开发的 3D RPG 游戏项目，采用模块化架构设计，包含完整的 MMORPG 核心系统。项目展示了 Unity 开发能力、系统架构设计能力、代码重构治理能力和 MMO 联机架构设计能力。
 
 ### 项目亮点
 
-✅ **完整的 RPG 核心系统** - 角色创建、战斗、技能、任务、背包、公会等  
-✅ **异步数据库架构** - 基于 MongoDB 的高性能数据持久化方案  
-✅ **事件驱动架构** - 使用 ScriptableObject 实现解耦的事件系统  
-✅ **模块化设计** - 高内聚低耦合的架构，易于扩展维护  
-✅ **热键系统** - 支持运行时修改并保存技能快捷键  
-✅ **动画系统** - 完整的角色与怪物动画控制系统
+✅ **完整的 RPG 核心系统** — 角色创建、战斗、技能、任务、背包、公会等  
+✅ **MMO 联机架构** — 客户端-服务端分离，5 容器 Docker 编排，双窗口互见 + HP 同步  
+✅ **上帝类治理** — GameManager 800+ 行 → 完全删除，绞杀者模式三阶段迁移  
+✅ **依赖注入** — VContainer DI 容器集成，14+ Manager 注册，支持单元测试 Mock  
+✅ **UniTask 异步** — 40+ 文件全部替换 Coroutine，零 `async void` 残留  
+✅ **事件驱动** — ScriptableObject Event Channel + TaskEventBridge 统一任务事件生命周期  
+✅ **FSM 状态机** — 怪物 7 状态 FSM + 玩家 12 状态 FSM，动画 Blend Tree + Trigger 驱动  
+✅ **单元测试** — 41 个 NUnit 测试覆盖 4 模块  
+✅ **GC 优化** — LINQ 清理、委托缓存、对象池化
 
 ---
 
@@ -66,6 +69,7 @@
 - 伤害计算与暴击判定
 - 战斗状态机
 - 受击反馈系统
+- **MMO 服务端权威战斗**：CombatServer 伤害计算 + Buff/Debuff 系统
 
 ### 🌟 技能系统
 
@@ -86,6 +90,7 @@
 - 背包容量管理
 - 拖拽系统
 - 物品分类（装备、消耗品、材料）
+- **抽卡系统**：单抽 + 十连抽
 
 ### 📜 任务系统
 
@@ -95,6 +100,7 @@
 - 任务进度追踪
 - 任务奖励发放
 - 跨场景任务恢复
+- **TaskEventBridge**：统一事件生命周期，防止场景切换泄漏
 
 ### 🏰 公会系统
 
@@ -102,6 +108,15 @@
 - 公会成员管理
 - 公会权限系统
 - 公会数据持久化
+
+### 🌐 MMO 联机系统
+
+- **客户端-服务端分离架构**：Unity 客户端 + .NET 8 服务端三件套（Gateway / WorldServer / CombatServer）
+- **Docker 一键部署**：5 容器编排（MongoDB / Redis / Gateway / WorldServer / CombatServer）
+- **AOI 九宫格**：50m cell 空间分区，20 tick/s 快照广播
+- **服务端权威战斗**：CombatServer 伤害公式 + Buff/Debuff，HP 同步到所有客户端
+- **位置同步**：30Hz 发送 + 30ms 延迟平滑插值，双窗口互见移动
+- **三通道通信**：HTTP JWT 登录 + TCP JSON 消息 + UDP 高频同步（预留）
 
 ### 🎨 UI 系统
 
@@ -139,30 +154,34 @@
 
 ### 核心技术
 
-| 技术      | 版本        | 用途       |
-| --------- | ----------- | ---------- |
-| **Unity** | 6000.059f2+ | 游戏引擎   |
-| **C#**    | 9.0+        | 编程语言   |
-| **.NET**  | 4.x         | 运行时框架 |
+| 技术         | 版本          | 用途             |
+| ------------ | ------------- | ---------------- |
+| **Unity**    | 6000.0.59f2+  | 游戏引擎         |
+| **C#**       | 9.0+          | 编程语言         |
+| **.NET**     | 8.0           | 服务端运行时     |
+| **Docker**   | —             | 容器化部署       |
+| **Redis**    | 7-alpine      | 服务间 Pub/Sub   |
 
 ### 核心包
 
-| 包名                          | 用途             |
-| ----------------------------- | ---------------- |
-| **MongoDB.Driver**            | 数据库连接与操作 |
-| **DOTween**                   | 动画效果         |
-| **Cinemachine**               | 摄像机控制       |
-| **TextMeshPro**               | 高质量文本渲染   |
-| **Addressables**              | 资源管理与加载   |
-| **Universal Render Pipeline** | 通用渲染管线     |
-| **Post Processing**           | 后处理效果       |
+| 包名                          | 用途               |
+| ----------------------------- | ------------------ |
+| **VContainer**                | DI 依赖注入        |
+| **UniTask**                   | 零 GC 异步替代 Coroutine |
+| **MongoDB.Driver**            | 数据库连接与操作   |
+| **DOTween**                   | 动画效果           |
+| **Cinemachine**               | 摄像机控制         |
+| **TextMeshPro**               | 高质量文本渲染     |
+| **Addressables**              | 资源管理与加载     |
+| **Universal Render Pipeline** | 通用渲染管线       |
+| **Post Processing**           | 后处理效果         |
 
 ### 第三方资源
 
-- **Suntail Village** - 场景与美术资源
-- **MagicaCloth2** - 布料模拟
-- **Lofelt.NiceVibrations** - 触觉反馈
-- **Damage Numbers Pro** - 伤害数字显示
+- **Suntail Village** — 场景与美术资源
+- **MagicaCloth2** — 布料模拟
+- **Lofelt.NiceVibrations** — 触觉反馈
+- **Damage Numbers Pro** — 伤害数字显示
 
 ---
 
@@ -229,7 +248,7 @@ private const string ConnectionString = "mongodb://localhost:27017";
 
 6. **运行游戏**
 
-- 打开 `Assets/Scenes/MainScene.unity`
+- 打开 `Assets/Scenes/七月/登录界面/LoginScene 1.unity`
 - 点击 Play 按钮
 
 ---
@@ -259,7 +278,10 @@ Assets/
 │   │   └── KeybindingStorage.cs
 │   ├── Map/                  # 地图管理
 │   ├── Mgr/                  # 核心管理器
-│   │   ├── GameManager.cs
+│   │   ├── GameDataConfig.cs       # SO 数据配置持有
+│   │   ├── SessionManager.cs       # 会话/角色数据
+│   │   ├── CharacterRuntimeManager.cs  # 运行时玩家实例
+│   │   ├── SaveCoordinator.cs      # 统一存档编排
 │   │   ├── MongoDBManager.cs
 │   │   ├── InventoryManager.cs
 │   │   ├── SkillManager.cs
@@ -269,7 +291,15 @@ Assets/
 │   │   ├── PlayerCurrencyManager.cs
 │   │   ├── GuildManager.cs
 │   │   ├── AudioManager.cs
+│   │   ├── CharacterDataManager.cs
 │   │   └── Singleton.cs
+│   ├── Network/              # MMO 客户端网络层
+│   │   ├── NetworkManager.cs
+│   │   ├── TcpChannel.cs
+│   │   ├── UdpChannel.cs
+│   │   ├── EntitySyncManager.cs
+│   │   ├── NetworkPlayerMover.cs
+│   │   └── PositionInterpolator.cs
 │   ├── Monster/              # 怪物系统
 │   │   ├── MonsterBase.cs
 │   │   ├── MonsterCombat.cs
@@ -294,7 +324,18 @@ Assets/
 │   ├── Task/                 # 任务系统
 │   │   ├── TaskManager.cs
 │   │   ├── TaskDataSO.cs
-│   │   └── TaskEvents.cs
+│   │   ├── TaskEvent.cs
+│   │   ├── TaskEventBridge.cs
+│   │   └── TaskTrackingService.cs
+│   ├── VContainer/            # DI 容器配置
+│   │   ├── GameLifetimeScope.cs
+│   │   └── ServiceRegistration.cs
+│   ├── Tests/                 # 单元测试
+│   │   └── Editor/
+│   │       ├── AudioManagerTests.cs
+│   │       ├── InventoryManagerTests.cs
+│   │       ├── CharacterStateTests.cs
+│   │       └── EquipmentControllerTests.cs
 │   ├── Teleport/             # 传送系统
 │   ├── UI/                   # UI系统
 │   │   ├── UIPopPanelBase.cs
@@ -309,8 +350,11 @@ Assets/
 │   ├── Prefab/Panel/         # 面板预制件
 │   └── ...
 ├── Scenes/                   # 场景文件
-│   ├── MainScene.unity
-│   └── ...
+│   ├── 七月/
+│   │   ├── 登录界面/LoginScene 1.unity
+│   │   ├── Level_1/Village.unity
+│   │   └── Level_2/Forest.unity
+│   └── LoadingScene.unity
 └── Packages/                 # Unity包配置
     ├── manifest.json
     └── packages-lock.json
@@ -358,7 +402,11 @@ Assets/
 ### 核心管理器体系
 
 ```
-GameManager (游戏总控制器)
+GameDataConfig (SO 数据配置持有者)
+SessionManager (会话/角色数据)
+CharacterRuntimeManager (运行时玩家实例)
+SaveCoordinator (统一存档编排)
+TaskEventBridge (任务事件生命周期)
 ├── MongoDBManager (数据库管理)
 ├── InventoryManager (背包管理)
 ├── SkillManager (技能管理)
@@ -369,8 +417,9 @@ GameManager (游戏总控制器)
 ├── GuildManager (公会管理)
 ├── AudioManager (音频管理)
 ├── CursorManager (光标管理)
-└── ResolutionManager (分辨率管理)
+└── CharacterDataManager (角色数据)
 ```
+> GameManager 已于 2026-05 完全删除（800+ 行 → 0 行），职责分散至上述 6 个专职 Manager。
 
 ---
 
@@ -653,7 +702,7 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 }
 ```
 
-**应用场景**: GameManager, InventoryManager, SkillManager, UIManager 等
+**应用场景**: GameDataConfig, SessionManager, SaveCoordinator, InventoryManager, SkillManager, TaskEventBridge 等 14+ Manager
 
 ---
 
@@ -709,31 +758,28 @@ public class EquipmentData : ScriptableObject
 
 ### 4. 状态机模式
 
-怪物状态机:
+**怪物 FSM**（7 个独立状态类）：
 
 ```csharp
-public enum MonsterState
+// 状态基类
+public abstract class MonsterStateBase
 {
-    Patrol,    // 巡逻
-    Chase,     // 追踪
-    Attack,    // 攻击
-    Hurt,      // 受伤
-    Dead       // 死亡
+    public abstract void Enter();
+    public abstract void Update();
+    public abstract void Exit();
+    public abstract MonsterState CheckTransitions();
 }
 
-public class MonsterStateMachine : MonoBehaviour
-{
-    private Dictionary<MonsterState, MonsterState> _states;
-    private MonsterState _currentState;
+// 7 个状态：Patrol → Chase → Alert → Attack → Death / ReturnToSpawn → Idle
+public class MonsterChaseState : MonsterStateBase { /* 追击逻辑 */ }
+public class MonsterAttackState : MonsterStateBase { /* 攻击冷却 + 3 种随机攻击动画 */ }
+// ...
 
-    public void ChangeState(MonsterState newState)
-    {
-        _currentState?.Exit();
-        _currentState = _states[newState];
-        _currentState.Enter();
-    }
-}
+// 动画系统：Blend Tree 2D + Trigger 驱动
+// VSpeed/HSpeed → Idle/Walk/Run, Attack/Death/Alert → Trigger
 ```
+
+**玩家 FSM**（12 个独立状态类）：Idle / Walk / Sprint / Crouch / Jump / Fall / Roll / Attack / Hit / Death / Cast / Interact。物理移动、旋转矫正、跳跃朝向全部迁移至各状态类的 `FixedUpdate()` / `LateUpdate()`。
 
 ---
 
@@ -760,29 +806,22 @@ Controller (控制层)
 
 ## ⚡ 性能优化
 
-### 1. 异步操作
+### 1. UniTask 异步体系
 
-- MongoDB 操作全部使用异步方法
-- 场景加载使用 Addressables 异步加载
-- 背包数据异步保存
+- 全面替换 Coroutine（40+ 文件），零 `async void` 残留
+- `.Forget()` 即发即忘 + `PlayerLoopTiming` Unity 原生调度
+- `await UniTask.Delay` 零 GC 分配
+- 场景卸载时自动取消未完成异步操作
 
-### 2. 对象池
+### 2. GC 优化
 
-高频创建销毁的对象使用对象池:
+- **LINQ 清理**：热路径中 `.Where()`/`.Select()`/`.ToList()` 替换为 `for`/`foreach` + 手动判断
+- **委托缓存**：消除每帧 Closure 分配
+- **对象池化**：投射物、UI Toast 高频创建销毁对象复用
 
-- 投射物对象池
-- 怪物对象池
-- UI 元素对象池
+### 3. 资源管理
 
-### 3. 事件优化
-
-- 使用 ScriptableObject 事件减少 GC
-- 事件监听器自动注册/注销
-- 避免内存泄漏
-
-### 4. 资源管理
-
-- 使用 Addressables 按需加载
+- Addressables 按需加载
 - 场景切换时及时卸载资源
 - UI 面板复用机制
 
@@ -860,8 +899,8 @@ private const string ConnectionString = "mongodb://localhost:27017";
 **解决方法**:
 
 ```csharp
-await GameManager.Instance.SaveCurrentCharacterData();
-await SceneLoadManager.LoadSceneAsync("NewScene");
+SaveCoordinator.Instance.SaveCurrentCharacterData().Forget();
+await SceneLoadManager.Instance.LoadSceneAsync("NewScene");
 ```
 
 ---
