@@ -15,6 +15,7 @@ public class GuildDetailsPanel : MonoBehaviour
     [SerializeField] private TMP_Text guildDescriptionText;
     [SerializeField] private TMP_Text guildAnnouncementText;
     [SerializeField] private TMP_InputField guildAnnouncementInputField;
+    [SerializeField] private TMP_Text guildCreateTimeText;
     [SerializeField] private EnterQuitGuildPanel quitPopupPanel;
     private GuildData currentGuildData;
     private bool isEditingAnnouncement = false;
@@ -85,6 +86,12 @@ public class GuildDetailsPanel : MonoBehaviour
         if (guildAnnouncementInputField != null)
         {
             guildAnnouncementInputField.gameObject.SetActive(false);
+        }
+        if (guildCreateTimeText != null)
+        {
+            DateTime createDt = new DateTime(data.createTime);
+            guildCreateTimeText.text = createDt.ToString
+            ("yyyy-M-d");
         }
 
         quitPopupPanel.gameObject.SetActive(false);
