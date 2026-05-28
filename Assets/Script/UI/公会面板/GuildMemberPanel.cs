@@ -239,10 +239,15 @@ public class GuildMemberPanel : MonoBehaviour
     }
 
     /// <summary>
-    /// 测试功能：向当前公会添加随机生成的成员
+    /// 测试功能：向当前公会添加随机生成的成员（Button OnClick 入口）
     /// </summary>
     /// <param name="count">要添加的成员数量</param>
-    public async UniTaskVoid AddRandomMembersToGuild(int count)
+    public void AddRandomMembersToGuild(int count)
+    {
+        AddRandomMembersToGuildAsync(count).Forget();
+    }
+
+    private async UniTaskVoid AddRandomMembersToGuildAsync(int count)
     {
         if (currentGuildData == null)
         {
