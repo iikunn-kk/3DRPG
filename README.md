@@ -67,7 +67,8 @@
 
 ### ⚔️ 战斗系统
 
-<img src="Screenshots/combat.gif" width="700" alt="战斗演示">
+<!-- <img src="Screenshots/combat.gif" width="700" alt="战斗演示"> -->
+<img src="Screenshots/combat.png" width="700" alt="战斗演示">
 
 - 实时战斗机制
 - 全局冷却（GCD）系统
