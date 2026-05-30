@@ -103,9 +103,9 @@
 - 物品分类（装备、消耗品、材料）
 
 ### 🎴 抽卡系统
-<img src="Screenshots/gachamenu.gif" width="700" alt="原神风格抽卡首页演示">
-<img src="Screenshots/gachaone.gif" width="700" alt="原神风格抽卡单抽演示">
-<img src="Screenshots/gachaten.gif" width="700" alt="原神风格抽卡十抽演示">
+<img src="Screenshots/gachamenu.png" width="700" alt="原神风格抽卡首页演示">
+<img src="Screenshots/gachaone.png" width="700" alt="原神风格抽卡单抽演示">
+<img src="Screenshots/gachaten.png" width="700" alt="原神风格抽卡十抽演示">
 
 - 单抽与十连抽
 - 原神风格 UI 与抽卡动画
