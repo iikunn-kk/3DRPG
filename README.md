@@ -8,7 +8,7 @@
 
 <img src="Screenshots/banner.png" width="800" alt="游戏主画面">
 
-**一个功能完整的 3D RPG 游戏框架，包含完整的角色系统、战斗系统、技能系统、任务系统、背包系统、公会系统等核心模块**
+**一个功能完整的 3D RPG 游戏框架，包含完整的角色系统、战斗系统、技能系统、锁定系统、任务系统、背包系统、商店系统、公会系统、昼夜系统、抽卡系统等核心模块**
 
 [快速开始](#-快速开始) • [功能特性](#-功能特性) • [技术架构](#-技术架构) • [项目结构](#-项目结构)
 
@@ -20,7 +20,6 @@
 
 - [项目简介](#-项目简介)
 - [功能特性](#-功能特性)
-- [抽卡系统](#-抽卡系统)
 - [技术栈](#-技术栈)
 - [快速开始](#-快速开始)
 - [项目结构](#-项目结构)
@@ -31,6 +30,7 @@
 - [开发指南](#-开发指南)
 - [常见问题](#-常见问题)
 - [贡献指南](#-贡献指南)
+- [深度文档](#-深度文档)
 - [许可证](#-许可证)
 
 ---
@@ -50,7 +50,11 @@
 ✅ **FSM 状态机** — 怪物 7 状态 FSM + 玩家 12 状态 FSM，动画 Blend Tree + Trigger 驱动  
 ✅ **单元测试** — 41 个 NUnit 测试覆盖 4 模块  
 ✅ **GC 优化** — LINQ 清理、委托缓存、对象池化  
-✅ **原神风格抽卡** — 单抽 + 十连抽，武器池随机，品质/星级转换，抽卡动画与结算特效
+✅ **原神风格抽卡** — 单抽 + 十连抽，武器池随机，品质/星级转换，抽卡动画与结算特效  
+✅ **NPC 商店系统** — NPC 商店 + 世界商店双模式，购买/出售/数量选择/详情面板  
+✅ **锁定系统** — 矩形盒区域检索，锁定目标详情面板，技能朝向自动追踪  
+✅ **昼夜循环** — 根据系统时间自动切换天空盒与场景光照  
+✅ **代码治理** — 单例基类统一（删除 SingletonAutoMono），MongoDBManager 消除 200 行样板
 
 ---
 
@@ -67,6 +71,17 @@
 - Buff/Debuff 系统
 - 死亡与复活机制
 
+### 🔑 账号与登录
+
+<img src="Screenshots/account-create.png" width="700" alt="账号注册与登录">
+
+
+- 登录界面（LoginScene）
+- 服务器选择面板
+- 角色选择 / 创建面板
+- PlayerLogInManager 账号管理
+- 登录 → Loading → 游戏场景 完整流程
+
 ### ⚔️ 战斗系统
 
 <!-- <img src="Screenshots/combat.gif" width="700" alt="战斗演示"> -->
@@ -79,6 +94,13 @@
 - 战斗状态机
 - 受击反馈系统
 - **MMO 服务端权威战斗**：CombatServer 伤害计算 + Buff/Debuff 系统
+
+### 🔒 锁定系统
+
+- 矩形盒区域检索（基于玩家朝向）
+- 锁定目标详情面板（TargetDetailsPanel）
+- 技能朝向自动追踪锁定目标
+- 光标锁定/解锁状态管理（CursorManager）
 
 ### 🌟 技能系统
 
@@ -164,6 +186,13 @@
 - Loading 过渡界面
 - 场景数据保存与恢复
 - 玩家跨场景迁移
+
+### 🌅 昼夜系统
+
+- 基于系统现实时间自动切换
+- 白天 / 夜晚天空盒材质切换
+- 场景光照强度自动调整
+- 时间图标 UI 显示
 
 ### 🎮 输入系统
 
@@ -601,7 +630,32 @@ public class InventoryManager : Singleton<InventoryManager>
 
 ---
 
-### 5. 任务系统
+### 5. 商店系统
+
+**核心类**: `WorldShopPanel.cs`, `NpcShopPanel.cs`, `NpcShopQuantityPanel.cs`
+
+**商店类型**:
+
+| 商店 | 面板 | 功能 |
+|------|------|------|
+| NPC 商店 | `NpcShopPanel` | 与 NPC 交互触发，购买/出售 |
+| 世界商店 | `WorldShopPanel` | 独立面板，全球统一商品池 |
+
+**购买流程**:
+
+```
+打开商店面板
+  ↓
+选择物品 → 弹出数量面板
+  ↓
+确认购买/出售
+  ↓
+InventoryManager 增减物品 + 货币扣减
+```
+
+---
+
+### 6. 任务系统
 
 **核心类**: `TaskManager.cs`, `TaskDataSO.cs`
 
@@ -628,7 +682,7 @@ public static class TaskEvents
 
 ---
 
-### 6. UI 系统
+### 7. UI 系统
 
 **核心类**: `UIManager.cs`, `UIPopPanelBase.cs`
 
@@ -666,7 +720,7 @@ public virtual void Show(Action onComplete = null)
 
 ---
 
-### 7. 场景管理
+### 8. 场景管理
 
 **核心类**: `SceneLoadManager.cs`
 
@@ -692,7 +746,7 @@ SceneLoadManager.LoadScene(sceneName)
 
 ---
 
-### 8. 输入与热键系统
+### 9. 输入与热键系统
 
 **核心特性**:
 
@@ -716,7 +770,7 @@ InputBindingBootstrap.LoadBindingsOnStartup();
 
 ---
 
-### 9. 数据库集成
+### 10. 数据库集成
 
 **核心类**: `MongoDBManager.cs`
 
@@ -991,6 +1045,22 @@ await SceneLoadManager.Instance.LoadSceneAsync("NewScene");
 - 添加必要的注释
 - 使用有意义的变量/函数名
 - 保持代码简洁清晰
+<!-- 
+---
+
+## 📚 深度文档
+
+项目根目录下提供了多份详细文档，方便快速理解设计意图与实施细节：
+
+| 文档 | 内容 |
+|------|------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 项目整体架构设计 — 顶层模块划分、关键组件职责、交互流程、典型问题案例 |
+| [MMO_FULL.md](MMO_FULL.md) | MMO 联机系统实施手册 — Phase 0~4 完整记录，Docker 操作、故障排查 |
+| [SERVER_PLAN.md](SERVER_PLAN.md) | 小规模服务端渐进式方案 — 三阶段路线图 |
+| [SERVER_PLAN_MMO.md](SERVER_PLAN_MMO.md) | MMORPG 大型服务端架构方案 — 300~2000 人同服设计 |
+| [GAMEMANAGER_REFACTOR_DESIGN.md](GAMEMANAGER_REFACTOR_DESIGN.md) | GameManager 拆分治理设计草案 — 绞杀者模式、契约优先 |
+| [RESUME_COMPETITIVENESS.md](RESUME_COMPETITIVENESS.md) | 项目求职竞争力分析 — 亮点、短板、面试策略 |
+| `Assets/Script/Input/` | Unity 输入系统热键修复完整文档链（8 份诊断→修复→检查清单） | -->
 
 ---
 

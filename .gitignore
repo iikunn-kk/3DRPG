@@ -27,6 +27,9 @@
 # 6.1 放行 Screenshots 文件夹（README 展示图片）
 !/Screenshots/
 !/Screenshots/**
+!/LICENSE
+# !/ARCHITECTURE.md
+# !/MMO_FULL.md
 
 
 # 7. 拉黑所有 .meta 文件（Unity自动生成，完全不需要上传）
