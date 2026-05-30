@@ -20,6 +20,7 @@
 
 - [项目简介](#项目简介)
 - [功能特性](#功能特性)
+  - [抽卡系统](#-抽卡系统)
 - [技术栈](#技术栈)
 - [快速开始](#快速开始)
 - [项目结构](#项目结构)
@@ -48,7 +49,8 @@
 ✅ **事件驱动** — ScriptableObject Event Channel + TaskEventBridge 统一任务事件生命周期  
 ✅ **FSM 状态机** — 怪物 7 状态 FSM + 玩家 12 状态 FSM，动画 Blend Tree + Trigger 驱动  
 ✅ **单元测试** — 41 个 NUnit 测试覆盖 4 模块  
-✅ **GC 优化** — LINQ 清理、委托缓存、对象池化
+✅ **GC 优化** — LINQ 清理、委托缓存、对象池化  
+✅ **原神风格抽卡** — 单抽 + 十连抽，武器池随机，品质/星级转换，抽卡动画与结算特效
 
 ---
 
@@ -99,7 +101,18 @@
 - 背包容量管理
 - 拖拽系统
 - 物品分类（装备、消耗品、材料）
-- **抽卡系统**：单抽 + 十连抽
+
+### 🎴 抽卡系统
+<img src="Screenshots/gachamenu.gif" width="700" alt="原神风格抽卡首页演示">
+<img src="Screenshots/gachaone.gif" width="700" alt="原神风格抽卡单抽演示">
+<img src="Screenshots/gachaten.gif" width="700" alt="原神风格抽卡十抽演示">
+
+- 单抽与十连抽
+- 原神风格 UI 与抽卡动画
+- 武器池随机抽取
+- 星级→品质转换（传说5星 / 史诗4星 / 稀有3星 / 普通2星）
+- 抽卡结果自动入库（InventoryManager 集成）
+- 品质背景、闪光特效、结算图集
 
 ### 📜 任务系统
 
@@ -514,7 +527,47 @@ public class SkillSO : ScriptableObject
 
 ---
 
-### 3. 背包系统
+### 3. 抽卡系统
+
+**核心类**: `DrawCardPanel.cs`, `LotteryPanel.cs`, `LotteryCell.cs`, `LegacyPackageManager.cs`
+
+**抽卡流程**:
+
+```
+DrawCardPanel (选择单抽/十连)
+  ↓
+LotteryPanel (展示容器)
+  ↓
+LegacyPackageManager.GetLotteryRandom1/10()
+  ↓ 从 PackageTable.asset 武器池随机抽取
+星级→品质转换 + 随机装备属性
+  ↓
+InventoryManager.AddItemWithoutToast() 入库
+  ↓
+LotteryCell 卡片展示 (品质背景 + 闪光特效)
+```
+
+**配置表**:
+
+```csharp
+// PackageTable.asset — 武器池配置
+// id / type / star / name / description / imagePath
+// LegacyPackageManager 从中读取武器池执行随机抽取
+```
+
+**与新背包集成**:
+
+```csharp
+// InventoryManager.cs
+public void AddItemWithoutToast(InventoryItem item)
+{
+    // 直接添加已生成的 InventoryItem (用于抽卡等场景)
+}
+```
+
+---
+
+### 4. 背包系统
 
 **核心类**: `InventoryManager.cs`
 
@@ -548,7 +601,7 @@ public class InventoryManager : Singleton<InventoryManager>
 
 ---
 
-### 4. 任务系统
+### 5. 任务系统
 
 **核心类**: `TaskManager.cs`, `TaskDataSO.cs`
 
@@ -575,7 +628,7 @@ public static class TaskEvents
 
 ---
 
-### 5. UI 系统
+### 6. UI 系统
 
 **核心类**: `UIManager.cs`, `UIPopPanelBase.cs`
 
@@ -613,7 +666,7 @@ public virtual void Show(Action onComplete = null)
 
 ---
 
-### 6. 场景管理
+### 7. 场景管理
 
 **核心类**: `SceneLoadManager.cs`
 
@@ -639,7 +692,7 @@ SceneLoadManager.LoadScene(sceneName)
 
 ---
 
-### 7. 输入与热键系统
+### 8. 输入与热键系统
 
 **核心特性**:
 
@@ -663,7 +716,7 @@ InputBindingBootstrap.LoadBindingsOnStartup();
 
 ---
 
-### 8. 数据库集成
+### 9. 数据库集成
 
 **核心类**: `MongoDBManager.cs`
 
