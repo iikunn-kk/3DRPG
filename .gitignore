@@ -2,8 +2,6 @@
 # 规则：只保留 Assets/Scripts 下的代码，其他全部忽略
 # ==============================================
 !/README.md
-!/Screenshots/
-!/Screenshots/**
 # 1. 先拉黑根目录下所有文件/文件夹
 *
 
@@ -26,6 +24,9 @@
 # 6. 放行 Assets/Scripts 下的所有子文件/子文件夹（也就是你的代码）
 !/Assets/Script/**/*
 
+# 6.1 放行 Screenshots 文件夹（README 展示图片）
+!/Screenshots/
+!/Screenshots/**
 
 
 # 7. 拉黑所有 .meta 文件（Unity自动生成，完全不需要上传）
