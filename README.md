@@ -6,6 +6,8 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Mac%20%7C%20Linux-lightgrey.svg)]()
 
+<img src="Screenshots/banner.png" width="800" alt="游戏主画面">
+
 **一个功能完整的 3D RPG 游戏框架，包含完整的角色系统、战斗系统、技能系统、任务系统、背包系统、公会系统等核心模块**
 
 [快速开始](#快速开始) • [功能特性](#功能特性) • [技术架构](#技术架构) • [项目结构](#项目结构) • [开发文档](#开发文档)
@@ -54,6 +56,8 @@
 
 ### 🧙 角色系统
 
+<img src="Screenshots/character-create.png" width="700" alt="角色创建">
+
 - 角色创建与选择
 - 属性系统（生命、攻击、防御、暴击等）
 - 等级与经验系统
@@ -62,6 +66,8 @@
 - 死亡与复活机制
 
 ### ⚔️ 战斗系统
+
+<img src="Screenshots/combat.gif" width="700" alt="战斗演示">
 
 - 实时战斗机制
 - 全局冷却（GCD）系统
@@ -83,6 +89,8 @@
 
 ### 🎒 背包系统
 
+<img src="Screenshots/inventory.png" width="700" alt="背包界面">
+
 - 物品增删改查
 - 装备与卸下
 - 物品堆叠
@@ -94,6 +102,8 @@
 
 ### 📜 任务系统
 
+<img src="Screenshots/quest.png" width="700" alt="任务面板">
+
 - 主线任务与支线任务
 - 任务链系统
 - 任务目标类型（击杀、收集、对话、到达等）
@@ -104,12 +114,16 @@
 
 ### 🏰 公会系统
 
+<img src="Screenshots/guild.png" width="700" alt="公会面板">
+
 - 公会创建与加入
 - 公会成员管理
 - 公会权限系统
 - 公会数据持久化
 
 ### 🌐 MMO 联机系统
+
+<img src="Screenshots/mmo-sync.gif" width="700" alt="MMO双窗口同步演示">
 
 - **客户端-服务端分离架构**：Unity 客户端 + .NET 8 服务端三件套（Gateway / WorldServer / CombatServer）
 - **Docker 一键部署**：5 容器编排（MongoDB / Redis / Gateway / WorldServer / CombatServer）
@@ -119,6 +133,8 @@
 - **三通道通信**：HTTP JWT 登录 + TCP JSON 消息 + UDP 高频同步（预留）
 
 ### 🎨 UI 系统
+
+<img src="Screenshots/ui-panels.png" width="700" alt="UI面板展示">
 
 - 模块化面板管理
 - DOTween 动画效果
