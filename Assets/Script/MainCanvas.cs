@@ -142,7 +142,6 @@ public class MainCanvas : MonoBehaviour
 
     public void ShowDrawCardPanel()
     {
-        // UIManager.Instance.OpenPanel(UIConst.DrawCardPanel);
         var drawCardPanel = UIManager.Instance.OpenPanel<DrawCardPanel>(out var isOpen);
         if (isOpen)
         {

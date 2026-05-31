@@ -113,9 +113,8 @@ public class LotteryPanel : UIPopPanelBase
     /// </summary>
     private void InitPrefab()
     {
-        // 从Resources/Prefab/Panel/Lottery/LotteryItem路径加载卡片预制体
-        // as GameObject进行类型转换，确保加载成功
-        LotteryCellPrefab = Resources.Load("Prefab/Panel/Lottery/LotteryItem") as GameObject;
+        // LotteryCellPrefab = Resources.Load("Prefab/Panel/Lottery/LotteryItem") as GameObject;
+        LotteryCellPrefab = AddressableCache.Load<GameObject>("LotteryItem");
     }
 
     /// <summary>
@@ -124,31 +123,22 @@ public class LotteryPanel : UIPopPanelBase
     /// </summary>
     private void OnLottery1Btn()
     {
-        // 输出调试日志，标记单抽按钮被触发
         print(">>>>>>>>>>>> OnLottery1Btn");
 
-        // ==================== 清空原有卡片 ====================
-        // 遍历展示区域的所有子物体（原有卡片），逐一销毁
         for (int i = 0; i < UICenter.childCount; i++)
         {
-            // 获取第i个子物体并销毁
             Destroy(UICenter.GetChild(i).gameObject);
         }
 
-        // ==================== 执行单抽逻辑 ====================
-        // 调用GameManager的单抽方法，获取随机抽取的物品数据
-        // PackageLocalItem item = LegacyPackageManager.Instance.GetLotteryRandom1();
         InventoryItem item = LegacyPackageManager.Instance.GetLotteryRandom1();
+        if (item == null)
+        {
+            Debug.LogWarning("单抽失败，可能背包已满");
+            return;
+        }
 
-        // ==================== 生成卡片并显示 ====================
-        // 实例化卡片预制体，并设置父物体为展示区域
         Transform LotteryCellTran = Instantiate(LotteryCellPrefab.transform, UICenter) as Transform;
-
-        // 获取卡片的LotteryCell组件引用
         LotteryCell lotteryCell = LotteryCellTran.GetComponent<LotteryCell>();
-
-        // 调用Refresh方法，传入物品数据和当前面板引用，更新卡片显示内容
-        // lotteryCell.Refresh(item, this);
         lotteryCell.Init(item, this);
     }
 
@@ -158,36 +148,24 @@ public class LotteryPanel : UIPopPanelBase
     /// </summary>
     private void OnLottery10Btn()
     {
-        // 输出调试日志，标记十连抽按钮被触发
         print(">>>>>>>>>> OnLottery10Btn");
 
-        // ==================== 执行十连抽逻辑 ====================
-        // 调用GameManager的十连抽方法，传入sort:true表示结果需要排序
-        // 返回一个包含10个物品的列表
-        // List<PackageLocalItem> packageLocalItems = LegacyPackageManager.Instance.GetLotteryRandom10(sort: true);
         List<InventoryItem> items = LegacyPackageManager.Instance.GetLotteryRandom10(sort: true);
+        if (items == null || items.Count == 0)
+        {
+            Debug.LogWarning("十连抽返回空结果，可能背包已满");
+            return;
+        }
 
-
-        // ==================== 清空原有卡片 ====================
-        // 遍历展示区域的所有子物体（原有卡片），逐一销毁
         for (int i = 0; i < UICenter.childCount; i++)
         {
             Destroy(UICenter.GetChild(i).gameObject);
         }
 
-        // ==================== 生成并显示所有卡片 ====================
-        // 遍历十连抽结果列表，为每个物品生成一张卡片
-        // foreach (PackageLocalItem item in packageLocalItems)
         foreach (InventoryItem item in items)
         {
-            // 实例化卡片预制体，设置父物体为展示区域
             Transform LotteryCellTran = Instantiate(LotteryCellPrefab.transform, UICenter) as Transform;
-
-            // 获取卡片的LotteryCell组件引用
             LotteryCell lotteryCell = LotteryCellTran.GetComponent<LotteryCell>();
-
-            // 调用Refresh方法更新卡片显示
-            // lotteryCell.Refresh(item, this);
             lotteryCell.Init(item, this);
         }
     }

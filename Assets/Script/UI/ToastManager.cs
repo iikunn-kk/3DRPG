@@ -194,7 +194,7 @@ public class ToastManager : MonoBehaviour
     private void RepositionToasts()
     {
         float currentY = -topPadding;
-        
+
         // 从上到下遍历所有活动的Toast
         for (int i = 0; i < _activeToasts.Count; i++)
         {
