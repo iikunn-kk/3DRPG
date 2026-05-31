@@ -299,7 +299,7 @@ public class DragAndDropPanel : Singleton<DragAndDropPanel>
                 spawnPos = player.transform.position + (player.transform.forward * 1.2f);
             }
 
-            GameObject prefab = Resources.Load<GameObject>(Path + "/" + "DroppedItems");
+            GameObject prefab = AddressableCache.Load<GameObject>("DroppedItems");
             if (prefab != null)
             {
                 var go = Object.Instantiate(prefab, spawnPos, Quaternion.identity);

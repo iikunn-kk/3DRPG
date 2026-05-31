@@ -60,7 +60,7 @@ public class PlayerInteraction : MonoBehaviour
     private void Start()
     {
         // 只实例化一次中央提示UI（从 Resources 加载），并保持隐藏
-        GameObject prefab = Resources.Load<GameObject>("PlayingUI/InteractionPromptUI");
+        GameObject prefab = AddressableCache.Load<GameObject>("InteractionPromptUI");
         if (prefab != null)
         {
             GameObject go = Instantiate(prefab);

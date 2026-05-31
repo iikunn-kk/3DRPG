@@ -112,7 +112,7 @@ public class ToastManager : MonoBehaviour
     {
         if (toastPrefab == null)
         {
-            toastPrefab = Resources.Load<GameObject>("PlayingUI/Toast");
+            toastPrefab = AddressableCache.Load<GameObject>("Toast");
             if (toastPrefab == null)
             {
                 Debug.LogWarning("ToastManager: toastPrefab 未设置！");

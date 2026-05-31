@@ -96,9 +96,9 @@ public class UIManager : Singleton<UIManager>
         GameObject panelPrefab = null;
         if (!prefabDict.TryGetValue(name, out panelPrefab))
         {
-            string realPath = "Prefab/Panel/" + path;
+            string realPath = "Panel/" + path;
 
-            panelPrefab = Resources.Load<GameObject>(realPath) as GameObject;
+            panelPrefab = AddressableCache.Load<GameObject>(realPath);
             prefabDict.Add(name, panelPrefab);
         }
 
@@ -163,7 +163,7 @@ public class UIManager : Singleton<UIManager>
         }
 
         // 加载并实例化面板
-        var panel = Resources.Load<T>(Path + "/" + panelName);
+        var panel = AddressableCache.Load<T>(panelName);
         if (panel == null)
         {
             Debug.LogError($"Panel {panelName} not found at path {Path + "/" + panelName}");
