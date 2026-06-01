@@ -1045,22 +1045,6 @@ await SceneLoadManager.Instance.LoadSceneAsync("NewScene");
 - 添加必要的注释
 - 使用有意义的变量/函数名
 - 保持代码简洁清晰
-<!-- 
----
-
-## 📚 深度文档
-
-项目根目录下提供了多份详细文档，方便快速理解设计意图与实施细节：
-
-| 文档 | 内容 |
-|------|------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | 项目整体架构设计 — 顶层模块划分、关键组件职责、交互流程、典型问题案例 |
-| [MMO_FULL.md](MMO_FULL.md) | MMO 联机系统实施手册 — Phase 0~4 完整记录，Docker 操作、故障排查 |
-| [SERVER_PLAN.md](SERVER_PLAN.md) | 小规模服务端渐进式方案 — 三阶段路线图 |
-| [SERVER_PLAN_MMO.md](SERVER_PLAN_MMO.md) | MMORPG 大型服务端架构方案 — 300~2000 人同服设计 |
-| [GAMEMANAGER_REFACTOR_DESIGN.md](GAMEMANAGER_REFACTOR_DESIGN.md) | GameManager 拆分治理设计草案 — 绞杀者模式、契约优先 |
-| [RESUME_COMPETITIVENESS.md](RESUME_COMPETITIVENESS.md) | 项目求职竞争力分析 — 亮点、短板、面试策略 |
-| `Assets/Script/Input/` | Unity 输入系统热键修复完整文档链（8 份诊断→修复→检查清单） | -->
 
 ---
 
