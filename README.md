@@ -188,6 +188,8 @@
 - 玩家跨场景迁移
 
 ### 🌅 昼夜系统
+<img src="Screenshots/day.png" width="700" alt="昼展示">
+<img src="Screenshots/night.png" width="700" alt="夜展示">
 
 - 基于系统现实时间自动切换
 - 白天 / 夜晚天空盒材质切换
