@@ -92,7 +92,10 @@ public class QuickInventoryBar : MonoBehaviour
         {
             string keyDisplay = (i == 9) ? "0" : (i + 1).ToString();
             if (quickSlots[i] != null)
+            {
+                quickSlots[i].SetQuickSlotIndex(i);
                 quickSlots[i].Init(null, keyDisplay, OnSlotPointerEnter, OnSlotPointerExit);
+            }
         }
     }
 

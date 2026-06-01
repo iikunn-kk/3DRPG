@@ -90,5 +90,8 @@ public class DragVisualPrefab : MonoBehaviour
 
         if (_image != null)
             _image.raycastTarget = false;
+
+        // 立即更新到鼠标位置，避免第一帧出现在 (0,0) 原点闪烁
+        UpdatePosition();
     }
 }

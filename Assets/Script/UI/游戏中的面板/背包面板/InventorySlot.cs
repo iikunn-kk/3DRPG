@@ -89,6 +89,16 @@ public class InventorySlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     }
 
     /// <summary>
+    /// LoopScrollRect 回调 —— 接收数据索引、物品、悬停回调
+    /// </summary>
+    public void ScrollCellIndexWithCallbacks(int idx, InventoryItem item,
+        Action<InventoryItem> onHoverEnter, Action onHoverExit)
+    {
+        _dataIndex = idx;
+        Init(item, onHoverEnter, onHoverExit);
+    }
+
+    /// <summary>
     /// 临时隐藏或显示该格子的可视元素（图标和数量），不会改变数据
     /// 在拖拽时可用于让源格子看起来是空的
     /// </summary>
@@ -193,7 +203,10 @@ public class InventorySlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     }
     #endregion
 
-    public ItemLocation Location=> location;
-    public int SlotIndex => transform.GetSiblingIndex(); // 它的索引就是它在父物体中的顺序
+    private int _dataIndex;
+    public ItemLocation Location => location;
+    public virtual int SlotIndex => _dataIndex;
+
+    public void SetSlotIndex(int index) => _dataIndex = index;
 
 }

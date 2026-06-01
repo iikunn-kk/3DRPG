@@ -8,6 +8,13 @@ public class QuickSlot : InventorySlot
 {
     [Header("快捷键文本")]
     [SerializeField] private TMP_Text keyText;
+
+    [SerializeField] private int _quickSlotIndex;
+
+    // 覆盖基类的 SlotIndex，返回自己的快捷键槽位索引
+    public override int SlotIndex => _quickSlotIndex;
+
+    public void SetQuickSlotIndex(int index) => _quickSlotIndex = index;
     
     /// <summary>
     /// [修改] 初始化快捷栏格子
