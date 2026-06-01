@@ -54,7 +54,10 @@
 ✅ **NPC 商店系统** — NPC 商店 + 世界商店双模式，购买/出售/数量选择/详情面板  
 ✅ **锁定系统** — 矩形盒区域检索，锁定目标详情面板，技能朝向自动追踪  
 ✅ **昼夜循环** — 根据系统时间自动切换天空盒与场景光照  
-✅ **代码治理** — 单例基类统一（删除 SingletonAutoMono），MongoDBManager 消除 200 行样板
+✅ **代码治理** — 单例基类统一（删除 SingletonAutoMono），MongoDBManager 消除 200 行样板  
+✅ **本地离线模式** — 策略模式 + 门面模式，MongoDB 不可用时自动降级为本地 JSON 存储  
+✅ **Addressables 加载** — UI Prefab 全面迁移至 Addressables，AddressableCache 同步加载工具  
+✅ **虚拟滚动背包** — LoopScrollRect 对象池复用，1000 格仅 ~63 个 GameObject，O(1) 槽位查找
 
 ---
 
@@ -116,6 +119,7 @@
 
 <img src="Screenshots/inventory.png" width="700" alt="背包界面">
 
+- **LoopScrollRect 虚拟滚动**：1000 格仅 63 个 GameObject，对象池复用
 - 物品增删改查
 - 装备与卸下
 - 物品堆叠
@@ -243,6 +247,7 @@
 - **MagicaCloth2** — 布料模拟
 - **Lofelt.NiceVibrations** — 触觉反馈
 - **Damage Numbers Pro** — 伤害数字显示
+- **LoopScrollRect** — UGUI 虚拟滚动列表（MIT 协议）
 
 ---
 
@@ -430,10 +435,12 @@ Assets/
 项目遵循以下架构原则：
 
 1. **模块化设计** - 每个系统职责单一，高内聚低耦合
-2. **事件驱动** - 使用 ScriptableObject 事件实现系统间通信
-3. **数据驱动** - 配置与逻辑分离，使用 ScriptableObject 管理数据
-4. **异步优先** - 数据库操作使用异步方式，避免阻塞主线程
-5. **单例模式** - 核心管理器使用单例确保全局唯一
+2. **事件驱动** - ScriptableObject 事件 + C# event + TaskEventBridge 解耦通信
+3. **数据驱动** - 配置与逻辑分离，ScriptableObject 管理数据
+4. **策略模式** - 持久化层 IDataStore / MongoDataStore / LocalJsonDataStore 自动降级
+5. **对象池化** - LoopScrollRect 虚拟滚动、技能特效、UI Toast 复用
+6. **异步优先** - UniTask 异步数据库操作，避免阻塞主线程
+7. **依赖注入** - VContainer DI 容器管理 16+ Manager 生命周期
 
 ### 分层架构
 
@@ -468,11 +475,11 @@ SessionManager (会话/角色数据)
 CharacterRuntimeManager (运行时玩家实例)
 SaveCoordinator (统一存档编排)
 TaskEventBridge (任务事件生命周期)
-├── MongoDBManager (数据库管理)
-├── InventoryManager (背包管理)
+├── MongoDBManager (门面模式 → IDataStore / MongoDataStore / LocalJsonDataStore)
+├── InventoryManager (背包管理 + LoopScrollRect)
 ├── SkillManager (技能管理)
 ├── TaskManager (任务管理)
-├── UIManager (UI管理)
+├── UIManager (UI管理 + Addressables)
 ├── SceneLoadManager (场景管理)
 ├── PlayerCurrencyManager (货币管理)
 ├── GuildManager (公会管理)
@@ -600,10 +607,13 @@ public void AddItemWithoutToast(InventoryItem item)
 
 ### 4. 背包系统
 
-**核心类**: `InventoryManager.cs`
+**核心类**: `InventoryManager.cs`, `InventoryLoopController.cs`
+
+**架构**: LoopScrollRect 虚拟滚动 + 对象池。`InventoryLoopController` 实现 `LoopScrollPrefabSource`（格子池）+ `LoopScrollMultiDataSource`（数据绑定），`InventoryPanel.Awake()` 显式注入依赖。
 
 **主要功能**:
 
+- 1000 格虚拟滚动，仅创建 ~63 个 GameObject
 - 异步加载/保存背包数据
 - 物品增删改查
 - 装备/卸下
@@ -947,9 +957,16 @@ Controller (控制层)
 
 ### 3. 资源管理
 
-- Addressables 按需加载
+- Addressables 按需加载（UI Prefab 已全面迁移，6 Groups）
 - 场景切换时及时卸载资源
 - UI 面板复用机制
+
+### 4. LoopScrollRect 虚拟滚动
+
+- 背包 1000 格仅创建 ~63 个 GameObject（对象池复用）
+- GridLayoutGroup + LoopScrollRectMulti 多列网格
+- O(1) 槽位查找（Dictionary 预构建）
+- `RefreshCells()` 保持滚动位置，`RefillCells()` 首次初始化
 
 ---
 
@@ -966,8 +983,9 @@ Controller (控制层)
 
 1. 创建 ItemDataSO 配置文件
 2. 设置物品属性与类型
-3. 配置属性缩放规则
-4. 在 ItemDataSO 数据库中注册
+3. 如需 UI Prefab，拖入 Addressables Groups（UI 组）
+4. 配置属性缩放规则
+5. 在 ItemDataSO 数据库中注册
 
 ### 添加新任务
 
@@ -1000,9 +1018,9 @@ Edit > Project Settings > Graphics
 
 ### Q2: MongoDB 连接失败？
 
-**A**: 检查 MongoDB 服务是否启动，连接字符串是否正确。
+**A**: 项目已集成本地离线模式——MongoDB 不可用时自动降级为本地 JSON 文件存储（`persistentDataPath/LocalData/`），无需额外配置即可游玩。
 
-**解决方法**:
+如需使用数据库功能，确保 MongoDB 服务已启动且连接字符串正确：
 
 ```csharp
 // MongoDBManager.cs
