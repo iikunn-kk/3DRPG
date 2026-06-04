@@ -16,7 +16,7 @@ namespace PlayerFSM
 
         public override void Enter()
         {
-            Debug.Log($"[PlayerFSM] 进入 Death 状态");
+            // Debug.Log($"[PlayerFSM] 进入 Death 状态");
 
             // 现有死亡流程已由 CharacterState.Die() 处理
             // FSM 仅做状态标记，确保不响应任何输入转换
@@ -34,7 +34,7 @@ namespace PlayerFSM
 
         public override void Exit()
         {
-            Debug.Log($"[PlayerFSM] 退出 Death 状态");
+            // Debug.Log($"[PlayerFSM] 退出 Death 状态");
         }
 
         /// <summary>

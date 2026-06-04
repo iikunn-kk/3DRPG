@@ -90,6 +90,8 @@ public partial class CharacterState : MonoBehaviour, IDamageable
                                                  //    public System.Action OnRespawnRuntimeDone;   // 实际复活完成后回调
 
     // 跨 partial 访问需要：对其它文件开放的序列化字段访问器（若未来需要可改成属性）
+
+
     internal CharacterStateEventSO CharacterStateEventSo => characterStateEventSo;
     internal GameObjectEventSO PlayerDeathEventSo => playerDeathEventSo;
     internal GameObjectEventSO PlayerRespawnEventSo => playerRespawnEventSo;

@@ -20,7 +20,7 @@ namespace PlayerFSM
 
         public override void Enter()
         {
-            Debug.Log($"[PlayerFSM] 进入 Attack 状态（阶段二：实际锁定）");
+            // Debug.Log($"[PlayerFSM] 进入 Attack 状态（阶段二：实际锁定）");
 
             // 播放攻击动画（无 Lock/Unlock — FSM 接管）
             anim.PlayAttack();
@@ -51,7 +51,7 @@ namespace PlayerFSM
         {
             CancelCts(ref _timeoutCts);
             movement.UnlockPlayerControl();
-            Debug.Log($"[PlayerFSM] 退出 Attack 状态");
+            // Debug.Log($"[PlayerFSM] 退出 Attack 状态");
         }
 
         /// <summary>

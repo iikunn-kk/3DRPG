@@ -13,7 +13,7 @@ namespace PlayerFSM
 
         public override void Enter()
         {
-            Debug.Log("[PlayerFSM] 进入 Sprint 状态");
+            // Debug.Log("[PlayerFSM] 进入 Sprint 状态");
         }
 
         public override void Update() { }
@@ -64,7 +64,7 @@ namespace PlayerFSM
 
         public override void Exit()
         {
-            Debug.Log("[PlayerFSM] 退出 Sprint 状态");
+            // Debug.Log("[PlayerFSM] 退出 Sprint 状态");
         }
 
         private Vector3 CalculateMoveVelocity(float speed)

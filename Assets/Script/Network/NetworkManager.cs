@@ -12,7 +12,7 @@ public class NetworkManager : Singleton<NetworkManager>
     [SerializeField] private string _serverHost = "localhost";
     [SerializeField] private int _tcpPort = 7777;
     [SerializeField] private int _udpPort = 7778;
-    [SerializeField] private int _httpPort = 5000;
+    [SerializeField] private int _httpPort = 15000;
 
     public string ServerHost => _serverHost;
     public string HttpBaseUrl => $"http://{_serverHost}:{_httpPort}";
@@ -71,27 +71,48 @@ public class NetworkManager : Singleton<NetworkManager>
             : "<color=red>❌ 连接失败，检查 Gateway 容器的 docker logs。</color>");
     }
 
+    private bool _connecting;
+
     /// <summary>完整连接流程：HTTP 登录 → TCP 连接 → UDP 绑定</summary>
     public async UniTask<bool> ConnectAsync(string username, string password)
     {
-        // 确保 Tcp/Udp 已初始化（Singleton AddComponent 时序保护）
-        Tcp ??= new TcpChannel();
-        Udp ??= new UdpChannel();
+        // 已连接或正在连接中，跳过重复调用
+        if (Tcp is { IsConnected: true })
+        {
+            Debug.Log($"[NetworkManager] 已连接 {PlayerUid}，跳过重复连接");
+            return true;
+        }
+        if (_connecting)
+        {
+            Debug.LogWarning("[NetworkManager] 正在连接中，跳过重复调用");
+            return true;
+        }
+        _connecting = true;
+        try
+        {
+            // 确保 Tcp/Udp 已初始化（Singleton AddComponent 时序保护）
+            Tcp ??= new TcpChannel();
+            Udp ??= new UdpChannel();
 
-        // 1. HTTP 登录获取 JWT
-        var loginSuccess = await HttpLoginAsync(username, password);
-        if (!loginSuccess) return false;
+            // 1. HTTP 登录获取 JWT
+            var loginSuccess = await HttpLoginAsync(username, password);
+            if (!loginSuccess) return false;
 
-        // 2. TCP 连接 + 首包鉴权
-        var tcpOk = await Tcp.ConnectAsync(_serverHost, _tcpPort, BearerToken);
-        if (!tcpOk) return false;
-        PlayerUid = Tcp.AuthenticatedUid;
-        SessionId = Tcp.SessionId;
+            // 2. TCP 连接 + 首包鉴权
+            var tcpOk = await Tcp.ConnectAsync(_serverHost, _tcpPort, BearerToken);
+            if (!tcpOk) return false;
+            PlayerUid = Tcp.AuthenticatedUid;
+            SessionId = Tcp.SessionId;
 
-        // 3. UDP 绑定
-        await Udp.ConnectAsync(_serverHost, _udpPort, SessionId);
-        Debug.Log($"[NetworkManager] 连接成功! Uid={PlayerUid}, Session={SessionId}");
-        return true;
+            // 3. UDP 绑定
+            await Udp.ConnectAsync(_serverHost, _udpPort, SessionId);
+            Debug.Log($"[NetworkManager] 连接成功! Uid={PlayerUid}, Session={SessionId}");
+            return true;
+        }
+        finally
+        {
+            _connecting = false;
+        }
     }
 
     private async UniTask<bool> HttpLoginAsync(string username, string password)

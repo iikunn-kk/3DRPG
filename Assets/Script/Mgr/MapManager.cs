@@ -67,7 +67,7 @@ public class MapManager : MonoBehaviour
 
 
         // Phase 4: 运行时自动挂载位置同步组件
-        // playerInstance.AddComponent<NetworkPlayerMover>();
+        playerInstance.AddComponent<NetworkPlayerMover>();
 
 
         var playerCharacter = playerInstance.GetComponent<CharacterState>();
@@ -80,6 +80,7 @@ public class MapManager : MonoBehaviour
             {
                 TaskManager.Instance.InitializeForCurrentCharacter();
             }
+            AutoConnectMMO();
             // 任务事件桥接：玩家生成后激活事件转发
             TaskEventBridge.Instance.Attach();
             // 恢复跨场景保存的临时 Buff
@@ -88,7 +89,7 @@ public class MapManager : MonoBehaviour
 
 
             // Phase 4: 自动连接 MMO 网络层（使用游戏用户名作为 MMO uid）
-            // AutoConnectMMO();
+            AutoConnectMMO();
 
 
 

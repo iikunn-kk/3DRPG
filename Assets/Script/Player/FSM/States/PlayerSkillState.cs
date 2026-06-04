@@ -20,7 +20,7 @@ namespace PlayerFSM
 
         public override void Enter()
         {
-            Debug.Log($"[PlayerFSM] 进入 Skill 状态（阶段二：实际锁定）");
+            // Debug.Log($"[PlayerFSM] 进入 Skill 状态（阶段二：实际锁定）");
 
             anim.PlaySkill(_duration);
             movement.LockPlayerControl();
@@ -40,7 +40,7 @@ namespace PlayerFSM
         {
             CancelCts(ref _timeoutCts);
             movement.UnlockPlayerControl();
-            Debug.Log($"[PlayerFSM] 退出 Skill 状态");
+            // Debug.Log($"[PlayerFSM] 退出 Skill 状态");
         }
 
         public void SetDuration(float duration)

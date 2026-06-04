@@ -89,7 +89,7 @@ public partial class CharacterState
         OnDamageDealt?.Invoke(target, finalDamage, isCrit);
 
         // Phase 5: 发送攻击到 MMO 服务端
-        // SendAttackToMMO(target, baseDamage);
+        SendAttackToMMO(target, baseDamage);
     }
 
     private void SendAttackToMMO(Transform target, float baseDamage)

@@ -21,7 +21,7 @@ namespace PlayerFSM
 
         public override void Enter()
         {
-            Debug.Log($"[PlayerFSM] 进入 ChannelAttack 状态（阶段二：实际锁定）");
+            // Debug.Log($"[PlayerFSM] 进入 ChannelAttack 状态（阶段二：实际锁定）");
 
             // 开始通道（锁定 + IsChanneling=true）
             anim.BeginChannelAttack();
@@ -42,7 +42,7 @@ namespace PlayerFSM
             CancelCts(ref _endAnimCts);
             movement.UnlockPlayerControl();
             _isChanneling = false;
-            Debug.Log($"[PlayerFSM] 退出 ChannelAttack 状态");
+            // Debug.Log($"[PlayerFSM] 退出 ChannelAttack 状态");
         }
 
         /// <summary>

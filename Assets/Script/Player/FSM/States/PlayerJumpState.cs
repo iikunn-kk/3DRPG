@@ -18,7 +18,7 @@ namespace PlayerFSM
 
         public override void Enter()
         {
-            Debug.Log($"[PlayerFSM] 进入 Jump 状态（空中朝向实时跟随相机）");
+            // Debug.Log($"[PlayerFSM] 进入 Jump 状态（空中朝向实时跟随相机）");
 
             // 保存跳跃瞬间的水平速度模长，用于滞空中抵抗物理阻力
             if (Rb != null)
@@ -81,7 +81,7 @@ namespace PlayerFSM
 
         public override void Exit()
         {
-            Debug.Log($"[PlayerFSM] 退出 Jump 状态");
+            // Debug.Log($"[PlayerFSM] 退出 Jump 状态");
         }
     }
 }

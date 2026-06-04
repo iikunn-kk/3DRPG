@@ -337,7 +337,7 @@ public class MonsterSpawner : MonoBehaviour
 
 
                     // // Phase 5: 注册怪物到 MMO 服务端
-                    // RegisterMonsterToMMO(monster, spawnPos);
+                    RegisterMonsterToMMO(monster, spawnPos);
 
 
                 }

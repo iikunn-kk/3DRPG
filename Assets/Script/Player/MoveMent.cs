@@ -299,7 +299,7 @@ public class MoveMent : MonoBehaviour
 
         // 如果控制被锁定，或者Alt键被按下，则不处理移动动作或动画参数，但仍需要缓存输入
         if (isControlLocked || isAltKeyDown) return;
-        Debug.Log("OnMove " + isControlLocked + " " + isAltKeyDown + " " + isRolling + " " + characterAnimation);
+        // Debug.Log("OnMove " + isControlLocked + " " + isAltKeyDown + " " + isRolling + " " + characterAnimation);
 
         // 冲刺倍率仅在向前移动（纵向轴大于0）时作用
         if (!isRolling)

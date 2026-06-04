@@ -33,7 +33,7 @@ namespace PlayerFSM
         {
             InitializeStates();
             ForceEnterInitialState(PlayerState.Idle);
-            Debug.Log($"[PlayerFSM] 阶段三激活，当前状态: {_currentState}");
+            // Debug.Log($"[PlayerFSM] 阶段三激活，当前状态: {_currentState}");
         }
 
         private void Update()
@@ -118,7 +118,7 @@ namespace PlayerFSM
             if (actionState != PlayerState.Attack && actionState != PlayerState.Skill &&
                 actionState != PlayerState.Buff && actionState != PlayerState.ChannelAttack)
             {
-                Debug.LogWarning($"[PlayerFSM] RequestAction 收到非法状态: {actionState}");
+                // Debug.LogWarning($"[PlayerFSM] RequestAction 收到非法状态: {actionState}");
                 return;
             }
 
@@ -159,7 +159,7 @@ namespace PlayerFSM
         {
             if (_observeOnly)
             {
-                Debug.Log($"[PlayerFSM] [OBSERVE] 请求切换: {_currentState} -> {newState}");
+                // Debug.Log($"[PlayerFSM] [OBSERVE] 请求切换: {_currentState} -> {newState}");
                 return;
             }
             ChangeStateInternal(newState);
@@ -169,7 +169,7 @@ namespace PlayerFSM
         {
             if (_hasEnteredInitialState && _currentState == newState) return;
 
-            Debug.Log($"[PlayerFSM] 切换: {_currentState} -> {newState}");
+            // Debug.Log($"[PlayerFSM] 切换: {_currentState} -> {newState}");
 
             _currentStateInstance?.Exit();
             _previousState = _currentState;

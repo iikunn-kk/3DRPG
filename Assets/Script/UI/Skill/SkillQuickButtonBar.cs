@@ -273,7 +273,7 @@ public class SkillQuickButtonBar : MonoBehaviour
     /// </summary>
     private void BuildBar(SkillController controller)
     {
-        print("开始创建快捷栏");
+        // print("开始创建快捷栏");
 
         var snapshot = controller.GetAllSkillsSnapshot();
         if (snapshot == null || snapshot.Count == 0) return;
@@ -399,7 +399,11 @@ public class SkillQuickButtonBar : MonoBehaviour
     {
         if (_mods == null || _mods.Count == 0) return;
         int mappedIndex = reverseBindingOrder ? (_mods.Count - 1 - actionIndex) : actionIndex;
-        if (debugHotkeyMapping) Debug.Log($"[热键] 触发: 动作索引={actionIndex} -> 槽位={mappedIndex}");
+        if (debugHotkeyMapping)
+        {
+            // Debug.Log($"[热键] 触发: 动作索引={actionIndex} -> 槽位={mappedIndex}");
+        }
+
         CastSkillByIndex(mappedIndex);
     }
 
@@ -424,23 +428,23 @@ public class SkillQuickButtonBar : MonoBehaviour
         int count = Mathf.Min(slotActions.Length, _mods.Count);
         for (int i = 0; i < count; i++)
         {
-            Debug.Log($"[热键] 处理槽位 {i}: slotActions[{i}] = {slotActions[i]?.action?.name ?? "null"}");
+            // Debug.Log($"[热键] 处理槽位 {i}: slotActions[{i}] = {slotActions[i]?.action?.name ?? "null"}");
 
             var action = ResolveRuntimeAction(slotActions[i]);
             if (action == null)
             {
-                Debug.LogWarning($"[热键] 槽位 {i}: 无法解析 InputAction，跳过");
+                // Debug.LogWarning($"[热键] 槽位 {i}: 无法解析 InputAction，跳过");
                 continue;
             }
 
-            Debug.Log($"[热键] 槽位 {i}: 解析到动作 {action.name}, 当前启用状态={action.enabled}");
+            // Debug.Log($"[热键] 槽位 {i}: 解析到动作 {action.name}, 当前启用状态={action.enabled}");
 
             int idx = i;
             System.Action<InputAction.CallbackContext> cb = (ctx) =>
             {
                 if (ctx.performed)
                 {
-                    Debug.Log($"[热键] 动作 {action.name} 被触发！槽位索引={idx}");
+                    // Debug.Log($"[热键] 动作 {action.name} 被触发！槽位索引={idx}");
                     SafeCastByActionIndex(idx);
                 }
             };
@@ -449,14 +453,17 @@ public class SkillQuickButtonBar : MonoBehaviour
             if (!action.enabled)
             {
                 action.Enable();
-                Debug.Log($"[热键] 槽位 {i}: 已启用动作 {action.name}");
+                // Debug.Log($"[热键] 槽位 {i}: 已启用动作 {action.name}");
             }
 
             _wiredRuntimeActions.Add(action);
             _runtimeCallbacks[action] = cb;
-            Debug.Log($"[热键] 槽位 {i}: 布线成功");
+            // Debug.Log($"[热键] 槽位 {i}: 布线成功");
         }
-        if (debugQuickbarLogs) Debug.Log($"[热键] 兜底布线完成: 动作数={_wiredRuntimeActions.Count}");
+        if (debugQuickbarLogs)
+        {
+            // Debug.Log($"[热键] 兜底布线完成: 动作数={_wiredRuntimeActions.Count}");
+        }
     }
 
     private void UnwireFallbackActions()
@@ -545,11 +552,14 @@ public class SkillQuickButtonBar : MonoBehaviour
 
             if (debugHotkeyMapping)
             {
-                Debug.Log($"[热键] 标签: 动作索引={i} -> 槽位={mappedIndex} 文本={display}");
+                // Debug.Log($"[热键] 标签: 动作索引={i} -> 槽位={mappedIndex} 文本={display}");
             }
         }
 
-        if (debugQuickbarLogs) Debug.Log("[快捷栏] 热键标签已刷新");
+        if (debugQuickbarLogs)
+        {
+            // Debug.Log("[快捷栏] 热键标签已刷新");
+        }
     }
 
     /// <summary>

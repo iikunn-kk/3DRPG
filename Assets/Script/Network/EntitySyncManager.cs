@@ -28,11 +28,16 @@ public class EntitySyncManager : MonoBehaviour
     {
         // 限制日志频率，避免刷屏
         _snapshotCount++;
-        if (_snapshotCount % 20 == 1)
-            Debug.Log($"[EntitySync] 收到快照, 长度={json.Length} (累计{_snapshotCount})");
+#if UNITY_EDITOR
+        if (_snapshotCount % 1000 == 1)
+            Debug.Log($"[EntitySync] 快照累计 #{_snapshotCount}");
+#endif
 
         try
         {
+            // 快速过滤非快照消息（不含 entities 字段就不是快照）
+            if (!json.Contains("\"entities\"")) return;
+
             var snapshot = JsonUtility.FromJson<PlayerSnapshot>(json);
             if (snapshot == null || snapshot.entities == null) return;
 
@@ -56,7 +61,8 @@ public class EntitySyncManager : MonoBehaviour
                 if (e.entityId == _localPlayerEntityId) continue;
                 if (e.entityType == 0 && e.uid == NetworkManager.Instance.PlayerUid) continue;
 
-                // Phase 5 诊断：每 N 帧统计一次实体类型
+#if UNITY_EDITOR
+                // Phase 5 诊断：每 200 帧统计实体类型（仅 Editor）
                 if (_snapshotCount % 200 == 1)
                 {
                     int playerCount = 0, monsterCount = 0;
@@ -64,21 +70,21 @@ public class EntitySyncManager : MonoBehaviour
                     {
                         if (ee.entityType == 0) playerCount++; else monsterCount++;
                     }
-                    Debug.Log($"[EntitySync] 快照#{_snapshotCount}: 玩家={playerCount} 怪物={monsterCount} (本地entityId={_localPlayerEntityId})");
+                    Debug.Log($"[EntitySync] 快照#{_snapshotCount}: 玩家={playerCount} 怪物={monsterCount}");
                 }
-                // 打印第一个含怪物的快照的原始 JSON
                 if (!_loggedMonsterJson)
                 {
                     foreach (var ee in snapshot.entities)
                     {
                         if (ee.entityType == 1)
                         {
-                            Debug.Log($"[EntitySync] 怪物原始JSON(dbg): {json}");
+                            Debug.Log($"[EntitySync] 首条怪物快照: {json.Substring(0, Mathf.Min(json.Length, 200))}");
                             _loggedMonsterJson = true;
                             break;
                         }
                     }
                 }
+#endif
 
                 ApplyEntity(e);
             }
@@ -102,12 +108,11 @@ public class EntitySyncManager : MonoBehaviour
                 {
                     if (combat.CurrentHealth != e.hp)
                     {
-                        Debug.Log($"[EntitySync] 怪物#{e.entityId} HP同步: {combat.CurrentHealth}→{e.hp}");
                         combat.CurrentHealth = e.hp;
                         if (e.hp <= 0) combat.Die();
                     }
                 }
-                else { Debug.LogWarning($"[EntitySync] 怪物#{e.entityId} 无 MonsterCombat 组件"); }
+                // 该实体无本地 MonsterCombat，无需同步
                 return; // 不创建 RemoteMonster Cube
             }
         }

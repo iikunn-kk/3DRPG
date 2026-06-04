@@ -24,6 +24,12 @@ public class TcpChannel
 
     public async Cysharp.Threading.Tasks.UniTask<bool> ConnectAsync(string host, int port, string token)
     {
+        if (IsConnected)
+        {
+            Debug.LogWarning("[TcpChannel] 已连接，跳过重复 ConnectAsync");
+            return true;
+        }
+
         try
         {
             _cts = new CancellationTokenSource();
@@ -57,15 +63,16 @@ public class TcpChannel
             SessionId = Guid.NewGuid().ToString("N");
             IsConnected = true;
             Debug.Log($"[TCP] 连接成功, Uid={AuthenticatedUid}");
-
-            // 后台持续接收服务端推送的快照
-            _ = ReceiveLoopAsync(_cts.Token);
             return true;
         }
         catch (Exception ex)
         {
             Debug.LogError($"[TCP] 连接异常: {ex.Message}");
             return false;
+        }
+        finally
+        {
+            // 接收由 Update() → PumpMessages() 驱动，无额外后台任务
         }
     }
 
@@ -74,11 +81,11 @@ public class TcpChannel
         if (!IsConnected) { Debug.LogWarning("[TcpChannel] Send 跳过: IsConnected=false"); return; }
         var payload = Encoding.UTF8.GetBytes(jsonMessage);
         lock (_sendQueue) { _sendQueue.Enqueue(BuildPacket(payload)); }
-        Debug.Log($"[TcpChannel] Send 入队, queueCount={_sendQueue.Count}, len={payload.Length}");
     }
 
     public void Update()
     {
+        PumpMessages();
         lock (_sendQueue)
         {
             while (_sendQueue.Count > 0)
@@ -110,24 +117,35 @@ public class TcpChannel
         return total;
     }
 
-    private async Cysharp.Threading.Tasks.UniTaskVoid ReceiveLoopAsync(CancellationToken ct)
+    /// <summary>同步批量处理 TCP 缓冲区中的全部消息，由 Update() 每帧调用</summary>
+    private void PumpMessages()
     {
+        if (!IsConnected || _stream == null || !_stream.DataAvailable) return;
         var buf = new byte[4];
-        while (!ct.IsCancellationRequested && IsConnected)
+        try
         {
-            try
+            while (_stream.DataAvailable)
             {
-                int r = await ReadExactlyAsync(_stream, buf, 0, 4, ct);
+                int r = _stream.Read(buf, 0, 4);
                 if (r < 4) break;
                 int len = BitConverter.ToInt32(buf, 0);
                 if (len <= 0 || len > 65536) break;
                 var msg = new byte[len];
-                await ReadExactlyAsync(_stream, msg, 0, len, ct);
+                int total = 0;
+                while (total < len)
+                {
+                    int n = _stream.Read(msg, total, len - total);
+                    if (n == 0) { IsConnected = false; return; }
+                    total += n;
+                }
                 var str = Encoding.UTF8.GetString(msg);
-                Debug.Log($"[TCP] 收到服务端消息, 长度={len}");
                 OnSnapshotReceived?.Invoke(str);
             }
-            catch { break; }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[TCP] 接收异常: {ex.Message}");
+            IsConnected = false;
         }
     }
 

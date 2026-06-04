@@ -19,39 +19,23 @@ public class NetworkPlayerMover : MonoBehaviour
     void Start()
     {
         _lastSentPosition = transform.position;
-        _sendTimer = _sendInterval; // 首帧立即发送一次，确保服务器有初始位置
+        _sendTimer = _sendInterval;
     }
 
     void Update()
     {
-        if (NetworkManager.Instance == null) return;
-
-        if (!NetworkManager.Instance.IsConnected)
-        {
-            // 连接未就绪时不做任何事
-            if (!_loggedDisconnected)
-            {
-                Debug.LogWarning($"[NetworkPlayerMover] 等待 MMO 连接... (IsConnected={NetworkManager.Instance.IsConnected})");
-                _loggedDisconnected = true;
-            }
+        if (NetworkManager.Instance == null || !NetworkManager.Instance.IsConnected)
             return;
-        }
 
-        _loggedDisconnected = false;
         _sendTimer += Time.deltaTime;
         if (_sendTimer < _sendInterval) return;
 
         var currentPos = transform.position;
-        var delta = Vector3.Distance(currentPos, _lastSentPosition);
-
-        if (delta > _moveThreshold || _sendTimer > 0.5f)
+        if (Vector3.Distance(currentPos, _lastSentPosition) > _moveThreshold || _sendTimer > 0.5f)
         {
-            Debug.Log($"[NetworkPlayerMover] 发送位置: ({currentPos.x:F2},{currentPos.y:F2},{currentPos.z:F2}) delta={delta:F3}");
             _lastSentPosition = currentPos;
             _sendTimer = 0f;
             NetworkManager.Instance.SendPosition(currentPos, transform.rotation);
         }
     }
-
-    private bool _loggedDisconnected;
 }
