@@ -76,15 +76,14 @@ public partial class CharacterState
         _isDead = true;
         CurrentHealth = 0;
         OnValueChange();
-        _anim?.PlayDeath();
-        _anim?.ForceLockAfterDeath();
-        ApplyDeadLayerAndDisableInteraction();
-        _movement?.LockPlayerControl();
+        // 动画/碰撞层/移动锁定 → 由 PlayerDeathState.Enter() 处理
         _plannedRespawnPosition = ResolveNearestSpawnPoint();
+        Debug.Log(_plannedRespawnPosition);
         _pendingRuntimeRespawn = true;
-        try { PlayerDeathEventSo?.RaiseEvent(gameObject, this); } catch (System.Exception ex) { Debug.LogWarning($"playerDeathEventSo Raise 失败: {ex.Message}"); }
+        PlayerDeathEventSo?.RaiseEvent(gameObject, this);
         CameraDeathEventSo?.RaiseEvent(false, this);
-        if (ApplyPenaltyImmediately) { ApplyDeathPenaltyAndPersist(); }
+        if (ApplyPenaltyImmediately)
+            ApplyDeathPenaltyAndPersist();
     }
 
     public void OnDeathPopupConfirmed()
@@ -100,17 +99,20 @@ public partial class CharacterState
     /// </summary>
     private void PerformRuntimeRespawn()
     {
+        Debug.Log("最终复活函数被触发");
         if (!_pendingRuntimeRespawn) return;
         transform.position = _plannedRespawnPosition;
+        Debug.Log("最终的复活位置" + _plannedRespawnPosition);
         CurrentHealth = MaxHealth;
         _isDead = false;
+        Debug.Log($"[Respawn] _isDead=false 设置完成, HP={CurrentHealth}/{MaxHealth}, FSM_state=待检测");
         _pendingRuntimeRespawn = false;
-        RestoreLayerAndInteraction();
+        RestoreLayerAndInteraction();// 恢复碰撞层+解锁移动
         OnValueChange();
         PlayerRespawnEventSo.RaiseEvent(gameObject, this);
     }
 
-    private void ApplyDeathPenaltyAndPersist()
+    public void ApplyDeathPenaltyAndPersist()
     {
         if (_penaltyApplied) return;
         int newExp = Mathf.RoundToInt(Exp * (1f - DeathPenaltyPercent));
@@ -129,9 +131,7 @@ public partial class CharacterState
         CurrentHealth = backupHp;
         var panel = UIManager.Instance.OpenPanel<DeathPopupPanel>(out bool isOpen);
         if (isOpen)
-        {
             panel.GetComponent<DeathPopupPanel>().Init(expLost, PlayerBeginRuntimeRespawn);
-        }
         _penaltyApplied = true;
         OnValueChange();
     }
@@ -141,50 +141,17 @@ public partial class CharacterState
         if (!_pendingRuntimeRespawn) return;
         PlayerBeginRespawnEventSo?.RaiseEvent(gameObject, this);
         var panel = UIManager.Instance.OpenPanel<PlayerRespawnPanel>(out bool isOpen);
-        if (isOpen)
-        {
-            panel.Init();
-        }
-        ExecuteRespawnUsingMapManager();
+        if (isOpen) panel.Init();
+
+        PerformRuntimeRespawn();
+
+
+        // 通知面板复活完成，面板异步动画会在淡出后自毁（无需手动 ClosePanel）
+        panel?.OnPlayerRespawn(gameObject);
+        Debug.Log("[Respawn] PlayerBeginRuntimeRespawn 完成");
     }
 
-    private void ExecuteRespawnUsingMapManager()
-    {
-        if (!_pendingRuntimeRespawn) return;
-        _pendingRuntimeRespawn = false;
-        var data = GetCharacterDataForSave();
-        if (data != null)
-        {
-            data.position = _plannedRespawnPosition;
-        }
-        var mapManager = GameObject.FindGameObjectWithTag("MapManager").GetComponent<MapManager>();
-        GameObject newPlayer = null;
-        if (mapManager != null && data != null)
-        {
-            mapManager.SpawnPlayer(data);
-            var current = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
-            if (current != null)
-            {
-                newPlayer = current.gameObject;
-                current.CurrentHealth = current.MaxHealth;
-            }
-        }
-        else
-        {
-            PerformRuntimeRespawn();
-            newPlayer = gameObject;
-        }
-        if (newPlayer != null)
-        {
-            PlayerRespawnEventSo?.RaiseEvent(newPlayer, this);
-        }
-        if (newPlayer != null && newPlayer != this.gameObject)
-        {
-            Object.Destroy(this.gameObject);
-        }
-    }
-
-    private void ApplyDeadLayerAndDisableInteraction()
+    public void ApplyDeadLayerAndDisableInteraction()
     {
         gameObject.layer = DeathLayerName;
         if (_interaction)
@@ -198,7 +165,7 @@ public partial class CharacterState
         }
     }
 
-    private void RestoreLayerAndInteraction()
+    public void RestoreLayerAndInteraction()
     {
         gameObject.layer = _originalLayer;
         if (_interaction) _interaction.enabled = _originalInteractionEnabled;
@@ -219,8 +186,10 @@ public partial class CharacterState
         var mapManager = Object.FindFirstObjectByType<MapManager>();
         if (mapManager != null)
         {
-            return mapManager.GetNearestSpawnPoint(transform.position);
+            Debug.Log("找到了MapManager并且在复活点复活");
+            return mapManager.GetSpawnPosition(transform.position);
         }
+        Debug.Log("触发复活位置找不到兜底机制，复活在死亡的位置");
         return transform.position;
     }
     #endregion

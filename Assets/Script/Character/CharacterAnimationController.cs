@@ -220,6 +220,30 @@ public class CharacterAnimationController : MonoBehaviour
         if (_deathTriggerHash != 0) { animator.ResetTrigger(_deathTriggerHash); animator.SetTrigger(_deathTriggerHash); }
     }
 
+    /// <summary>复活时重置动画状态（由 PerformRuntimeRespawn 调用）</summary>
+    public void ResetFromDeath()
+    {
+        _isDead = false;
+        if (animator == null) return;
+
+        var stateBefore = animator.GetCurrentAnimatorStateInfo(0);
+        Debug.Log($"[Anim] Reset前: stateHash={stateBefore.fullPathHash}, IsName('Death')={stateBefore.IsName("Death")}");
+
+        if (_deathTriggerHash != 0) animator.ResetTrigger(_deathTriggerHash);
+        if (_attackTriggerHash != 0) animator.ResetTrigger(_attackTriggerHash);
+        if (_skillTriggerHash != 0) animator.ResetTrigger(_skillTriggerHash);
+
+        // 跳到 Base Layer 第 0 个状态 (Locomotion 混合树)
+        animator.Play(0, 0, 0f);
+        SetMoveSpeeds(0f, 0f);
+
+        var stateAfter = animator.GetCurrentAnimatorStateInfo(0);
+        Debug.Log($"[Anim] Reset后: stateHash={stateAfter.fullPathHash}, 状态名={stateAfter.shortNameHash}, VSpeed={animator.GetFloat(_vSpeedHash):F2}, HSpeed={animator.GetFloat(_hSpeedHash):F2}");
+
+        // 验证是否跳出了 Death：stateHash 应该变化
+        Debug.Log($"[Anim] 是否跳出Death: {stateBefore.fullPathHash != stateAfter.fullPathHash}");
+    }
+
     private void HandlePlayerDeath()
     {
         // 1) 禁用 PlayerInteraction（若存在）

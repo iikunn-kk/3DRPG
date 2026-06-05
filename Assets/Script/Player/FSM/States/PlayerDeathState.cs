@@ -4,49 +4,52 @@ namespace PlayerFSM
 {
     /// <summary>
     /// 死亡状态：终态，最高优先级。
-    /// 由 PlayerStateMachine.UpdateStateMachine 检测 _isDead 进入。
-    /// 等待复活后退出。
+    /// Enter: 播放死亡动画 + 切碰撞层 + 锁定移动
+    /// Exit:  恢复碰撞层 + 解锁移动
     /// </summary>
     public class PlayerDeathState : PlayerStateBase
     {
         public override PlayerState StateType => PlayerState.Death;
 
-        // 复活回调标记：已订阅 CharacterState 的 PlayerRespawnEventSo
-        private bool _hasSubscribed;
-
         public override void Enter()
         {
-            // Debug.Log($"[PlayerFSM] 进入 Death 状态");
-
-            // 现有死亡流程已由 CharacterState.Die() 处理
-            // FSM 仅做状态标记，确保不响应任何输入转换
-        }
-
-        public override void Update()
-        {
-            // 不检查任何转换——死亡是终态
-        }
-
-        public override void CheckTransitions()
-        {
-            // 死亡状态下不进行任何转换检查
+            Debug.Log($"[FSM] DeathState.Enter(), go={owner?.name}");
+            // 动画表现
+            anim?.PlayDeath();
+            anim?.ForceLockAfterDeath();
+            // 物理层 + 交互禁用
+            characterState?.ApplyDeadLayerAndDisableInteraction();
+            // 锁定移动
+            movement?.LockPlayerControl();
         }
 
         public override void Exit()
         {
-            // Debug.Log($"[PlayerFSM] 退出 Death 状态");
+            Debug.Log($"[FSM] DeathState.Exit(), go={owner?.name}, 调用 ResetFromDeath()...");
+            // 复活时恢复动画、碰撞层和交互
+            anim?.ResetFromDeath();
+            Debug.Log("[FSM] ResetFromDeath() 完成");
+            characterState?.RestoreLayerAndInteraction();
+            Debug.Log("[FSM] DeathState.Exit() 完成");
         }
 
-        /// <summary>
-        /// 外部调用：标记复活（供 CharacterState 复活后调用）
-        /// </summary>
-        public void OnRespawn()
+        public override void Update()
         {
-            if (owner.CurrentState == PlayerState.Death)
-            {
-                // 复活后恢复到 Idle
-                owner.ChangeState(PlayerState.Idle);
-            }
+            // 终态，无帧逻辑
         }
+
+        public override void CheckTransitions()
+        {
+            // 由 OnRespawn() 外部触发复活
+        }
+
+        // /// <summary>
+        // /// 外部调用：标记复活（供 CharacterState 复活后调用）
+        // /// </summary>
+        // public void OnRespawn()
+        // {
+        //     if (owner.CurrentState == PlayerState.Death)
+        //         owner.ChangeState(PlayerState.Idle);
+        // }
     }
 }

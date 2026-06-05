@@ -186,12 +186,24 @@ namespace PlayerFSM
 
         private void UpdateStateMachine()
         {
-            // 阶段三：全局死亡检测（最高优先级）
+            // 全局死亡检测（最高优先级）
             var charState = GetComponent<CharacterState>();
-            if (charState != null && charState.IsDead && _currentState != PlayerState.Death)
+            if (charState != null)
             {
-                ChangeStateInternal(PlayerState.Death);
-                return;
+                // 进入死亡
+                if (charState.IsDead && _currentState != PlayerState.Death)
+                {
+                    ChangeStateInternal(PlayerState.Death);
+                    return;
+                }
+                // 退出死亡 → 复活
+                if (!charState.IsDead && _currentState == PlayerState.Death)
+                {
+                    Debug.Log($"[FSM] 检测复活: IsDead={charState.IsDead}, state={_currentState} → ChangeStateInternal(Idle)");
+                    ChangeStateInternal(PlayerState.Idle);
+                    Debug.Log($"[FSM] ChangeStateInternal(Idle) 完成, 新状态={_currentState}");
+                    return;
+                }
             }
 
             _currentStateInstance.Update();

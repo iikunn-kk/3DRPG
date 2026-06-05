@@ -140,10 +140,11 @@ public class MapManager : MonoBehaviour
         _ = NetworkManager.Instance.ConnectAsync(username, "123");
     }
 
-    private Vector3 GetSpawnPosition(Vector3 prevPosition)
+    public Vector3 GetSpawnPosition(Vector3 prevPosition)
     {
         if (teleportSpawnPoint != null)
         {
+            Debug.Log("使用唯一传送出生点");
             return teleportSpawnPoint.transform.position;
         }
         // 兼容旧逻辑：找最近出生点
