@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 /// <summary>
@@ -10,9 +11,12 @@ public class EntitySyncManager : MonoBehaviour
 {
     public static EntitySyncManager Instance { get; private set; }
     void Awake() { Instance = this; }
-    [Header("远程实体 Prefab")]
+    [Header("远程实体 Prefab（兜底）")]
     [SerializeField] private GameObject _remotePlayerPrefab;
     [SerializeField] private GameObject _remoteMonsterPrefab;
+
+    [Header("角色模型映射（按 modelType 选远程玩家 Prefab）")]
+    [SerializeField] private CharacterSelectDataSO _characterSelectData;
 
     [Header("本地玩家引用（用于过滤自身）")]
     [SerializeField] private Transform _localPlayer;
@@ -144,9 +148,25 @@ public class EntitySyncManager : MonoBehaviour
         GameObject go;
         if (!_entities.TryGetValue(e.entityId, out go))
         {
-            var prefab = e.entityType == 0 ? _remotePlayerPrefab : _remoteMonsterPrefab;
+            // 远程玩家：按 modelType 选择角色模型 Prefab
+            GameObject prefab = null;
+            if (e.entityType == 0)
+            {
+                prefab = GetRemotePlayerPrefab(e.modelType);
+            }
+            prefab ??= e.entityType == 0 ? _remotePlayerPrefab : _remoteMonsterPrefab;
             if (prefab == null) return;
             go = Instantiate(prefab);
+
+            // 远程玩家：剥离游戏逻辑组件，只保留视觉模型 + Animator
+            if (e.entityType == 0 && go != _remotePlayerPrefab)
+            {
+                StripGameplayComponents(go);
+                // 挂载移动动画驱动器：从位置差计算 VSpeed/HSpeed 驱动 Blend Tree
+                if (go.GetComponent<MonsterLocomotionDriver>() == null)
+                    go.AddComponent<MonsterLocomotionDriver>();
+            }
+
             _entities[e.entityId] = go;
         }
 
@@ -206,6 +226,46 @@ public class EntitySyncManager : MonoBehaviour
         }
     }
 
+    /// <summary>移除远程玩家身上的游戏逻辑组件，避免和本地玩家产生输入/动画/物理冲突</summary>
+    void StripGameplayComponents(GameObject go)
+    {
+        // 彻底销毁游戏逻辑组件（enabled=false 不够，方法仍可被 IDamageable 等接口调用）
+        Destroy(go.GetComponent<CharacterState>());
+        Destroy(go.GetComponent<MoveMent>());
+        Destroy(go.GetComponent<CharacterAnimationController>());
+        Destroy(go.GetComponent<PlayerFSM.PlayerStateMachine>());
+        Destroy(go.GetComponent<LockOnController>());
+        Destroy(go.GetComponent<PlayerInteraction>());
+        Destroy(go.GetComponent<SkillController>());
+
+        // 物理隔离：远程玩家不应和本地玩家碰撞
+        var rb = go.GetComponent<Rigidbody>();
+        if (rb != null) { rb.isKinematic = true; rb.linearVelocity = Vector3.zero; }
+
+        var col = go.GetComponent<Collider>();
+        if (col != null) col.enabled = false;
+
+        // 禁用音效（避免远程玩家的脚步/攻击音效在本地播放）
+        var audioSources = go.GetComponentsInChildren<AudioSource>();
+        foreach (var src in audioSources) src.enabled = false;
+
+        // 移除 Player 标签（防止技能通过 FindWithTag("Player") 找到远程玩家）
+        if (go.CompareTag("Player")) go.tag = "Untagged";
+
+        // 放入 "RemotePlayer" 层避免物理碰撞
+        int remoteLayer = LayerMask.NameToLayer("RemotePlayer");
+        if (remoteLayer != -1) go.layer = remoteLayer;
+    }
+
+    /// <summary>根据 modelType 查找远程玩家的角色模型 Prefab</summary>
+    GameObject GetRemotePlayerPrefab(byte modelType)
+    {
+        if (_characterSelectData == null || _characterSelectData.data == null) return null;
+        var profession = (CharacterProfession)modelType;
+        var entry = _characterSelectData.data.FirstOrDefault(x => x.job == profession);
+        return entry?.model;
+    }
+
     /// <summary>实体离开视野</summary>
     public void RemoveEntity(uint entityId)
     {
@@ -235,6 +295,7 @@ public class EntitySyncManager : MonoBehaviour
         public uint entityId;
         public byte entityType;
         public string uid;
+        public byte modelType;
         public float posX, posY, posZ;
         public float rotY;
         public int hp, maxHp;

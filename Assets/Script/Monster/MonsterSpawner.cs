@@ -570,13 +570,14 @@ public class MonsterSpawner : MonoBehaviour
     }
     private void RegisterMonsterToMMO(MonsterBase monster, Vector3 pos)
     {
-        if (NetworkManager.Instance == null || !NetworkManager.Instance.IsConnected) return;
+        var nm = FindFirstObjectByType<NetworkManager>();
+        if (nm == null || !nm.IsConnected) return;
         // 分配唯一网络 ID（本地递增）并注册到全局查找表
         monster.NetworkId = MonsterBase.GetNextNetworkId();
         MonsterBase.RegisterNetwork(monster);
         var hp = monster.GetComponent<MonsterCombat>();
         int maxHp = hp != null ? hp.MaxHealth : monster.monsterData.health;
-        NetworkManager.Instance.SendMonsterSpawn(monster.NetworkId, maxHp, pos);
+        nm.SendMonsterSpawn(monster.NetworkId, maxHp, pos);
     }
 
     private void CancelCts(ref CancellationTokenSource cts)

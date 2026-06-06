@@ -138,6 +138,7 @@ public class CharacterAnimationController : MonoBehaviour
         {
             _rb.angularVelocity = Vector3.zero;
             _rb.linearVelocity = Vector3.zero;
+            //角色初始默认就将X和Z轴冻住了，Y是未冻住状态，进入死亡状态后欧，将Y轴冻住
             _rb.constraints = RigidbodyConstraints.FreezeRotation;
         }
 
@@ -157,7 +158,8 @@ public class CharacterAnimationController : MonoBehaviour
 
         // 解冻物理旋转
         if (_rb != null)
-            _rb.constraints = RigidbodyConstraints.None;
+            //角色复活之后，将Y轴解冻
+            _rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
         // 直跳回 Locomotion 混合树
         SafeCrossFade(locomotionState, respawnCrossFade);

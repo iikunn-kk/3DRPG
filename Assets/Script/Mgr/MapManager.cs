@@ -82,11 +82,11 @@ public class MapManager : MonoBehaviour
             CharacterRuntimeManager.Instance.RestoreTransientPlayerState(playerCharacter);
             cameraController.SetTarget(playerInstance.transform);
 
-            // MMO 模式：挂网络同步组件并连接到 Gateway
+            // MMO 模式：挂网络同步组件并连接到 Gateway（职业在连接内同步发送）
             if (GameModeConfig.IsMmoMode)
             {
                 playerInstance.AddComponent<NetworkPlayerMover>();
-                AutoConnectMMO();
+                AutoConnectMMO((byte)characterData.profession);
             }
 
 
@@ -124,8 +124,8 @@ public class MapManager : MonoBehaviour
         catch (OperationCanceledException) { }
     }
 
-    /// <summary>角色实例化后自动连接 MMO 网络层</summary>
-    private void AutoConnectMMO()
+    /// <summary>角色实例化后自动连接 MMO 网络层（同步发送职业信息）</summary>
+    private void AutoConnectMMO(byte profession)
     {
         if (NetworkManager.Instance == null || NetworkManager.Instance.IsConnected) return;
         var username = PlayerLogInManager.Instance.GetLoggedInUsername();
@@ -134,8 +134,8 @@ public class MapManager : MonoBehaviour
             Debug.LogWarning("[MapManager] 无法获取游戏用户名，跳过 MMO 自动连接");
             return;
         }
-        Debug.Log($"[MapManager] 自动连接 MMO: {username}");
-        _ = NetworkManager.Instance.ConnectAsync(username, "123");
+        Debug.Log($"[MapManager] 自动连接 MMO: {username} profession={(CharacterProfession)profession}({profession})");
+        _ = NetworkManager.Instance.ConnectAsync(username, "123", profession);
     }
 
     public Vector3 GetSpawnPosition(Vector3 prevPosition)

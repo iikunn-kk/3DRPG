@@ -94,19 +94,24 @@ public partial class CharacterState
 
     private void SendAttackToMMO(Transform target, float baseDamage)
     {
-        if (NetworkManager.Instance == null || !NetworkManager.Instance.IsConnected) return;
-        var monster = target.GetComponent<MonsterBase>();
-        if (monster == null || monster.NetworkId == 0) return;
         // MMO 模式下 MonsterCombat.TakeDamage 已发 monster_attack，跳过旧格式
         if (GameModeConfig.IsMmoMode) return;
+
+        var nm = FindFirstObjectByType<NetworkManager>();
+        if (nm == null || !nm.IsConnected) return;
+
+        var monster = target.GetComponent<MonsterBase>();
+        if (monster == null || monster.NetworkId == 0) return;
+
         var mc = target.GetComponent<MonsterCombat>();
-        var entityId = EntitySyncManager.Instance?.GetLocalPlayerEntityId() ?? 0;
+        var sync = FindFirstObjectByType<EntitySyncManager>();
+        var entityId = sync != null ? sync.GetLocalPlayerEntityId() : 0;
         if (entityId == 0) return;
 
         var skillMultiplier = Attack > 0 ? baseDamage / Attack : 1f;
         float dist = Vector3.Distance(transform.position, target.position);
 
-        NetworkManager.Instance.SendAttack(entityId, monster.NetworkId, Attack,
+        nm.SendAttack(entityId, monster.NetworkId, Attack,
             mc != null ? mc.CurrentHealth : 100, Defence, CritChancePercent,
             skillMultiplier, dist);
     }

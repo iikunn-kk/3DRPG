@@ -16,17 +16,14 @@ namespace PlayerFSM
             // 动画表现
             anim?.PlayDeath();
             anim?.ForceLockAfterDeath();
-            // 物理层 + 交互禁用
+            // 物理层 + 交互禁用 + 锁定移动（一次性由 CharacterState 处理）
             characterState?.ApplyDeadLayerAndDisableInteraction();
-            // 锁定移动
-            movement?.LockPlayerControl();
         }
 
         public override void Exit()
         {
-            // 复活时恢复动画、碰撞层和交互
+            // 复活时恢复动画（层和交互已在 PerformRuntimeRespawn 恢复）
             anim?.ResetFromDeath();
-            characterState?.RestoreLayerAndInteraction();
         }
 
         public override void Update()

@@ -73,8 +73,8 @@ public class NetworkManager : Singleton<NetworkManager>
 
     private bool _connecting;
 
-    /// <summary>完整连接流程：HTTP 登录 → TCP 连接 → UDP 绑定</summary>
-    public async UniTask<bool> ConnectAsync(string username, string password)
+    /// <summary>完整连接流程：HTTP 登录 → TCP 连接 → 发送职业 → UDP 绑定</summary>
+    public async UniTask<bool> ConnectAsync(string username, string password, byte profession = 255)
     {
         // 已连接或正在连接中，跳过重复调用
         if (Tcp is { IsConnected: true })
@@ -104,7 +104,11 @@ public class NetworkManager : Singleton<NetworkManager>
             PlayerUid = Tcp.AuthenticatedUid;
             SessionId = Tcp.SessionId;
 
-            // 3. UDP 绑定
+            // 3. 立即发送职业信息（赶在第一个位置消息和第一个快照之前）
+            if (profession <= 3)
+                SendPlayerInfo(profession);
+
+            // 4. UDP 绑定
             await Udp.ConnectAsync(_serverHost, _udpPort, SessionId);
             Debug.Log($"[NetworkManager] 连接成功! Uid={PlayerUid}, Session={SessionId}");
             return true;
@@ -169,6 +173,14 @@ public class NetworkManager : Singleton<NetworkManager>
         Debug.Log($"[NetworkManager] 注册怪物 instId={instId} hp={maxHp}");
     }
 
+    /// <summary>发送玩家职业信息到服务器（用于其他客户端显示正确模型）</summary>
+    public void SendPlayerInfo(byte profession)
+    {
+        if (!Tcp.IsConnected) return;
+        var payload = new PlayerInfoPayload { type = "player_info", uid = PlayerUid, profession = profession };
+        Tcp.Send(JsonUtility.ToJson(payload));
+    }
+
     /// <summary>服务端权威：发送怪物受伤请求</summary>
     public void SendMonsterAttack(uint instId, int damage)
     {
@@ -206,6 +218,9 @@ public class NetworkManager : Singleton<NetworkManager>
 
     [System.Serializable]
     private struct MonsterAttackPayload { public string type; public uint instId; public int damage; }
+
+    [System.Serializable]
+    private struct PlayerInfoPayload { public string type; public string uid; public byte profession; }
 
     [System.Serializable]
     private class LoginResponse
