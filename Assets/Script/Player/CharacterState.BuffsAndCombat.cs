@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -97,6 +97,8 @@ public partial class CharacterState
         if (NetworkManager.Instance == null || !NetworkManager.Instance.IsConnected) return;
         var monster = target.GetComponent<MonsterBase>();
         if (monster == null || monster.NetworkId == 0) return;
+        // MMO 模式下 MonsterCombat.TakeDamage 已发 monster_attack，跳过旧格式
+        if (GameModeConfig.IsMmoMode) return;
         var mc = target.GetComponent<MonsterCombat>();
         var entityId = EntitySyncManager.Instance?.GetLocalPlayerEntityId() ?? 0;
         if (entityId == 0) return;

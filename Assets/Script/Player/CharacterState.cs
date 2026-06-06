@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using UnityEngine;
 // 移除未使用的命名空间引用，保持文件整洁

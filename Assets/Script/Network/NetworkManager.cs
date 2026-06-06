@@ -169,6 +169,15 @@ public class NetworkManager : Singleton<NetworkManager>
         Debug.Log($"[NetworkManager] 注册怪物 instId={instId} hp={maxHp}");
     }
 
+    /// <summary>服务端权威：发送怪物受伤请求</summary>
+    public void SendMonsterAttack(uint instId, int damage)
+    {
+        if (!Tcp.IsConnected) return;
+        var payload = new MonsterAttackPayload { type = "monster_attack", instId = instId, damage = damage };
+        Tcp.Send(JsonUtility.ToJson(payload));
+        Debug.Log($"[MMO] 权威扣血 怪物#{instId} -{damage}");
+    }
+
     public void SendAttack(uint attackerId, uint targetId, int attackerAtk, int targetHp, int targetDef, float critRate, float skillMultiplier = 1f, float distance = 2f)
     {
         if (!Tcp.IsConnected) return;
@@ -194,6 +203,9 @@ public class NetworkManager : Singleton<NetworkManager>
 
     [System.Serializable]
     private struct MonsterSpawnPayload { public string type; public uint instId; public int maxHp; public float x; public float y; public float z; }
+
+    [System.Serializable]
+    private struct MonsterAttackPayload { public string type; public uint instId; public int damage; }
 
     [System.Serializable]
     private class LoginResponse

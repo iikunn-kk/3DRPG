@@ -57,9 +57,17 @@ public class EntitySyncManager : MonoBehaviour
 
             foreach (var e in snapshot.entities)
             {
-                // 过滤自身：按 entityId 或 uid 匹配
-                if (e.entityId == _localPlayerEntityId) continue;
-                if (e.entityType == 0 && e.uid == NetworkManager.Instance.PlayerUid) continue;
+                // 本地玩家：仅同步服务端权威 HP（被怪物攻击时服务端扣血）
+                if (e.entityId == _localPlayerEntityId || (e.entityType == 0 && e.uid == NetworkManager.Instance.PlayerUid))
+                {
+                    var localState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+                    if (localState != null && e.hp != localState.CurrentHealth)
+                    {
+                        localState.CurrentHealth = e.hp;
+                        if (e.hp <= 0) localState.Die();
+                    }
+                    continue;
+                }
 
 #if UNITY_EDITOR
                 // Phase 5 诊断：每 200 帧统计实体类型（仅 Editor）
@@ -97,12 +105,13 @@ public class EntitySyncManager : MonoBehaviour
 
     void ApplyEntity(EntitySnapshot e)
     {
-        // 怪物：优先匹配本地 MonsterBase（已由 MonsterSpawner 生成），直接更新 HP
+        // 怪物（entityType=1）：服务端权威 HP/位置/状态
         if (e.entityType == 1)
         {
             var localMonster = MonsterBase.FindByNetworkId(e.entityId);
             if (localMonster != null)
             {
+                // 权威 HP 同步
                 var combat = localMonster.GetComponent<MonsterCombat>();
                 if (combat != null)
                 {
@@ -112,8 +121,23 @@ public class EntitySyncManager : MonoBehaviour
                         if (e.hp <= 0) combat.Die();
                     }
                 }
-                // 该实体无本地 MonsterCombat，无需同步
-                return; // 不创建 RemoteMonster Cube
+                // 权威位置同步（通过插值平滑，避免 VSpeed/HSpeed 因位置突变而抖动）
+                var newPos = new Vector3(e.posX, e.posY, e.posZ);
+                var interp = localMonster.GetComponent<PositionInterpolator>();
+                if (interp == null) interp = localMonster.gameObject.AddComponent<PositionInterpolator>();
+                interp.RenderDelay = 0.15f;  // 150ms 缓冲，匹配 ~250ms 快照间隔
+                interp.SetTarget(newPos);
+                var nav = localMonster.GetComponent<UnityEngine.AI.NavMeshAgent>();
+                if (nav != null && nav.hasPath) nav.ResetPath(); // 清除残留寻路
+                // 权威 AI 状态同步 + MMO 动画驱动
+                var sm = localMonster.GetComponent<MonsterStateMachine>();
+                var serverState = (MonsterState)e.animState;
+                if (sm != null && sm.currentState != serverState && serverState != MonsterState.Death)
+                {
+                    sm.currentState = serverState;
+                    SyncMmoAnimation(localMonster, sm, serverState);
+                }
+                return; // 本地怪物已存在，不创建 RemoteMonster
             }
         }
 
@@ -141,6 +165,45 @@ public class EntitySyncManager : MonoBehaviour
 
         var proxy = go.GetComponent<NetworkEntityProxy>();
         if (proxy) proxy.SetHp(e.hp, e.maxHp);
+    }
+
+    /// <summary>
+    /// MMO 模式：根据服务端状态变化触发对应的客户端动画。
+    /// 仅当状态发生切换时调用，避免每帧重复触发。
+    /// </summary>
+    void SyncMmoAnimation(MonsterBase monster, MonsterStateMachine sm, MonsterState newState)
+    {
+        if (!GameModeConfig.IsMmoMode) return;
+
+        var animCtrl = monster.GetComponent<MonsterAnimationController>();
+        var loco = monster.GetComponent<MonsterLocomotionDriver>();
+        var playerTf = sm.PlayerRef;
+
+        switch (newState)
+        {
+            case MonsterState.Attack:
+                // 服务端每 2s 攻击一次，只在状态首次切换时触发单次攻击动画
+                animCtrl?.PlayAttack();
+                if (loco != null) loco.FaceTarget = playerTf;
+                break;
+
+            case MonsterState.Alert:
+                animCtrl?.PlayAlert();
+                if (loco != null) loco.FaceTarget = playerTf;
+                break;
+
+            case MonsterState.Chase:
+                // 追击时锁定朝向玩家
+                if (loco != null) loco.FaceTarget = playerTf;
+                break;
+
+            case MonsterState.Patrol:
+            case MonsterState.Idle:
+            case MonsterState.ReturnToSpawn:
+                // 非战斗状态取消面向玩家，由移动方向决定朝向
+                if (loco != null) loco.FaceTarget = null;
+                break;
+        }
     }
 
     /// <summary>实体离开视野</summary>

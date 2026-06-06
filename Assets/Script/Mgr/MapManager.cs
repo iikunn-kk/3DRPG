@@ -13,7 +13,7 @@ public class MapManager : MonoBehaviour
     [Header("所有的模型数据")][SerializeField] private CharacterSelectDataSO characterSelectDataSo;
     [Header("动画控制器")][SerializeField] private RuntimeAnimatorController playingController;
     [Header("Camera")][SerializeField] private CameraController cameraController;
-    [Header("所有的怪物刷新点")][SerializeField] private List<MonsterSpawner> monsterSpawners;
+    [Header("所有的怪物刷新点")] public List<MonsterSpawner> monsterSpawners;
     [Header("玩家成功生成事件")][SerializeField] private CharacterStateEventSO playerSpawned;
     [Header("本地图传送点")] public TeleportPoint teleportPoint;
     [Header("小地图")]
@@ -66,10 +66,6 @@ public class MapManager : MonoBehaviour
         GameObject playerInstance = Instantiate(characterPrefabData.model, spawnPosition, Quaternion.identity);
 
 
-        // Phase 4: 运行时自动挂载位置同步组件
-        playerInstance.AddComponent<NetworkPlayerMover>();
-
-
         var playerCharacter = playerInstance.GetComponent<CharacterState>();
         if (playerCharacter != null)
         {
@@ -80,16 +76,18 @@ public class MapManager : MonoBehaviour
             {
                 TaskManager.Instance.InitializeForCurrentCharacter();
             }
-            AutoConnectMMO();
             // 任务事件桥接：玩家生成后激活事件转发
             TaskEventBridge.Instance.Attach();
             // 恢复跨场景保存的临时 Buff
             CharacterRuntimeManager.Instance.RestoreTransientPlayerState(playerCharacter);
             cameraController.SetTarget(playerInstance.transform);
 
-
-            // Phase 4: 自动连接 MMO 网络层（使用游戏用户名作为 MMO uid）
-            AutoConnectMMO();
+            // MMO 模式：挂网络同步组件并连接到 Gateway
+            if (GameModeConfig.IsMmoMode)
+            {
+                playerInstance.AddComponent<NetworkPlayerMover>();
+                AutoConnectMMO();
+            }
 
 
 
@@ -144,7 +142,6 @@ public class MapManager : MonoBehaviour
     {
         if (teleportSpawnPoint != null)
         {
-            Debug.Log("使用唯一传送出生点");
             return teleportSpawnPoint.transform.position;
         }
         // 兼容旧逻辑：找最近出生点

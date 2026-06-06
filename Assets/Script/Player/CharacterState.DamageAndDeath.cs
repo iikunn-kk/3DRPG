@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 // 受击、死亡与复活相关逻辑
 public partial class CharacterState
@@ -80,6 +80,16 @@ public partial class CharacterState
         _plannedRespawnPosition = ResolveNearestSpawnPoint();
         _pendingRuntimeRespawn = true;
         PlayerDeathEventSo?.RaiseEvent(gameObject, this);
+        // MMO 模式：主动通知所有 MonsterSpawner 玩家已死亡（触发庆祝动画）
+        if (GameModeConfig.IsMmoMode)
+        {
+            var mm = CharacterRuntimeManager.Instance?.currentMapManager;
+            if (mm != null && mm.monsterSpawners != null)
+            {
+                foreach (var sp in mm.monsterSpawners)
+                    if (sp != null) sp.OnPlayerDeath(gameObject);
+            }
+        }
         CameraDeathEventSo?.RaiseEvent(false, this);
         if (ApplyPenaltyImmediately)
             ApplyDeathPenaltyAndPersist();

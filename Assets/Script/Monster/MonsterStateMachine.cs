@@ -262,6 +262,14 @@ public class MonsterStateMachine : MonoBehaviour
 
     public void UpdateStateMachine()
     {
+        // MMO 模式：AI 由服务器驱动，客户端只从快照同步状态和位置
+        if (GameModeConfig.IsMmoMode)
+        {
+            if (navMeshAgent != null && navMeshAgent.enabled)
+                navMeshAgent.ResetPath(); // 清除残留寻路目标，防止与快照位置冲突
+            return;
+        }
+
         if (isDead && currentState == MonsterState.Death) return;
         if (isDead && currentState != MonsterState.Death)
         {

@@ -87,8 +87,13 @@ public class MonsterSpawner : MonoBehaviour
         // 立即检测玩家是否在触发范围内（CheckPlayerInRange 内部已做 null 检查）
         CheckPlayerInRange();
 
+        // MMO 模式：无视距离，立即生成（服务器管理怪物生命周期）
+        if (GameModeConfig.IsMmoMode)
+        {
+            StartSpawnMonsters();
+        }
         // 如果配置为在游戏开始时生成并且玩家已在范围内，则开始生成
-        if (spawnOnStart && isPlayerInRange)
+        else if (spawnOnStart && isPlayerInRange)
         {
             StartSpawnMonsters();
         }
@@ -161,6 +166,7 @@ public class MonsterSpawner : MonoBehaviour
     /// </summary>
     private void HandlePlayerLeaveRegion()
     {
+        if (GameModeConfig.IsMmoMode) return; // MMO 模式：服务器管理怪物生命周期
         if (isPlayerLeft && spawnedMonsters.Count > 0)
         {
             playerLeaveTimer += Time.deltaTime;
@@ -273,8 +279,8 @@ public class MonsterSpawner : MonoBehaviour
     /// </summary>
     private void HandleMonsterSpawning()
     {
-        // 如果玩家在范围内且未在生成中
-        if (isPlayerInRange && !isSpawning)
+        bool shouldSpawn = GameModeConfig.IsMmoMode || isPlayerInRange;
+        if (shouldSpawn && !isSpawning)
         {
             // 检查是否需要生成怪物
             if (spawnedMonsters.Count < maxMonsters)
@@ -316,8 +322,8 @@ public class MonsterSpawner : MonoBehaviour
             for (int i = 0; i < monstersToSpawn; i++)
             {
                 token.ThrowIfCancellationRequested();
-                // 检查是否仍然满足生成条件
-                if (!isPlayerInRange || spawnedMonsters.Count >= maxMonsters)
+                // 检查生成条件：MMO 模式无条件生成，单机模式需玩家在范围内
+                if ((!GameModeConfig.IsMmoMode && !isPlayerInRange) || spawnedMonsters.Count >= maxMonsters)
                 {
                     break;
                 }
@@ -333,11 +339,19 @@ public class MonsterSpawner : MonoBehaviour
                 {
                     // 初始化怪物数据
                     monster.Init(monsterData, player, this);
+
+                    // MMO 模式：分配 NetworkId 用于匹配快照 entityId，但不向服务器注册
+                    if (GameModeConfig.IsMmoMode)
+                    {
+                        monster.NetworkId = MonsterBase.GetNextNetworkId();
+                        MonsterBase.RegisterNetwork(monster);
+                    }
+                    else
+                    {
+                        RegisterMonsterToMMO(monster, spawnPos);
+                    }
+
                     spawnedMonsters.Add(monster);
-
-
-                    // // Phase 5: 注册怪物到 MMO 服务端
-                    RegisterMonsterToMMO(monster, spawnPos);
 
 
                 }
@@ -465,15 +479,31 @@ public class MonsterSpawner : MonoBehaviour
     }
     public void OnPlayerDeath(GameObject playerObj)
     {
-        // 停止生成协程
+        // 停止生成/移除协程（单机和 MMO 通用）
         CancelCts(ref spawnCts);
         isSpawning = false;
-
-        // 停止移除协程
         CancelCts(ref removeCts);
 
-        // 禁用所有已生成怪物的攻击/AI，距离玩家一定范围内的怪物播放胜利/庆祝动画
-        if (spawnedMonsters != null)
+        // MMO 模式：仅播放庆祝动画，不破坏组件（EntitySyncManager 需要它们同步快照）
+        if (GameModeConfig.IsMmoMode)
+        {
+            if (spawnedMonsters == null) return;
+            foreach (var monster in spawnedMonsters)
+            {
+                if (monster == null) continue;
+                var anim = monster.GetComponent<MonsterAnimationController>();
+                if (playerObj != null)
+                {
+                    float sqrDist = (monster.transform.position - playerObj.transform.position).sqrMagnitude;
+                    if (sqrDist <= playerDeathAffectRadius * playerDeathAffectRadius)
+                        anim?.PlayCelebrate();
+                    else
+                        anim?.PlayIdle();
+                }
+                else anim?.PlayIdle();
+            }
+            return;
+        }
         {
             // 复制以便在循环中安全修改原列表（不过我们不会在此删除）
             var listCopy = new List<MonsterBase>(spawnedMonsters);
@@ -530,10 +560,12 @@ public class MonsterSpawner : MonoBehaviour
     }
     public void OnPlayerBeginRespawn(GameObject playerObj)
     {
+        if (GameModeConfig.IsMmoMode) return; // MMO: 服务器管理怪物生命周期
         ClearSpawnedMonsters();
     }
     public void OnPlayerRespawned(GameObject playerObj)
     {
+        if (GameModeConfig.IsMmoMode) return; // MMO: 怪物由快照同步，不需重新 Init
         Init(playerObj.GetComponent<CharacterState>());
     }
     private void RegisterMonsterToMMO(MonsterBase monster, Vector3 pos)

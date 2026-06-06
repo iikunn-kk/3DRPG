@@ -31,6 +31,7 @@ public class MonsterBase : MonoBehaviour
     public CharacterState PlayerState => playerState;
     private NavMeshAgent navMeshAgent;
     private MonsterSpawner monsterSpawner;
+    public MonsterSpawner Spawner => monsterSpawner;
 
     private MonsterStateMachine stateMachine;
     private MonsterDetection detection;

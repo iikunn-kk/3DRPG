@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -109,19 +109,36 @@ public class MonsterCombat : MonoBehaviour, IDamageable
         // 回血技能：作为治疗处理
         if (attackType == AttackType.回血技能)
         {
-            int healed = Mathf.Clamp(damage, 0, MaxHealth - CurrentHealth);
             CurrentHealth = Mathf.Min(MaxHealth, CurrentHealth + damage);
-
-            // 显示回血数字
-            if (healthRegenDamageNumber != null && healed > 0)
+            if (healthRegenDamageNumber != null)
             {
-                var dn = healthRegenDamageNumber.Spawn(transform.position + Vector3.up * 0.5f, healed);
+                var dn = healthRegenDamageNumber.Spawn(transform.position + Vector3.up * 0.5f, damage);
                 dn.SetFollowedTarget(transform);
                 dn.SetColor(new Color(0.3f, 1f, 0.3f));
                 dn.SetScale(1f);
             }
-
             BroadcastHealthIfLocked();
+            return;
+        }
+
+        // MMO 模式：发送伤害到服务器，本地只播放视觉效果（服务端权威扣血）
+        if (GameModeConfig.IsMmoMode)
+        {
+            if (_monsterBase == null) _monsterBase = GetComponent<MonsterBase>();
+            if (_monsterBase != null && _monsterBase.NetworkId > 0)
+            {
+                NetworkManager.Instance.SendMonsterAttack(_monsterBase.NetworkId, damage);
+            }
+            // 本地播放视觉效果（不扣血）
+            _animController?.PlayHit();
+            // 不调 ForceAggroToPlayer —— MMO 模式下 AI 状态由服务端快照驱动
+            if (physicsDamageNumber != null)
+            {
+                var dn = physicsDamageNumber.Spawn(transform.position + Vector3.up * 0.5f, damage);
+                dn.SetFollowedTarget(transform);
+                dn.SetColor(new Color(1f, 0.6f, 0.5f));
+                dn.SetScale(1f);
+            }
             return;
         }
 

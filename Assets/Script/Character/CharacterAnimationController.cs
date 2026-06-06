@@ -157,9 +157,7 @@ public class CharacterAnimationController : MonoBehaviour
 
         // 解冻物理旋转
         if (_rb != null)
-            // 只冻结 X 和 Z，保留 Y 旋转
-            _rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-
+            _rb.constraints = RigidbodyConstraints.None;
 
         // 直跳回 Locomotion 混合树
         SafeCrossFade(locomotionState, respawnCrossFade);
