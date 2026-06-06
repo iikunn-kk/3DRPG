@@ -34,12 +34,9 @@ public class DeathPopupPanel : UIPopPanelBase
 
     public void OnButtonClick()
     {
-        Debug.Log("[DeathPopup] OnButtonClick → 开始复活流程");
         _resurrectionAction.Invoke();
-        Debug.Log("[DeathPopup] resurrectionAction 执行完毕，调用 Hide()");
         Hide();
         UIManager.Instance.ClosePanel<DeathPopupPanel>();
-        Debug.Log("[DeathPopup] Hide()+ClosePanel 完毕");
     }
 
 }

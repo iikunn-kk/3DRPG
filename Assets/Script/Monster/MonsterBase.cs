@@ -27,6 +27,8 @@ public class MonsterBase : MonoBehaviour
 
     private Vector3 spawnPosition;
     private Transform player;
+    private CharacterState playerState;          // 检查玩家是否死亡
+    public CharacterState PlayerState => playerState;
     private NavMeshAgent navMeshAgent;
     private MonsterSpawner monsterSpawner;
 
@@ -91,6 +93,7 @@ public class MonsterBase : MonoBehaviour
         // Assign provided values
         monsterData = data;
         player = playerTransform != null ? playerTransform : GameObject.FindGameObjectWithTag("Player")?.transform;
+        playerState = player?.GetComponent<CharacterState>();
         monsterSpawner = spawner; // spawner must be provided by the creator
 
         // Basic validation and helpful warnings to catch setup issues early
@@ -134,7 +137,7 @@ public class MonsterBase : MonoBehaviour
 
         // Initialize subsystems which depend on these references
         stateMachine?.Initialize(spawnPosition, player, navMeshAgent, monsterSpawner, _animController);
-        detection?.Initialize(player);
+        detection?.Initialize(player, playerState);
         combat?.Initialize(data, monsterSpawner, _animController, navMeshAgent);
 
         // 新增：将巡逻速度作为动画树的“步行=1.0”的参考速度

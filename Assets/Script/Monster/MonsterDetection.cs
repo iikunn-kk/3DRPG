@@ -13,6 +13,7 @@ public class MonsterDetection : MonoBehaviour
     [SerializeField] private float alertRange = 15f;   // 警觉范围
     
     private Transform player;              // 玩家Transform引用
+    private CharacterState playerState;    // 检查玩家是否死亡
     private float searchPlayerTimer;       // 搜索玩家计时器
     private float chaseRangeSqr;           // 追击范围的平方（用于优化距离计算）
     private float alertRangeSqr;           // 警觉范围的平方（用于优化距离计算）
@@ -25,9 +26,10 @@ public class MonsterDetection : MonoBehaviour
         alertRangeSqr = alertRange * alertRange;
     }
     
-    public void Initialize(Transform playerTransform)
+    public void Initialize(Transform playerTransform, CharacterState playerCharacterState)
     {
         player = playerTransform;
+        playerState = playerCharacterState;
     }
     
     public void UpdateDetection()
@@ -48,13 +50,19 @@ public class MonsterDetection : MonoBehaviour
     /// </summary>
     private void CheckPlayerInRange()
     {
-        if (player != null)
+        if (player == null) return;
+
+        // 玩家死亡 → 强制不在范围，怪物停止追击
+        if (playerState != null && playerState.IsDead)
         {
-            // 使用平方距离比较以提高性能，避免开方运算
-            float distanceSqr = (transform.position - player.position).sqrMagnitude;
-            bool isPlayerInRange = distanceSqr <= chaseRangeSqr;
-            stateMachine.SetPlayerInRange(isPlayerInRange);
+            stateMachine.SetPlayerInRange(false);
+            return;
         }
+
+        // 使用平方距离比较以提高性能，避免开方运算
+        float distanceSqr = (transform.position - player.position).sqrMagnitude;
+        bool isPlayerInRange = distanceSqr <= chaseRangeSqr;
+        stateMachine.SetPlayerInRange(isPlayerInRange);
     }
     
     /// <summary>

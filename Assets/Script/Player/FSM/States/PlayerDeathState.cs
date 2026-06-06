@@ -13,7 +13,6 @@ namespace PlayerFSM
 
         public override void Enter()
         {
-            Debug.Log($"[FSM] DeathState.Enter(), go={owner?.name}");
             // 动画表现
             anim?.PlayDeath();
             anim?.ForceLockAfterDeath();
@@ -25,12 +24,9 @@ namespace PlayerFSM
 
         public override void Exit()
         {
-            Debug.Log($"[FSM] DeathState.Exit(), go={owner?.name}, 调用 ResetFromDeath()...");
             // 复活时恢复动画、碰撞层和交互
             anim?.ResetFromDeath();
-            Debug.Log("[FSM] ResetFromDeath() 完成");
             characterState?.RestoreLayerAndInteraction();
-            Debug.Log("[FSM] DeathState.Exit() 完成");
         }
 
         public override void Update()

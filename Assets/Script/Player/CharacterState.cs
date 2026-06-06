@@ -70,6 +70,8 @@ public partial class CharacterState : MonoBehaviour, IDamageable
     private Vector3 _plannedRespawnPosition;
     private bool _penaltyApplied;
     private bool _pendingRuntimeRespawn; // 仅运行时标记（不持久化）
+    private float _invincibleUntil;      // 复活无敌时间戳
+    [SerializeField] private float respawnInvincibleDuration = 2f; // 复活无敌时长
 
     // 新增：标记核心 Init 是否已完成（供装备初始化判断）
     private bool _hasRunCoreInit;

@@ -7,7 +7,7 @@ public partial class CharacterState
     // IDamageable 接口实现（带攻击类型）
     public void TakeDamage(int damage, AttackType attackType)
     {
-        if (_isDead) return;
+        if (_isDead || Time.time < _invincibleUntil) return;
         int final = Mathf.Max(0, damage);
 
         // 物理 / 魔法 / 回血 预处理
@@ -78,7 +78,6 @@ public partial class CharacterState
         OnValueChange();
         // 动画/碰撞层/移动锁定 → 由 PlayerDeathState.Enter() 处理
         _plannedRespawnPosition = ResolveNearestSpawnPoint();
-        Debug.Log(_plannedRespawnPosition);
         _pendingRuntimeRespawn = true;
         PlayerDeathEventSo?.RaiseEvent(gameObject, this);
         CameraDeathEventSo?.RaiseEvent(false, this);
@@ -99,15 +98,15 @@ public partial class CharacterState
     /// </summary>
     private void PerformRuntimeRespawn()
     {
-        Debug.Log("最终复活函数被触发");
         if (!_pendingRuntimeRespawn) return;
         transform.position = _plannedRespawnPosition;
-        Debug.Log("最终的复活位置" + _plannedRespawnPosition);
         CurrentHealth = MaxHealth;
         _isDead = false;
-        Debug.Log($"[Respawn] _isDead=false 设置完成, HP={CurrentHealth}/{MaxHealth}, FSM_state=待检测");
         _pendingRuntimeRespawn = false;
+        _penaltyApplied = false;
+        _invincibleUntil = Time.time + respawnInvincibleDuration;  // 复活无敌保护
         RestoreLayerAndInteraction();// 恢复碰撞层+解锁移动
+        CameraDeathEventSo?.RaiseEvent(true, this);  // 解锁相机
         OnValueChange();
         PlayerRespawnEventSo.RaiseEvent(gameObject, this);
     }
@@ -141,14 +140,15 @@ public partial class CharacterState
         if (!_pendingRuntimeRespawn) return;
         PlayerBeginRespawnEventSo?.RaiseEvent(gameObject, this);
         var panel = UIManager.Instance.OpenPanel<PlayerRespawnPanel>(out bool isOpen);
-        if (isOpen) panel.Init();
-
-        PerformRuntimeRespawn();
-
-
-        // 通知面板复活完成，面板异步动画会在淡出后自毁（无需手动 ClosePanel）
-        panel?.OnPlayerRespawn(gameObject);
-        Debug.Log("[Respawn] PlayerBeginRuntimeRespawn 完成");
+        if (isOpen)
+        {
+            // 等面板完全淡入（不透明）后才执行复活，避免透视看到角色瞬移
+            panel.Init(() =>
+            {
+                PerformRuntimeRespawn();
+                panel.OnPlayerRespawn(gameObject);
+            });
+        }
     }
 
     public void ApplyDeadLayerAndDisableInteraction()
@@ -185,11 +185,7 @@ public partial class CharacterState
     {
         var mapManager = Object.FindFirstObjectByType<MapManager>();
         if (mapManager != null)
-        {
-            Debug.Log("找到了MapManager并且在复活点复活");
             return mapManager.GetSpawnPosition(transform.position);
-        }
-        Debug.Log("触发复活位置找不到兜底机制，复活在死亡的位置");
         return transform.position;
     }
     #endregion

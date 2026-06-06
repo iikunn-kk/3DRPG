@@ -22,22 +22,22 @@ public class TaskArrowUI : MonoBehaviour
     [Header("显示配置")][SerializeField] private float fadeSpeed = 6f;
     [SerializeField] private bool hideWhenNoTrack = true;
     [Header("最小显示距离(进入范围后不再显示距离)")][SerializeField] private float minDistanceToShow = 0.5f;
-    [SerializeField] private float playerMoveThreshold = 0.3f; // 玩家移动阈值
+    [SerializeField] private float playerMoveThreshold = 1.0f; // 玩家移动阈值（提到1m，避免每帧重复查询）
 
     // --- 新增动画相关配置 ---
     [Header("箭头过渡动画")]
-    [Tooltip("旋转平滑时间（秒），使用 SmoothDampAngle")][SerializeField] private float arrowRotationSmoothTime = 0.12f;
+    [Tooltip("旋转平滑时间（秒），使用 SmoothDampAngle。0.2s 可减少过冲")][SerializeField] private float arrowRotationSmoothTime = 0.2f;
+    [Tooltip("箭头最大旋转速度（度/秒），防止目标角度突变时过冲转圈")][SerializeField] private float arrowMaxRotationSpeed = 360f;
     [Tooltip("是否启用缩放过渡（显示/隐藏时平滑缩放）")][SerializeField] private bool animateScaleOnChange = true;
     [Tooltip("缩放平滑时间（秒）")][SerializeField] private float arrowScaleSmoothTime = 0.12f;
     [Tooltip("当目标缩放小于此阈值时认为已隐藏（用于物体激活/禁用判断）")][SerializeField] private float hideScaleThreshold = 0.01f;
 
     // 新增：将位置查询与每帧视觉更新分离
     [Header("查询与更新频率")]
-    [Tooltip("目标世界位置查询间隔（秒），查询可能较重，设置为较大以节省性能。同时允许每帧旋转更新以保持流畅）")][SerializeField] private float positionFetchInterval = 0.25f;
-    [Tooltip("距离文字更新间隔（秒），避免每帧重新计算/设置UI")][SerializeField] private float distanceUpdateInterval = 0.25f;
+    [Tooltip("目标世界位置查询间隔（秒）")][SerializeField] private float positionFetchInterval = 0.5f;
+    [Tooltip("距离文字更新间隔（秒）")][SerializeField] private float distanceUpdateInterval = 0.5f;
     [Tooltip("当距离变化超过该值（米）时会立即更新距离显示）")][SerializeField] private float distanceChangeThreshold = 1f;
 
-    private float _timer;
     private float _positionFetchTimer;
     private float _distanceUpdateTimer;
     private Vector3 _lastPlayerPos;
@@ -173,7 +173,6 @@ public class TaskArrowUI : MonoBehaviour
                 UpdateTexts("已到达");
                 _lastText = "已到达";
             }
-            _lastPlayerPos = playerState.transform.position;
             // 隐藏箭头图形或平滑缩放
             showArrowGraphic = !(_cachedInside && hideArrowWhenInside);
             if (arrowRect != null)
@@ -216,16 +215,15 @@ public class TaskArrowUI : MonoBehaviour
 
         if (useCompassMode && arrowRect)
         {
-            // 使用 atan2 计算玩家朝向与目标方向的夹角，避免对 toTarget 做 Normalize（归一化可能包含开方）
             Vector3 forward = playerState.transform.forward;
             if (flattenY)
             {
                 forward.y = 0f;
                 toTarget.y = 0f;
             }
+
             if (toTarget.sqrMagnitude > 0.0001f)
             {
-                // atan2 的参数顺序使用 (x, z) 来计算在 XZ 平面上的朝向角度
                 float angleTo = Mathf.Atan2(toTarget.x, toTarget.z) * Mathf.Rad2Deg;
                 float angleForward = Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
                 float signedAngle = Mathf.DeltaAngle(angleForward, angleTo);
@@ -233,7 +231,8 @@ public class TaskArrowUI : MonoBehaviour
                 float currentZ = arrowRect.localEulerAngles.z;
                 if (currentZ > 180f) currentZ -= 360f;
                 float targetZ = -signedAngle;
-                float smoothZ = Mathf.SmoothDampAngle(currentZ, targetZ, ref _rotationVelocity, arrowRotationSmoothTime, Mathf.Infinity, Time.unscaledDeltaTime);
+                float smoothZ = Mathf.SmoothDampAngle(currentZ, targetZ, ref _rotationVelocity, arrowRotationSmoothTime, arrowMaxRotationSpeed, Time.unscaledDeltaTime);
+
                 arrowRect.localRotation = Quaternion.Euler(0f, 0f, smoothZ);
             }
         }

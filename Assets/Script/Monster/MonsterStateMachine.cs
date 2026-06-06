@@ -11,10 +11,10 @@ using Cysharp.Threading.Tasks;
 public class MonsterStateMachine : MonoBehaviour
 {
     // ==================== 序列化字段（保持原样，供 Inspector 配置） ====================
-    
+
     [Header("状态机设置")]
     public MonsterState currentState;          // 当前状态
-    
+
     [Header("状态参数")]
     [Tooltip("发现玩家的距离")]
     [SerializeField] private float alertRange = 15f;        // 警觉范围
@@ -28,20 +28,21 @@ public class MonsterStateMachine : MonoBehaviour
     [SerializeField] protected float returnToSpawnRange = 1f; // 返回出生点的判定距离
     [Header("巡逻逻辑")]
     [SerializeField] protected float patrolPauseDuration = 2f; // 巡逻暂停时长
-    [SerializeField] [Tooltip("进入Idle状态的几率")] 
+    [SerializeField]
+    [Tooltip("进入Idle状态的几率")]
     private float idleChance = 0.2f;                       // 进入空闲状态的几率
-    
+
     [Header("UI & FX")]
     [SerializeField] private GameObject alertIcon;         // 警觉状态图标
     [SerializeField] private GameObject attackIcon;        // 攻击状态图标
-    
+
     // 使用平方距离比较以提高性能
     private float attackRangeSqr;              // 攻击范围的平方
     private float chaseRangeSqr;               // 追击范围的平方
     private float alertRangeSqr;               // 警觉范围的平方
     private float returnToSpawnRangeSqr;       // 返回出生点范围的平方
     private float attackLeaveRangeSqr;         // 缓冲后的退出攻击距离平方
-    
+
     private Vector3 spawnPosition;             // 出生点位置
     private Transform player;                  // 玩家Transform引用
     private UnityEngine.AI.NavMeshAgent navMeshAgent; // 导航网格代理
@@ -52,12 +53,12 @@ public class MonsterStateMachine : MonoBehaviour
     private MonsterSpawner monsterSpawner;     // 怪物生成器引用
     private MonsterAnimationController _animController; // 动画管理器引用
     private MonsterLocomotionDriver _locomotion; // 新增：驱动模型朝向与动画 V/H
-    
+
     private MonsterBase monsterBase;           // 怪物基础组件引用
     private MonsterCombat _combat;             // 怪物战斗组件引用
     private CancellationTokenSource _stateCts; // 状态协程取消令牌（用于攻击序列）
-    
-    [Header("攻击高级设置")] 
+
+    [Header("攻击高级设置")]
     [SerializeField][Tooltip("是否开启必中攻击（攻击发动后即锁定目标，后续不再检测距离）")] private bool guaranteedHit = true;
     [SerializeField][Tooltip("攻击动画前摇秒数（无需动画事件，通过代码延迟造成伤害）")] private float attackWindup = 0.15f;
     [SerializeField][Tooltip("前摇期间若目标死亡则取消伤害")] private bool cancelIfTargetDeadDuringWindup = true;
@@ -81,7 +82,7 @@ public class MonsterStateMachine : MonoBehaviour
     private Collider[] _overlapBuffer; // 非分配物理查询缓存
 
     // ==================== 状态类管理（新增） ====================
-    
+
     private Dictionary<MonsterState, MonsterStateBase> _stateDict;
     private MonsterStateBase _currentStateInstance;
 
@@ -91,7 +92,7 @@ public class MonsterStateMachine : MonoBehaviour
     private void InitializeStates()
     {
         _stateDict = new Dictionary<MonsterState, MonsterStateBase>(8);
-        
+
         // 注册所有状态，Init() 时会缓存组件引用
         RegisterState(new MonsterIdleState());
         RegisterState(new MonsterPatrolState());
@@ -109,7 +110,7 @@ public class MonsterStateMachine : MonoBehaviour
     }
 
     // ==================== 公开访问器（供状态类使用） ====================
-    
+
     public Transform PlayerRef => player;
     public UnityEngine.AI.NavMeshAgent NavMeshAgentRef => navMeshAgent;
     public MonsterBase MonsterBaseRef => monsterBase;
@@ -117,42 +118,42 @@ public class MonsterStateMachine : MonoBehaviour
     public MonsterAnimationController AnimControllerRef => _animController;
     public MonsterLocomotionDriver LocomotionRef => _locomotion;
     public MonsterSpawner MonsterSpawnerRef => monsterSpawner;
-    
+
     public Vector3 SpawnPosition => spawnPosition;
     public MonsterState CurrentStateEnum => currentState;
     public bool IsPlayerInRangeFlag => isPlayerInRange;
     public bool IsAttackInProgress => _attackInProgress;
     public bool UseCustomMovement => useCustomMovement;
-    
+
     // 序列化配置值
     public float PatrolPauseDuration => patrolPauseDuration;
     public float IdleChance => idleChance;
     public float AttackCooldown => attackCooldown;
     public float ChaseDuration => chaseDuration;
-    
+
     // 平方距离值
     public float AlertRangeSqr => alertRangeSqr;
     public float ChaseRangeSqr => chaseRangeSqr;
     public float AttackRangeSqr => attackRangeSqr;
     public float AttackLeaveRangeSqr => attackLeaveRangeSqr;
     public float ReturnToSpawnRangeSqr => returnToSpawnRangeSqr;
-    
+
     // UI 图标
     public GameObject AlertIcon => alertIcon;
     public GameObject AttackIcon => attackIcon;
 
     // ==================== 对外状态查询/控制（供 Spawner 使用，保持原样） ====================
-    
+
     /// <summary>
     /// 是否处于与玩家的"交战"相关状态（Alert/Chase/Attack）
     /// </summary>
     public bool IsEngaged => currentState == MonsterState.Alert || currentState == MonsterState.Chase || currentState == MonsterState.Attack;
-    
+
     /// <summary>
     /// 是否在出生点附近（用 returnToSpawnRange 判定）
     /// </summary>
     public bool IsNearSpawn => (transform.position - spawnPosition).sqrMagnitude <= returnToSpawnRangeSqr;
-    
+
     /// <summary>
     /// 强制切换为返回出生点状态
     /// </summary>
@@ -165,7 +166,7 @@ public class MonsterStateMachine : MonoBehaviour
     }
 
     // ==================== 内部帮助方法（保持原样） ====================
-    
+
     public bool IsOutsideSpawnerBounds(Vector3 pos)
     {
         return monsterSpawner != null && !monsterSpawner.IsWithinSpawnBounds(pos);
@@ -189,7 +190,7 @@ public class MonsterStateMachine : MonoBehaviour
     }
 
     // ==================== Unity 生命周期 ====================
-    
+
     private void Awake()
     {
         monsterBase = GetComponent<MonsterBase>();
@@ -201,15 +202,15 @@ public class MonsterStateMachine : MonoBehaviour
         }
         overlapBufferSize = Mathf.Clamp(overlapBufferSize, 8, 256);
         _overlapBuffer = new Collider[overlapBufferSize];
-        
+
         // 初始化取消令牌源（用于攻击序列取消）
         _stateCts = new CancellationTokenSource();
-        
+
         // 初始化状态字典
         InitializeStates();
     }
-    
-    public void Initialize(Vector3 spawnPos, Transform playerTransform, UnityEngine.AI.NavMeshAgent agent, 
+
+    public void Initialize(Vector3 spawnPos, Transform playerTransform, UnityEngine.AI.NavMeshAgent agent,
                           MonsterSpawner spawner, MonsterAnimationController animController)
     {
         spawnPosition = spawnPos;
@@ -256,9 +257,9 @@ public class MonsterStateMachine : MonoBehaviour
             state.Init(this);
         }
     }
-    
+
     // ==================== 帧更新（主入口） ====================
-    
+
     public void UpdateStateMachine()
     {
         if (isDead && currentState == MonsterState.Death) return;
@@ -267,7 +268,18 @@ public class MonsterStateMachine : MonoBehaviour
             ChangeState(MonsterState.Death);
             return;
         }
-        
+
+        // 0. 玩家死亡 → 战斗中的怪物立即回出生点
+        var ps = monsterBase.PlayerState;
+        if (ps != null && ps.IsDead)
+        {
+            if (currentState == MonsterState.Alert || currentState == MonsterState.Chase || currentState == MonsterState.Attack)
+            {
+                ChangeState(MonsterState.ReturnToSpawn);
+                return;
+            }
+        }
+
         // 1. 全局转换检查：生成器范围束缚
         if (IsPlayerOutsideSpawnerBounds())
         {
@@ -277,26 +289,26 @@ public class MonsterStateMachine : MonoBehaviour
                 return;
             }
         }
-        
+
         // 2. 状态自身行为更新
         _currentStateInstance?.Update();
-        
+
         // 3. 状态自身转换条件检查
         if (currentState != MonsterState.Death)
         {
             _currentStateInstance?.CheckTransitions();
         }
     }
-    
+
     // ==================== 状态切换（核心） ====================
-    
+
     /// <summary>
     /// 切换到新状态 - 调用旧状态 Exit → 记录新状态 → 调用新状态 Enter
     /// </summary>
     public void ChangeState(MonsterState newState)
     {
         if (currentState == newState) return;
-        
+
         _currentStateInstance?.Exit();
         currentState = newState;
         _currentStateInstance = _stateDict[newState];
@@ -304,9 +316,9 @@ public class MonsterStateMachine : MonoBehaviour
     }
 
     // ==================== 外部接口（保持原样） ====================
-    
+
     public void SetPlayerInRange(bool inRange) => isPlayerInRange = inRange;
-    
+
     public void SetDead(bool dead)
     {
         if (dead && !isDead)
@@ -317,7 +329,7 @@ public class MonsterStateMachine : MonoBehaviour
     }
 
     public void AnimationAttackHit() => PerformAttack();
-    
+
     public void ForceAggroToPlayer()
     {
         if (isDead || player == null) return;
@@ -350,7 +362,7 @@ public class MonsterStateMachine : MonoBehaviour
     }
 
     // ==================== 攻击系统（保持原样，供 AttackState 调用） ====================
-    
+
     /// <summary>
     /// 由 MonsterAttackState 调用，开始攻击序列
     /// </summary>
@@ -472,7 +484,7 @@ public class MonsterStateMachine : MonoBehaviour
     }
 
     // ==================== 自定义移动系统（保持原样） ====================
-    
+
     public void CustomMoveTowards(Vector3 targetPos, float speed)
     {
         Vector3 toTarget = targetPos - transform.position;

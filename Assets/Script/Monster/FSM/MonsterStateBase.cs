@@ -56,10 +56,12 @@ public abstract class MonsterStateBase
 
     // ==================== 帮助方法 ====================
 
-    /// <summary>计算到玩家的平方距离（避免开方）</summary>
+    /// <summary>计算到玩家的平方距离（避免开方）。玩家死亡返回无限远。</summary>
     protected float GetSqrDistanceToPlayer()
     {
         if (player == null) return float.MaxValue;
+        var ps = owner.MonsterBaseRef.PlayerState;
+        if (ps != null && ps.IsDead) return float.MaxValue;
         return (owner.transform.position - player.position).sqrMagnitude;
     }
 

@@ -10,8 +10,8 @@ public class NetworkManager : Singleton<NetworkManager>
 {
     [Header("连接配置")]
     [SerializeField] private string _serverHost = "localhost";
-    [SerializeField] private int _tcpPort = 7777;
-    [SerializeField] private int _udpPort = 7778;
+    [SerializeField] private int _tcpPort = 17777;
+    [SerializeField] private int _udpPort = 17778;
     [SerializeField] private int _httpPort = 15000;
 
     public string ServerHost => _serverHost;
@@ -148,7 +148,8 @@ public class NetworkManager : Singleton<NetworkManager>
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[NetworkManager] HTTP 登录异常: {ex.Message}");
+            Debug.LogWarning($"[NetworkManager] HTTP 登录异常: {ex.Message}");
+            // Debug.LogError($"[NetworkManager] HTTP 登录异常: {ex.Message}");
             return false;
         }
     }
