@@ -72,6 +72,9 @@ public class NetworkManager : Singleton<NetworkManager>
     }
 
     private bool _connecting;
+    private byte _lastProfession = 255;
+    private float _reconnectTimer;
+    private bool _wasConnected;
 
     /// <summary>完整连接流程：HTTP 登录 → TCP 连接 → 发送职业 → UDP 绑定</summary>
     public async UniTask<bool> ConnectAsync(string username, string password, byte profession = 255)
@@ -103,6 +106,7 @@ public class NetworkManager : Singleton<NetworkManager>
             if (!tcpOk) return false;
             PlayerUid = Tcp.AuthenticatedUid;
             SessionId = Tcp.SessionId;
+            _lastProfession = profession;  // 断线重连时复用
 
             // 3. 立即发送职业信息（赶在第一个位置消息和第一个快照之前）
             if (profession <= 3)
@@ -160,9 +164,25 @@ public class NetworkManager : Singleton<NetworkManager>
 
     public void SendPosition(Vector3 pos, Quaternion rot)
     {
-        if (!Tcp.IsConnected) return;
-        var payload = new PositionPayload { type = "position", uid = PlayerUid, x = pos.x, y = pos.y, z = pos.z };
-        Tcp.Send(JsonUtility.ToJson(payload));
+        // 用 forward 向量计算水平方位角，避免 eulerAngles.y 在含 Pitch/Roll 时的错误分解
+        Vector3 fwd = rot * Vector3.forward;
+        float rotY = Mathf.Atan2(fwd.x, fwd.z) * Mathf.Rad2Deg;
+        if (rotY < 0f) rotY += 360f; // 归一化到 [0, 360)
+        if (Udp?.IsConnected == true)
+        {
+            float safe(float v) => float.IsNaN(v) || float.IsInfinity(v) ? 0f : v;
+            var x = safe(pos.x).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+            var y = safe(pos.y).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+            var z = safe(pos.z).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+            var ry = safe(rotY).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+            var json = $"{{\"type\":\"position\",\"uid\":\"{PlayerUid}\",\"x\":{x},\"y\":{y},\"z\":{z},\"rotY\":{ry}}}";
+            Udp.SendString(json);
+        }
+        else if (Tcp.IsConnected)
+        {
+            var payload = new PositionPayload { type = "position", uid = PlayerUid, x = pos.x, y = pos.y, z = pos.z, rotY = rotY };
+            Tcp.Send(JsonUtility.ToJson(payload));
+        }
     }
 
     public void SendMonsterSpawn(uint instId, int maxHp, Vector3 pos)
@@ -171,6 +191,28 @@ public class NetworkManager : Singleton<NetworkManager>
         var payload = new MonsterSpawnPayload { type = "monster_spawn", instId = instId, maxHp = maxHp, x = pos.x, y = pos.y, z = pos.z };
         Tcp.Send(JsonUtility.ToJson(payload));
         Debug.Log($"[NetworkManager] 注册怪物 instId={instId} hp={maxHp}");
+    }
+
+    /// <summary>发送聊天消息</summary>
+    public void SendChat(string text)
+    {
+        if (!Tcp.IsConnected) return;
+        Tcp.Send($"{{\"type\":\"chat\",\"uid\":\"{PlayerUid}\",\"text\":\"{EscapeJson(text)}\"}}");
+    }
+
+    /// <summary>发送玩家攻击触发（用于其他客户端播放攻击动画）</summary>
+    public void SendPlayerAtk()
+    {
+        if (!Tcp.IsConnected) return;
+        Tcp.Send($"{{\"type\":\"player_atk\",\"uid\":\"{PlayerUid}\"}}");
+    }
+
+    /// <summary>发送技能释放事件（用于其他客户端播放技能特效）</summary>
+    public void SendSkillCast(string skillId, Vector3 targetPos)
+    {
+        if (!Tcp.IsConnected) return;
+        var payload = new SkillCastPayload { type = "skill_cast", uid = PlayerUid, skillId = skillId, tx = targetPos.x, ty = targetPos.y, tz = targetPos.z };
+        Tcp.Send(JsonUtility.ToJson(payload));
     }
 
     /// <summary>发送玩家职业信息到服务器（用于其他客户端显示正确模型）</summary>
@@ -202,6 +244,30 @@ public class NetworkManager : Singleton<NetworkManager>
     {
         Tcp?.Update();
         Udp?.Update();
+
+        // 断线重连：曾经连通过但断开了，3 秒后自动重试
+        if (Tcp != null && Tcp.IsConnected) _wasConnected = true;
+        if (_wasConnected && Tcp != null && !Tcp.IsConnected && !_connecting)
+        {
+            _reconnectTimer += Time.deltaTime;
+            if (_reconnectTimer > 3f)
+            {
+                _reconnectTimer = 0f;
+                var uid = PlayerUid;
+                if (string.IsNullOrEmpty(uid))
+                {
+                    Debug.LogWarning("[NetworkManager] 重连失败: 无保存的 UID");
+                    return;
+                }
+                Debug.Log("[NetworkManager] 检测到断线，尝试重连...");
+                var prof = _lastProfession;
+                Tcp.Disconnect();
+                Udp?.Disconnect();
+                PlayerUid = uid;
+                _ = ConnectAsync(uid, "123", prof);
+            }
+        }
+        else _reconnectTimer = 0f;
     }
 
     private void OnDestroy()
@@ -211,7 +277,7 @@ public class NetworkManager : Singleton<NetworkManager>
     }
 
     [System.Serializable]
-    private struct PositionPayload { public string type; public string uid; public float x; public float y; public float z; }
+    private struct PositionPayload { public string type; public string uid; public float x; public float y; public float z; public float rotY; }
 
     [System.Serializable]
     private struct MonsterSpawnPayload { public string type; public uint instId; public int maxHp; public float x; public float y; public float z; }
@@ -221,6 +287,11 @@ public class NetworkManager : Singleton<NetworkManager>
 
     [System.Serializable]
     private struct PlayerInfoPayload { public string type; public string uid; public byte profession; }
+
+    [System.Serializable]
+    private struct SkillCastPayload { public string type; public string uid; public string skillId; public float tx; public float ty; public float tz; }
+
+    private static string EscapeJson(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
 
     [System.Serializable]
     private class LoginResponse

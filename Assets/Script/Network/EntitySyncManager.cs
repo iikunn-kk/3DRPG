@@ -22,6 +22,8 @@ public class EntitySyncManager : MonoBehaviour
     [SerializeField] private Transform _localPlayer;
 
     private readonly Dictionary<uint, GameObject> _entities = new();
+    private readonly Dictionary<uint, byte> _remoteAtkCache = new();  // entityId → lastAtkTrigger
+    private readonly Dictionary<uint, byte> _remoteSkillCache = new(); // entityId → lastSkillTrigger
     private uint _localPlayerEntityId;
 
     public void SetLocalPlayerEntityId(uint id) => _localPlayerEntityId = id;
@@ -148,26 +150,35 @@ public class EntitySyncManager : MonoBehaviour
         GameObject go;
         if (!_entities.TryGetValue(e.entityId, out go))
         {
-            // 远程玩家：按 modelType 选择角色模型 Prefab
-            GameObject prefab = null;
-            if (e.entityType == 0)
+            try
             {
-                prefab = GetRemotePlayerPrefab(e.modelType);
-            }
-            prefab ??= e.entityType == 0 ? _remotePlayerPrefab : _remoteMonsterPrefab;
-            if (prefab == null) return;
-            go = Instantiate(prefab);
+                // 远程玩家：按 modelType 选择角色模型 Prefab
+                GameObject prefab = null;
+                if (e.entityType == 0)
+                {
+                    prefab = GetRemotePlayerPrefab(e.modelType);
+                }
+                if (prefab == null) prefab = e.entityType == 0 ? _remotePlayerPrefab : _remoteMonsterPrefab;
+                if (prefab == null) return;
+                go = Instantiate(prefab);
+                go.transform.position = new Vector3(e.posX, e.posY, e.posZ);
+                go.transform.rotation = Quaternion.Euler(0, e.rotY, 0);
 
-            // 远程玩家：剥离游戏逻辑组件，只保留视觉模型 + Animator
-            if (e.entityType == 0 && go != _remotePlayerPrefab)
+                // 远程玩家：剥离游戏逻辑组件，只保留视觉模型 + Animator
+                if (e.entityType == 0 && go != _remotePlayerPrefab)
+                {
+                    StripGameplayComponents(go);
+                    if (go.GetComponent<MonsterLocomotionDriver>() == null)
+                        go.AddComponent<MonsterLocomotionDriver>();
+                }
+
+                _entities[e.entityId] = go;
+            }
+            catch (System.Exception ex)
             {
-                StripGameplayComponents(go);
-                // 挂载移动动画驱动器：从位置差计算 VSpeed/HSpeed 驱动 Blend Tree
-                if (go.GetComponent<MonsterLocomotionDriver>() == null)
-                    go.AddComponent<MonsterLocomotionDriver>();
+                Debug.LogError($"[EntitySync] 创建远程实体{e.entityId} 异常: {ex}");
+                return; // 创建失败，跳过本次更新
             }
-
-            _entities[e.entityId] = go;
         }
 
         var pos = new Vector3(e.posX, e.posY, e.posZ);
@@ -185,6 +196,28 @@ public class EntitySyncManager : MonoBehaviour
 
         var proxy = go.GetComponent<NetworkEntityProxy>();
         if (proxy) proxy.SetHp(e.hp, e.maxHp);
+
+        // 远程玩家攻击动画：atkTrigger 变化时播放攻击
+        if (e.entityType == 0 && e.atkTrigger > 0)
+        {
+            var lastAtk = _remoteAtkCache.GetValueOrDefault(e.entityId);
+            if (e.atkTrigger != lastAtk)
+            {
+                _remoteAtkCache[e.entityId] = e.atkTrigger;
+                go.GetComponent<Animator>()?.SetTrigger("Attack");
+            }
+        }
+
+        // 远程玩家技能特效：skillTrigger 变化时实例化技能 VFX
+        if (e.entityType == 0 && e.skillTrigger > 0 && !string.IsNullOrEmpty(e.skillId))
+        {
+            var lastSkill = _remoteSkillCache.GetValueOrDefault(e.entityId);
+            if (e.skillTrigger != lastSkill)
+            {
+                _remoteSkillCache[e.entityId] = e.skillTrigger;
+                PlayRemoteSkillVfx(go, e.skillId, new Vector3(e.skillTargetX, e.skillTargetY, e.skillTargetZ));
+            }
+        }
     }
 
     /// <summary>
@@ -274,12 +307,41 @@ public class EntitySyncManager : MonoBehaviour
             Destroy(go);
             _entities.Remove(entityId);
         }
+        _remoteAtkCache.Remove(entityId);
     }
 
     void OnDestroy()
     {
         foreach (var go in _entities.Values) Destroy(go);
         _entities.Clear();
+        _remoteAtkCache.Clear();
+        _remoteSkillCache.Clear();
+    }
+
+    /// <summary>在远程玩家身上实例化技能 VFX（只播放视觉效果，不造成伤害）</summary>
+    void PlayRemoteSkillVfx(GameObject remotePlayer, string skillId, Vector3 targetPos)
+    {
+        var sm = SkillManager.Instance;
+        if (sm == null) return;
+        var so = sm.GetSkillSo(skillId);
+        if (so == null || so.skillPrefab == null) return;
+
+        var go = Instantiate(so.skillPrefab, remotePlayer.transform.position,
+            targetPos != remotePlayer.transform.position
+                ? Quaternion.LookRotation(targetPos - remotePlayer.transform.position)
+                : remotePlayer.transform.rotation);
+        var comp = go.GetComponent<Skill>();
+        if (comp != null)
+        {
+            comp.SetFirePoint(remotePlayer.transform);
+            // 用最小等级 PlayerSkill 驱动 Execute——只触发 VFX，远程玩家没有本地怪物/目标所以不会造成伤害
+            var dummySkill = new PlayerSkill(so, 1);
+            comp.Execute(remotePlayer.transform, dummySkill);
+        }
+        else
+        {
+            Destroy(go, 6f);
+        }
     }
 
     [Serializable]
@@ -296,6 +358,10 @@ public class EntitySyncManager : MonoBehaviour
         public byte entityType;
         public string uid;
         public byte modelType;
+        public byte atkTrigger;
+        public byte skillTrigger;
+        public string skillId;
+        public float skillTargetX, skillTargetY, skillTargetZ;
         public float posX, posY, posZ;
         public float rotY;
         public int hp, maxHp;

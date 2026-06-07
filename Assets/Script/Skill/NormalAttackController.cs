@@ -316,8 +316,12 @@ public class NormalAttackController : MonoBehaviour
         {
             GetPlayerFsm()?.RequestEndChannel();
             characterAnimationController.EndChannelAttackRequest();
+            characterAnimationController.ForceEndActionImmediate();
         }
-        characterAnimationController.ForceEndActionImmediate();
+        else
+        {
+            GetPlayerFsm()?.RequestEndChannel();
+        }
         attackStartedEvent.RaiseEvent(false, this);
     }
     // 兼容旧接口：被 SkillController 或其他系统调用以打断普攻

@@ -274,6 +274,17 @@ public class SkillController : MonoBehaviour
 #endif
             }
         }
+
+        // MMO 技能特效同步：通知其他客户端播放技能 VFX
+        if (GameModeConfig.IsMmoMode)
+        {
+            var nm = FindFirstObjectByType<NetworkManager>();
+            if (nm != null && nm.IsConnected)
+            {
+                Vector3 targetPos = target != null ? target.position : transform.position + transform.forward * 5f;
+                nm.SendSkillCast(skillID, targetPos);
+            }
+        }
         // 注意：GCD的启动已经移到前面，无论有无prefab都执行
     }
     

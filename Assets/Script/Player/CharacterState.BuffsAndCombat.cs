@@ -90,6 +90,12 @@ public partial class CharacterState
 
         // Phase 5: 发送攻击到 MMO 服务端
         SendAttackToMMO(target, baseDamage);
+        // MMO 远程动画：每攻击一次通知服务端（其他客户端播放攻击动画）
+        if (GameModeConfig.IsMmoMode)
+        {
+            var nm = FindFirstObjectByType<NetworkManager>();
+            if (nm != null && nm.IsConnected) nm.SendPlayerAtk();
+        }
     }
 
     private void SendAttackToMMO(Transform target, float baseDamage)

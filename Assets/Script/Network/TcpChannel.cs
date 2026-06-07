@@ -12,6 +12,8 @@ public class TcpChannel
 {
     /// <summary>收到服务端世界快照时触发（JSON）</summary>
     public event Action<string> OnSnapshotReceived;
+    /// <summary>收到聊天消息时触发（JSON）</summary>
+    public event Action<string> OnChatReceived;
 
     public bool IsConnected { get; private set; }
     public string AuthenticatedUid { get; private set; }
@@ -139,7 +141,9 @@ public class TcpChannel
                     total += n;
                 }
                 var str = Encoding.UTF8.GetString(msg);
-                OnSnapshotReceived?.Invoke(str);
+                var hasType = str.Contains("\"type\":\"chat\"");
+                if (hasType) OnChatReceived?.Invoke(str);
+                else OnSnapshotReceived?.Invoke(str);
             }
         }
         catch (Exception ex)

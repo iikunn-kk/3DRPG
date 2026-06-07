@@ -39,6 +39,18 @@ public class UdpChannel
         catch { IsConnected = false; }
     }
 
+    /// <summary>发送文本（JSON），UTF8 编码后走 UDP</summary>
+    public void SendString(string text)
+    {
+        if (!IsConnected || _client == null) return;
+        try
+        {
+            var bytes = System.Text.Encoding.UTF8.GetBytes(text);
+            _client.SendAsync(bytes, bytes.Length);
+        }
+        catch { IsConnected = false; }
+    }
+
     public void Update() { }
 
     public void Disconnect()
