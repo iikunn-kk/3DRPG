@@ -7,7 +7,7 @@ using UnityEngine;
 /// 从 WorldServer 接收 AOI 快照，创建/更新/销毁远程实体。
 /// 挂载到场景中的空 GameObject 上（建议和 NetworkManager 同级）。
 /// </summary>
-public class EntitySyncManager : MonoBehaviour
+public partial class EntitySyncManager : MonoBehaviour
 {
     public static EntitySyncManager Instance { get; private set; }
     void Awake() { Instance = this; }
@@ -63,14 +63,24 @@ public class EntitySyncManager : MonoBehaviour
 
             foreach (var e in snapshot.entities)
             {
-                // 本地玩家：仅同步服务端权威 HP（被怪物攻击时服务端扣血）
+                // 本地玩家：同步服务端权威 HP + guildId（公会创建/加入/离开）
                 if (e.entityId == _localPlayerEntityId || (e.entityType == 0 && e.uid == NetworkManager.Instance.PlayerUid))
                 {
                     var localState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
-                    if (localState != null && e.hp != localState.CurrentHealth)
+                    if (localState != null)
                     {
-                        localState.CurrentHealth = e.hp;
-                        if (e.hp <= 0) localState.Die();
+                        if (e.hp != localState.CurrentHealth)
+                        {
+                            localState.CurrentHealth = e.hp;
+                            if (e.hp <= 0) localState.Die();
+                        }
+                    }
+                    // MMO 公会同步：更新本地角色的 guildId
+                    var cd = SessionManager.Instance?.CurrentCharacter;
+                    if (cd != null && !string.IsNullOrEmpty(e.uid) && cd.guildId != e.guildId)
+                    {
+                        cd.guildId = e.guildId ?? "";
+                        SessionManager.Instance.SetCurrentCharacterData(cd);
                     }
                     continue;
                 }
@@ -115,8 +125,26 @@ public class EntitySyncManager : MonoBehaviour
         if (e.entityType == 1)
         {
             var localMonster = MonsterBase.FindByNetworkId(e.entityId);
+            if (localMonster == null)
+            {
+                // 首次匹配：位置接近的本地怪物 → 绑定服务端 entityId
+                var snapPos = new Vector3(e.posX, e.posY, e.posZ);
+                localMonster = MonsterBase.FindByPositionProximity(snapPos, 15f);
+                if (localMonster != null && localMonster.NetworkId != e.entityId)
+                {
+                    MonsterBase.UnregisterNetwork(localMonster.NetworkId);
+                    localMonster.NetworkId = e.entityId;
+                    MonsterBase.RegisterNetwork(localMonster);
+                }
+            }
             if (localMonster != null)
             {
+                // MMO 复活：快照 HP>0 但怪物处于休眠状态 → 唤醒
+                if (e.hp > 0 && !localMonster.gameObject.activeInHierarchy)
+                {
+                    localMonster.GetComponent<MonsterCombat>()?.MmoRevive(e.maxHp);
+                }
+
                 // 权威 HP 同步
                 var combat = localMonster.GetComponent<MonsterCombat>();
                 if (combat != null)
@@ -131,10 +159,16 @@ public class EntitySyncManager : MonoBehaviour
                 var newPos = new Vector3(e.posX, e.posY, e.posZ);
                 var interp = localMonster.GetComponent<PositionInterpolator>();
                 if (interp == null) interp = localMonster.gameObject.AddComponent<PositionInterpolator>();
-                interp.RenderDelay = 0.15f;  // 150ms 缓冲，匹配 ~250ms 快照间隔
+                interp.RenderDelay = 0.066f;
                 interp.SetTarget(newPos);
                 var nav = localMonster.GetComponent<UnityEngine.AI.NavMeshAgent>();
-                if (nav != null && nav.hasPath) nav.ResetPath(); // 清除残留寻路
+                if (nav != null)
+                {
+                    // MMO: 禁止 agent 控制位置/旋转，防止与 PositionInterpolator 冲突造成抖动
+                    if (nav.updatePosition) nav.updatePosition = false;
+                    if (nav.updateRotation) nav.updateRotation = false;
+                    if (nav.hasPath) nav.ResetPath();
+                }
                 // 权威 AI 状态同步 + MMO 动画驱动
                 var sm = localMonster.GetComponent<MonsterStateMachine>();
                 var serverState = (MonsterState)e.animState;
@@ -145,6 +179,7 @@ public class EntitySyncManager : MonoBehaviour
                 }
                 return; // 本地怪物已存在，不创建 RemoteMonster
             }
+            return; // 找不到本地怪物，也不创建 RemoteMonster（服务端才管理怪物实体）
         }
 
         GameObject go;
@@ -205,6 +240,16 @@ public class EntitySyncManager : MonoBehaviour
             {
                 _remoteAtkCache[e.entityId] = e.atkTrigger;
                 go.GetComponent<Animator>()?.SetTrigger("Attack");
+            }
+        }
+
+        // 公会数据同步：guildId 变更时更新本地 GuildManager
+        if (e.entityType == 0 && !string.IsNullOrEmpty(e.uid))
+        {
+            var gm = GuildManager.Instance;
+            if (gm != null)
+            {
+                gm.ApplyRemoteGuildId(e.uid, e.guildId ?? "");
             }
         }
 
@@ -308,6 +353,7 @@ public class EntitySyncManager : MonoBehaviour
             _entities.Remove(entityId);
         }
         _remoteAtkCache.Remove(entityId);
+        _remoteSkillCache.Remove(entityId);
     }
 
     void OnDestroy()
@@ -362,6 +408,7 @@ public class EntitySyncManager : MonoBehaviour
         public byte skillTrigger;
         public string skillId;
         public float skillTargetX, skillTargetY, skillTargetZ;
+        public string guildId;
         public float posX, posY, posZ;
         public float rotY;
         public int hp, maxHp;

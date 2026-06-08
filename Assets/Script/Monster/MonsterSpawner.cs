@@ -279,13 +279,20 @@ public class MonsterSpawner : MonoBehaviour
     /// </summary>
     private void HandleMonsterSpawning()
     {
-        bool shouldSpawn = GameModeConfig.IsMmoMode || isPlayerInRange;
+        if (GameModeConfig.IsMmoMode)
+        {
+            // MMO: 仅初始生成一次（提供正确的 Prefab+组件），后续由服务端快照驱动
+            if (_mmoInitialSpawnDone) return;
+            _mmoInitialSpawnDone = true;
+            StartSpawnMonsters();
+            return;
+        }
+
+        bool shouldSpawn = isPlayerInRange;
         if (shouldSpawn && !isSpawning)
         {
-            // 检查是否需要生成怪物
             if (spawnedMonsters.Count < maxMonsters)
             {
-                // 检查刷新计时器
                 respawnTimer += Time.deltaTime;
                 if (respawnTimer >= respawnTime)
                 {
@@ -295,6 +302,7 @@ public class MonsterSpawner : MonoBehaviour
             }
         }
     }
+    private bool _mmoInitialSpawnDone;
 
     /// <summary>
     /// 开始生成怪物
@@ -340,15 +348,11 @@ public class MonsterSpawner : MonoBehaviour
                     // 初始化怪物数据
                     monster.Init(monsterData, player, this);
 
-                    // MMO 模式：分配 NetworkId 用于匹配快照 entityId，但不向服务器注册
+                    // MMO 模式：分配临时本地 ID，不向服务器注册（entityId 由快照位置匹配分配）
                     if (GameModeConfig.IsMmoMode)
                     {
                         monster.NetworkId = MonsterBase.GetNextNetworkId();
                         MonsterBase.RegisterNetwork(monster);
-                    }
-                    else
-                    {
-                        RegisterMonsterToMMO(monster, spawnPos);
                     }
 
                     spawnedMonsters.Add(monster);

@@ -48,22 +48,48 @@ public class NotHaveGuildPanel : MonoBehaviour
     {
         try
         {
-            // 调用GameManager的创建公会功能
             bool success = await GuildManager.Instance.CreateGuild(guildName, guildDescription);
 
             if (success)
             {
                 Debug.Log("公会创建成功");
-                // 创建或加入公会成功后，刷新角色数据并切换到公会详情面板
-                await SwitchToGuildDetailsPanel();
+                if (GameModeConfig.IsMmoMode)
+                {
+                    // MMO 模式：guildId 由服务端快照异步同步，稍等后重试获取
+                    UIManager.Instance.ShowSkillToast("公会创建请求已发送，等待服务端确认...");
+                    await UniTask.Delay(1500);
+                    // 异步等待快照同步 guildId 后再切换面板
+                    _ = SwitchToGuildDetailsPanelWithRetry(3);
+                }
+                else
+                {
+                    await SwitchToGuildDetailsPanel();
+                }
             }
             else
             {
-                Debug.LogError("公会创建失败");
-                // 可以在这里添加创建失败的UI反馈
+                var err = GuildManager.Instance.LastError;
+                var msg = string.IsNullOrEmpty(err) ? "公会创建失败" : err;
+                UIManager.Instance?.ShowSkillToast(msg);
+                Debug.LogWarning($"公会创建失败: {msg}");
             }
         }
         catch (OperationCanceledException) { }
+    }
+
+    private async Task SwitchToGuildDetailsPanelWithRetry(int maxRetries)
+    {
+        for (int i = 0; i < maxRetries; i++)
+        {
+            var cd = SessionManager.Instance?.CurrentCharacter;
+            if (cd != null && !string.IsNullOrEmpty(cd.guildId))
+            {
+                await SwitchToGuildDetailsPanel(cd.guildId);
+                return;
+            }
+            await UniTask.Delay(1000);
+        }
+        Debug.LogWarning("等待公会数据超时，请手动刷新");
     }
 
     /// <summary>

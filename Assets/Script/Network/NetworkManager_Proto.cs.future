@@ -1,0 +1,32 @@
+// Unity 客户端：追加到 Assets/Script/Network/NetworkManager.cs
+// ProtoBuf 版本的位置发送方法
+
+using UnityEngine;
+using Proto = Mmo;
+
+public partial class NetworkManager
+{
+    /// <summary>ProtoBuf 版本：发送位置 (UDP)，体积减少 60%</summary>
+    public void SendPositionProto(Vector3 pos)
+    {
+        if (Udp?.IsConnected == true)
+        {
+            Udp.SendPosition(PlayerUid, pos.x, pos.y, pos.z);
+        }
+        else if (Tcp.IsConnected)
+        {
+            // Fallback: TCP ProtoBuf
+            var pb = new Proto.PositionUpdate { Uid = PlayerUid, X = pos.x, Y = pos.y, Z = pos.z };
+            Tcp.SendProto(pb.ToByteArray());
+        }
+    }
+
+    /// <summary>ProtoBuf 版本：怪物攻击请求</summary>
+    public void SendMonsterAttackProto(uint instId, int damage)
+    {
+        if (!Tcp.IsConnected) return;
+        var pb = new Proto.MonsterAttackRequest { InstId = instId, Damage = (uint)damage };
+        Tcp.SendProto(pb.ToByteArray());
+        Debug.Log($"[MMO] Proto权威扣血 怪物#{instId} -{damage}");
+    }
+}

@@ -1,0 +1,127 @@
+// Unity 客户端：追加到 Assets/Script/Network/EntitySyncManager.cs
+// 新增 ProtoBuf 快照处理方法，原有 ApplySnapshot(json) 保持不变
+
+using Google.Protobuf;
+using UnityEngine;
+using Proto = Mmo;
+
+public partial class EntitySyncManager
+{
+    /// <summary>接收 ProtoBuf 格式的玩家快照</summary>
+    public void ApplySnapshotProto(byte[] data)
+    {
+        try
+        {
+            var snap = Proto.PlayerSnapshot.Parser.ParseFrom(data);
+            if (snap == null || snap.Entities == null || snap.Entities.Count == 0) return;
+
+            foreach (var e in snap.Entities)
+            {
+                // 跳过自身
+                if (e.EntityId == _localPlayerEntityId) continue;
+                if (e.EntityType == 0 && e.Uid == NetworkManager.Instance.PlayerUid) continue;
+
+                ApplyProtoEntity(e);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[EntitySync] Proto快照解析失败: {ex.Message}");
+        }
+    }
+
+    private void ApplyProtoEntity(Proto.EntitySnapshot e)
+    {
+        // 怪物处理
+        if (e.EntityType == 1)
+        {
+            var localMonster = MonsterBase.FindByNetworkId(e.EntityId);
+            if (localMonster != null)
+            {
+                var combat = localMonster.GetComponent<MonsterCombat>();
+                if (combat != null && combat.CurrentHealth != e.Hp)
+                {
+                    combat.CurrentHealth = e.Hp;
+                    if (e.Hp <= 0) combat.Die();
+                }
+
+                var pos = new Vector3(e.Position.X, e.Position.Y, e.Position.Z);
+                var interp = localMonster.GetComponent<PositionInterpolator>();
+                if (interp == null) interp = localMonster.gameObject.AddComponent<PositionInterpolator>();
+                interp.RenderDelay = 0.15f;
+                interp.SetTarget(pos);
+
+                var nav = localMonster.GetComponent<UnityEngine.AI.NavMeshAgent>();
+                if (nav != null && nav.hasPath) nav.ResetPath();
+
+                var sm = localMonster.GetComponent<MonsterStateMachine>();
+                var serverState = (MonsterState)e.AnimState;
+                if (sm != null && sm.currentState != serverState && serverState != MonsterState.Death)
+                {
+                    sm.currentState = serverState;
+                    SyncMmoAnimation(localMonster, sm, serverState);
+                }
+                return;
+            }
+        }
+
+        // 远程实体创建
+        if (!_entities.TryGetValue(e.EntityId, out var go))
+        {
+            var prefab = e.EntityType == 0
+                ? GetRemotePlayerPrefab((byte)e.ModelType) ?? _remotePlayerPrefab
+                : _remoteMonsterPrefab;
+            if (prefab == null) return;
+
+            go = Instantiate(prefab);
+            go.transform.position = new Vector3(e.Position.X, e.Position.Y, e.Position.Z);
+
+            if (e.EntityType == 0 && go != _remotePlayerPrefab)
+            {
+                StripGameplayComponents(go);
+                if (go.GetComponent<MonsterLocomotionDriver>() == null)
+                    go.AddComponent<MonsterLocomotionDriver>();
+            }
+
+            _entities[e.EntityId] = go;
+        }
+
+        // 位置更新
+        var targetPos = new Vector3(e.Position.X, e.Position.Y, e.Position.Z);
+        var interpolator2 = go.GetComponent<PositionInterpolator>();
+        if (interpolator2)
+        {
+            interpolator2.RenderDelay = 0.03f;
+            interpolator2.SetTarget(targetPos);
+        }
+        else go.transform.position = targetPos;
+
+        go.transform.rotation = Quaternion.Euler(0, e.RotY, 0);
+
+        var proxy = go.GetComponent<NetworkEntityProxy>();
+        if (proxy) proxy.SetHp(e.Hp, e.MaxHp);
+
+        // atkTrigger 攻击动画
+        if (e.EntityType == 0 && e.AtkTrigger > 0)
+        {
+            var lastAtk = _remoteAtkCache.GetValueOrDefault(e.EntityId);
+            if (e.AtkTrigger != lastAtk)
+            {
+                _remoteAtkCache[e.EntityId] = (byte)e.AtkTrigger;
+                go.GetComponent<Animator>()?.SetTrigger("Attack");
+            }
+        }
+
+        // skillTrigger 技能特效 (Phase 11)
+        if (e.EntityType == 0 && e.SkillTrigger > 0 && !string.IsNullOrEmpty(e.SkillId))
+        {
+            var lastSkill = _remoteSkillCache.GetValueOrDefault(e.EntityId);
+            if (e.SkillTrigger != lastSkill)
+            {
+                _remoteSkillCache[e.EntityId] = (byte)e.SkillTrigger;
+                PlayRemoteSkillVfx(go, e.SkillId,
+                    new Vector3(e.SkillTarget.X, e.SkillTarget.Y, e.SkillTarget.Z));
+            }
+        }
+    }
+}

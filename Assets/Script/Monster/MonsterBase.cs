@@ -49,6 +49,21 @@ public class MonsterBase : MonoBehaviour
     private static readonly Dictionary<uint, MonsterBase> _networkRegistry = new();
     public static MonsterBase FindByNetworkId(uint id) => _networkRegistry.TryGetValue(id, out var m) ? m : null;
     public static void RegisterNetwork(MonsterBase m) { if (m != null && m.NetworkId > 0) _networkRegistry[m.NetworkId] = m; }
+    public static void UnregisterNetwork(uint id) { _networkRegistry.Remove(id); }
+
+    /// <summary>按位置匹配最近怪物（用于首次快照绑定 entityId，含休眠状态）</summary>
+    public static MonsterBase FindByPositionProximity(Vector3 pos, float maxDist)
+    {
+        MonsterBase best = null; float bestDist = maxDist * maxDist;
+        foreach (var (_, m) in _networkRegistry)
+        {
+            if (m == null) continue;
+            float d = (m.transform.position - pos).sqrMagnitude;
+            if (d < bestDist) { bestDist = d; best = m; }
+        }
+        return best;
+    }
+
     void OnDestroy() { if (NetworkId > 0) _networkRegistry.Remove(NetworkId); }
 
     public MonsterData monsterData { get; private set; }

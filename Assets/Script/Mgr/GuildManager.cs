@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using MongoDB.Bson;
@@ -8,6 +9,9 @@ using MongoDB.Bson;
 /// </summary>
 public class GuildManager : Singleton<GuildManager>
 {
+    /// <summary>最后一次操作的错误信息</summary>
+    public string LastError { get; private set; } = "";
+
     /// <summary>
     /// 创建公会
     /// </summary>
@@ -16,27 +20,36 @@ public class GuildManager : Singleton<GuildManager>
     /// <returns>创建公会操作是否成功</returns>
     public async Task<bool> CreateGuild(string guildName, string guildDescription)
     {
+        // MMO 模式：发送到服务端，结果异步返回
+        if (GameModeConfig.IsMmoMode)
+        {
+            var nm = FindFirstObjectByType<NetworkManager>();
+            if (nm == null || !nm.IsConnected) { LastError = "未连接MMO服务端"; return false; }
+            nm.SendGuildCreate(guildName, guildDescription);
+            Debug.Log("[Guild] MMO 创建公会请求已发送");
+            return true;
+        }
+
         CharacterData currentCharacter = SessionManager.Instance.CurrentCharacter;
 
         if (currentCharacter == null)
         {
-            Debug.LogWarning("当前没有选择角色");
+            LastError = "当前没有选择角色";
             return false;
         }
 
         if (string.IsNullOrEmpty(guildName))
         {
-            Debug.LogWarning("公会名称不能为空");
+            LastError = "公会名称不能为空";
             return false;
         }
 
         try
         {
-            // 检查同名公会是否已存在（在同一个服务器上）
             bool guildExists = await MongoDBManager.Instance.IsGuildNameExistsOnServer(guildName, currentCharacter.serverId);
             if (guildExists)
             {
-                Debug.LogWarning($"公会名称 '{guildName}' 已存在");
+                LastError = $"公会名称 '{guildName}' 已存在";
                 return false;
             }
 
@@ -130,6 +143,15 @@ public class GuildManager : Singleton<GuildManager>
     /// <returns>加入公会操作是否成功</returns>
     public async Task<bool> JoinGuild(string guildId)
     {
+        if (GameModeConfig.IsMmoMode)
+        {
+            var nm = FindFirstObjectByType<NetworkManager>();
+            if (nm == null || !nm.IsConnected) { LastError = "未连接MMO服务端"; return false; }
+            nm.SendGuildApply(guildId, "");
+            Debug.Log("[Guild] MMO 加入公会请求已发送");
+            return true;
+        }
+
         CharacterData currentCharacter = SessionManager.Instance.CurrentCharacter;
 
         if (currentCharacter == null)
@@ -234,6 +256,17 @@ public class GuildManager : Singleton<GuildManager>
     /// <returns>退出公会操作是否成功</returns>
     public async Task<bool> QuitGuild()
     {
+        if (GameModeConfig.IsMmoMode)
+        {
+            var nm = FindFirstObjectByType<NetworkManager>();
+            if (nm == null || !nm.IsConnected) { LastError = "未连接MMO服务端"; return false; }
+            var gid = SessionManager.Instance.CurrentCharacter?.guildId ?? "";
+            if (string.IsNullOrEmpty(gid)) { LastError = "未加入公会"; return false; }
+            nm.SendGuildLeave(gid);
+            Debug.Log("[Guild] MMO 退出公会请求已发送");
+            return true;
+        }
+
         CharacterData currentCharacter = SessionManager.Instance.CurrentCharacter;
 
         if (currentCharacter == null)
@@ -296,4 +329,17 @@ public class GuildManager : Singleton<GuildManager>
             return false;
         }
     }
+
+    /// <summary>MMO 模式：从快照同步远程玩家的 guildId</summary>
+    public void ApplyRemoteGuildId(string uid, string guildId)
+    {
+        // 仅处理本地玩家的 guildId 变更（自己的 guildId 由服务端通过 guild_result 频道推送）
+        // 远程玩家的 guildId 仅用于 UI 显示（如成员列表），暂不在此处处理
+        _remotePlayerGuilds[uid] = guildId;
+    }
+
+    private readonly Dictionary<string, string> _remotePlayerGuilds = new();
+
+    /// <summary>获取远程玩家的公会 ID</summary>
+    public string GetRemoteGuildId(string uid) => _remotePlayerGuilds.GetValueOrDefault(uid, "");
 }

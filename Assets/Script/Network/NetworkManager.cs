@@ -6,7 +6,7 @@ using UnityEngine.Networking;
 /// <summary>
 /// 统一网络入口 (Singleton)。管理 TCP/UDP 双通道 + HTTP 登录。
 /// </summary>
-public class NetworkManager : Singleton<NetworkManager>
+public partial class NetworkManager : Singleton<NetworkManager>
 {
     [Header("连接配置")]
     [SerializeField] private string _serverHost = "localhost";
@@ -213,6 +213,45 @@ public class NetworkManager : Singleton<NetworkManager>
         if (!Tcp.IsConnected) return;
         var payload = new SkillCastPayload { type = "skill_cast", uid = PlayerUid, skillId = skillId, tx = targetPos.x, ty = targetPos.y, tz = targetPos.z };
         Tcp.Send(JsonUtility.ToJson(payload));
+    }
+
+    // ========== 公会消息 (6 种) ==========
+
+    public void SendGuildCreate(string name, string desc)
+    {
+        if (!Tcp.IsConnected) return;
+        Tcp.Send($"{{\"type\":\"guild_create\",\"uid\":\"{PlayerUid}\",\"name\":\"{EscapeJson(name)}\",\"desc\":\"{EscapeJson(desc)}\"}}");
+    }
+
+    public void SendGuildApply(string guildId, string message)
+    {
+        if (!Tcp.IsConnected) return;
+        Tcp.Send($"{{\"type\":\"guild_apply\",\"uid\":\"{PlayerUid}\",\"guildId\":\"{guildId}\",\"message\":\"{EscapeJson(message)}\"}}");
+    }
+
+    public void SendGuildLeave(string guildId)
+    {
+        if (!Tcp.IsConnected) return;
+        Tcp.Send($"{{\"type\":\"guild_leave\",\"uid\":\"{PlayerUid}\",\"guildId\":\"{guildId}\"}}");
+    }
+
+    public void SendGuildKick(string guildId, string targetUid)
+    {
+        if (!Tcp.IsConnected) return;
+        Tcp.Send($"{{\"type\":\"guild_kick\",\"uid\":\"{PlayerUid}\",\"guildId\":\"{guildId}\",\"targetUid\":\"{targetUid}\"}}");
+    }
+
+    public void SendGuildPromote(string guildId, string targetUid, int newRank)
+    {
+        if (!Tcp.IsConnected) return;
+        Tcp.Send($"{{\"type\":\"guild_promote\",\"uid\":\"{PlayerUid}\",\"guildId\":\"{guildId}\",\"targetUid\":\"{targetUid}\",\"rank\":{newRank}}}");
+    }
+
+    public void SendGuildApprove(string guildId, string applicantUid, bool approved)
+    {
+        if (!Tcp.IsConnected) return;
+        var a = approved ? "true" : "false";
+        Tcp.Send($"{{\"type\":\"guild_approve\",\"uid\":\"{PlayerUid}\",\"guildId\":\"{guildId}\",\"applicantUid\":\"{applicantUid}\",\"approved\":{a}}}");
     }
 
     /// <summary>发送玩家职业信息到服务器（用于其他客户端显示正确模型）</summary>

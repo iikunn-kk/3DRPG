@@ -14,14 +14,15 @@ public class MonsterCombat : MonoBehaviour, IDamageable
     [SerializeField] private float dropForce = 5f;
     [SerializeField][Tooltip("死亡后动画持续时间 (秒)，超过后才进入尸体计时")] private float deathAnimationDuration = 2.5f;
     [SerializeField][Tooltip("死亡后切换到的物理层 (避免与玩家/其它怪物继续交互)，为空则保持原层")] private string deathLayerName = "Dead";
+    [SerializeField][Tooltip("复活后恢复的物理层（默认 Monster）")] private string reviveLayerName = "Monster";
     [SerializeField][Tooltip("死亡后是否禁用 NavMeshAgent (一般需要禁用)")] private bool disableAgentOnDeath = true;
     [SerializeField][Tooltip("死亡后是否禁用 AI/状态机组件")] private bool disableStateMachineOnDeath = true;
-    
+
     [Header("命中特效挂点（艺术家在怪物 prefab 上设置）")]
     [Tooltip("用于放置被击中时的命中特效位置（例如胸口或头顶），如果为空会回退到射线击中点。")]
     [SerializeField] protected Transform _hitVfxPoint;
     public Transform hitVfxPoint => _hitVfxPoint;
-    
+
     public int CurrentHealth { get; set; }
     public int MaxHealth { get; set; }
     [Header("伤害数字预制体 (在 Inspector 中分配)")]
@@ -34,13 +35,15 @@ public class MonsterCombat : MonoBehaviour, IDamageable
     private MonsterSpawner monsterSpawner;                   // 怪物生成器引用
     private MonsterAnimationController _animController;      // 动画控制器引用
     private UnityEngine.AI.NavMeshAgent navMeshAgent;        // 导航网格代理
-    private bool isDead;                             // 是否已死亡
-    
+    // private bool isDead;                             // 是否已死亡
+    public bool isDead;                             // 是否已死亡
+
 
     [Header("事件 SO（可选）")]
     [SerializeField] private TargetHealthEventSO targetHealthEventSO;
 
-    private MonsterBase _monsterBase;                        // 怪物基础组件引用
+    // private MonsterBase _monsterBase;                        // 怪物基础组件引用
+    public MonsterBase _monsterBase;                        // 怪物基础组件引用
     private MonsterStateMachine _stateMachine;               // 状态机引用
 
     // 防止死亡序列被执行多次
@@ -81,22 +84,22 @@ public class MonsterCombat : MonoBehaviour, IDamageable
         _monsterBase = GetComponent<MonsterBase>();
         _stateMachine = GetComponent<MonsterStateMachine>();
     }
-    
-    public void Initialize(MonsterData data, MonsterSpawner spawner, 
+
+    public void Initialize(MonsterData data, MonsterSpawner spawner,
                           MonsterAnimationController animController, UnityEngine.AI.NavMeshAgent agent)
     {
         monsterData = data;
         monsterSpawner = spawner;
         _animController = animController;
         navMeshAgent = agent;
-        
+
         MaxHealth = data.health;
         CurrentHealth = data.health;
 
         if (_monsterBase == null) _monsterBase = GetComponent<MonsterBase>();
         if (_stateMachine == null) _stateMachine = GetComponent<MonsterStateMachine>();
     }
-    
+
     /// <summary>
     /// 受到伤害（兼容带攻击类型的版本）
     /// </summary>
@@ -196,14 +199,17 @@ public class MonsterCombat : MonoBehaviour, IDamageable
         if (isDead) return;
         isDead = true;
 
-        // 请求状态机进入死亡状态（会在 EnterState 中调用 ExecuteDeathSequence）
-        if (_stateMachine != null)
+        // MMO 模式：状态机 Update 被禁用，直接执行死亡序列
+        if (GameModeConfig.IsMmoMode)
+        {
+            ExecuteDeathSequence();
+        }
+        else if (_stateMachine != null)
         {
             _stateMachine.SetDead(true);
         }
         else
         {
-            // 兜底：无状态机时直接执行
             ExecuteDeathSequence();
         }
     }
@@ -264,17 +270,49 @@ public class MonsterCombat : MonoBehaviour, IDamageable
     {
         try
         {
-            // 先等待死亡动画时间
             if (deathAnimationDuration > 0f)
                 await UniTask.Delay(TimeSpan.FromSeconds(deathAnimationDuration), cancellationToken: token);
-            // 再等待尸体消失时间
             if (corpseDisappearTime > 0f)
                 await UniTask.Delay(TimeSpan.FromSeconds(corpseDisappearTime), cancellationToken: token);
-            Destroy(gameObject);
+
+            if (GameModeConfig.IsMmoMode)
+            {
+                // MMO: 休眠复用，不销毁（复活时从快照唤醒）
+                gameObject.SetActive(false);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
         }
         catch (OperationCanceledException) { }
     }
-    
+
+    /// <summary>MMO 模式：快照驱动复活，重置怪物到初始状态</summary>
+    public void MmoRevive(int maxHp)
+    {
+        isDead = false;
+        _deathSequenceExecuted = false;
+        CurrentHealth = maxHp;
+        gameObject.SetActive(true);
+
+        // 恢复物理层：死亡时切到 "Dead"，复活切回 "Monster"
+        if (!string.IsNullOrEmpty(reviveLayerName))
+        {
+            int rl = LayerMask.NameToLayer(reviveLayerName);
+            if (rl != -1) gameObject.layer = rl;
+        }
+
+        var nav = GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (nav != null) { nav.enabled = true; nav.updatePosition = false; nav.updateRotation = false; }
+
+        var sm = GetComponent<MonsterStateMachine>();
+        if (sm != null) { sm.SetDead(false); sm.currentState = MonsterState.Patrol; }
+
+        var anim = GetComponent<MonsterAnimationController>();
+        anim?.PlayIdle();
+    }
+
     // 将经验授予玩家并显示 Toast（若配置了 expReward）
     private void GivePlayerExp()
     {
@@ -310,7 +348,7 @@ public class MonsterCombat : MonoBehaviour, IDamageable
             Debug.LogWarning($"[MonsterCombat] 显示经验 Toast 失败: {e}");
         }
     }
-    
+
     public bool IsDead => isDead;
 
     public int GetDamageValue()
