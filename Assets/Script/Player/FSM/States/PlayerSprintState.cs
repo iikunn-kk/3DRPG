@@ -48,6 +48,11 @@ namespace PlayerFSM
                 owner.ChangeState(PlayerState.Roll);
                 return;
             }
+            if (movement.isCrouching)
+            {
+                owner.ChangeState(PlayerState.Crouch);
+                return;
+            }
 
             Vector2 input = GetInputVector();
             bool sprintHeld = IsSprintHeld();

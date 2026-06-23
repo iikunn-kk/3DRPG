@@ -180,7 +180,7 @@ public partial class CharacterState : MonoBehaviour, IDamageable
     #endregion
 
     #region 公共数据更新通知
-    private void OnValueChange()
+    public void OnValueChange()
     {
         characterStateEventSo.RaiseEvent(this, this);
     }

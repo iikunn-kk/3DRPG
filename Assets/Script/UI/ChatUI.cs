@@ -1,55 +1,58 @@
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 /// <summary>
-/// MMO 聊天 UI。挂到 Canvas 下的 ChatPanel 上。
-/// 需要：TMP_InputField（输入）、Button（发送）、ScrollRect + TMP_Text（消息列表）。
-/// 按 Enter 发送，消息从 Gateway 广播到所有在线玩家。
+/// MMO 聊天 UI — 世界频道。
+/// 气泡(头像+文字+sprite表情) + EmojiPicker + 垂直布局滚动 + Enter 弹出/发送。
+/// 挂到 Canvas/ChatPanel 上。
 /// </summary>
 public class ChatUI : MonoBehaviour
 {
     [Header("UI 引用")]
     [SerializeField] private TMP_InputField _inputField;
-    [SerializeField] private TMP_Text _chatLog;
     [SerializeField] private Button _sendButton;
     [SerializeField] private ScrollRect _scrollRect;
     [SerializeField] private GameObject _panelRoot;
 
-    [Header("设置")]
-    [SerializeField] private int _maxLines = 50;
+    [Header("气泡")]
+    [SerializeField] private ChatBubble _bubblePrefab;
+    [SerializeField] private Transform _bubbleParent;
 
-    [Header("快捷键")]
-    [SerializeField] private KeyCode _toggleKey = KeyCode.Return;
+    [Header("输入锁")]
+    [SerializeField] private BoolEventSO cameraRotationActiveEvent;   // 关闭时锁相机（和 UIManager 共用同一个 SO）
+    [SerializeField] private BoolEventSO movementLockEvent;           // 打开时禁止角色移动
+
+    [Header("设置")]
+    [SerializeField] private int _maxBubbles = 50;
+    [SerializeField] private KeyCode _toggleKey = KeyCode.P;
+
+    [SerializeField] private Sprite _avatar;
 
     private bool _isFocused;
-    private string _logText = "";
+    public static bool IsChatFocused { get; private set; }    // 供 QuickInventoryBar 等外部系统检查
+    private NetworkManager _nm;
+    private readonly Queue<ChatBubble> _bubbles = new();
 
     void Start()
     {
-        _sendButton?.onClick.AddListener(SendMessage);
+        _nm = FindFirstObjectByType<NetworkManager>();
         _panelRoot?.SetActive(false);
 
-        // 注册到 NetworkManager 接收聊天
-        if (NetworkManager.Instance != null && NetworkManager.Instance.Tcp != null)
-        {
-            NetworkManager.Instance.Tcp.OnChatReceived += OnChatReceived;
-        }
+        _sendButton?.onClick.AddListener(SendMessage);
+        _inputField?.onSubmit.AddListener(_ => SendMessage());
+
+        if (_nm != null && _nm.Tcp != null)
+            _nm.Tcp.OnChatReceived += OnChatReceived;
     }
 
     void Update()
     {
-        // 按快捷键打开/关闭聊天输入
         if (Input.GetKeyDown(_toggleKey))
         {
-            if (!_isFocused)
-            {
-                OpenChat();
-            }
-            else if (_inputField != null)
-            {
-                SendMessage();
-            }
+            if (_isFocused) CloseChat();
+            else OpenChat();
         }
     }
 
@@ -57,30 +60,45 @@ public class ChatUI : MonoBehaviour
     {
         _panelRoot?.SetActive(true);
         _isFocused = true;
+        IsChatFocused = true;
         _inputField?.Select();
         _inputField?.ActivateInputField();
+
+        // 锁定鼠标/相机 + 禁止角色移动
+        cameraRotationActiveEvent?.RaiseEvent(false, this);
+        movementLockEvent?.RaiseEvent(true, this);
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
     }
 
     public void SendMessage()
     {
         if (_inputField == null || string.IsNullOrWhiteSpace(_inputField.text)) return;
 
-        var text = _inputField.text.Trim();
+        var raw = _inputField.text.Trim();
         _inputField.text = "";
 
-        var nm = FindFirstObjectByType<NetworkManager>();
-        if (nm != null && nm.IsConnected)
-        {
-            nm.SendChat(text);
-        }
+        if (_nm != null && _nm.IsConnected)
+            _nm.SendChat(raw);
         else
-        {
-            // 离线模式：只显示本地消息
-            AppendMessage("你", text);
-        }
+            AddBubble(raw);
 
+        // 保持面板打开，重新聚焦输入框，继续输入
         _inputField?.Select();
         _inputField?.ActivateInputField();
+    }
+
+    private void CloseChat()
+    {
+        _isFocused = false;
+        IsChatFocused = false;
+        _panelRoot?.SetActive(false);
+
+        // 恢复鼠标/相机 + 恢复角色移动
+        cameraRotationActiveEvent?.RaiseEvent(true, this);
+        movementLockEvent?.RaiseEvent(false, this);
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     private void OnChatReceived(string json)
@@ -88,37 +106,32 @@ public class ChatUI : MonoBehaviour
         try
         {
             var msg = JsonUtility.FromJson<ChatMsg>(json);
-            if (msg != null && !string.IsNullOrEmpty(msg.uid))
-                AppendMessage(msg.uid, msg.text);
+            if (msg != null && !string.IsNullOrEmpty(msg.text))
+                AddBubble(msg.text);
         }
-        catch { /* 忽略解析失败 */ }
+        catch { }
     }
 
-    private void AppendMessage(string sender, string text)
+    private void AddBubble(string text)
     {
-        _logText += $"[{sender}]: {text}\n";
+        if (_bubblePrefab == null || _bubbleParent == null) return;
 
-        // 限制行数
-        var lines = _logText.Split('\n');
-        if (lines.Length > _maxLines)
-        {
-            _logText = string.Join("\n", lines, lines.Length - _maxLines, _maxLines);
-        }
+        var bubble = Instantiate(_bubblePrefab, _bubbleParent);
+        bubble.Setup(text, _avatar);
+        bubble.name = $"Bubble_{_bubbles.Count}";
 
-        if (_chatLog != null)
-        {
-            _chatLog.text = _logText;
-            Canvas.ForceUpdateCanvases();
-            _scrollRect.verticalNormalizedPosition = 0f;
-        }
+        _bubbles.Enqueue(bubble);
+        while (_bubbles.Count > _maxBubbles)
+            Destroy(_bubbles.Dequeue().gameObject);
+
+        Canvas.ForceUpdateCanvases();
+        if (_scrollRect != null) _scrollRect.verticalNormalizedPosition = 0f;
     }
 
     void OnDestroy()
     {
-        if (NetworkManager.Instance != null && NetworkManager.Instance.Tcp != null)
-        {
-            NetworkManager.Instance.Tcp.OnChatReceived -= OnChatReceived;
-        }
+        if (_nm != null && _nm.Tcp != null)
+            _nm.Tcp.OnChatReceived -= OnChatReceived;
     }
 
     [System.Serializable]

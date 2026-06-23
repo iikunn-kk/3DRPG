@@ -1,16 +1,12 @@
-// Unity 客户端：替换 Assets/Script/Network/NetworkPlayerMover.cs
-// ProtoBuf 版本：位置消息直接序列化为 proto binary，走 UDP
-
 using UnityEngine;
-using Proto = Mmo;
 
 /// <summary>
-/// 零侵入位置同步组件 — ProtoBuf 版本。
-/// 挂载到玩家 GameObject，检测位置变化后发送 UDP ProtoBuf 消息。
-/// 带宽: ~0.9 KB/s (vs JSON 的 2.4 KB/s)
+/// 零侵入位置同步组件 — 挂载到玩家 GameObject，检测 transform.position 变化后自动发送 TCP 位置消息。
+/// 不改 MoveMent / FSM / CharacterState 任何一行代码。
 /// </summary>
 public class NetworkPlayerMover : MonoBehaviour
 {
+    [Header("同步设置")]
     [Tooltip("位置变化超过此阈值（米）才发送更新")]
     [SerializeField] private float _moveThreshold = 0.05f;
 
@@ -39,9 +35,7 @@ public class NetworkPlayerMover : MonoBehaviour
         {
             _lastSentPosition = currentPos;
             _sendTimer = 0f;
-
-            // ProtoBuf UDP 发送（体积 ~30B vs JSON ~80B）
-            NetworkManager.Instance.SendPositionProto(currentPos);
+            NetworkManager.Instance.SendPosition(currentPos, transform.rotation);
         }
     }
 }

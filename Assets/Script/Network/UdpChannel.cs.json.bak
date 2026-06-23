@@ -1,15 +1,11 @@
-// Unity 客户端：Assets/Script/Network/UdpChannel.cs
-// 完整替换，位置消息走 ProtoBuf 二进制
-
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Threading;
-using Cysharp.Threading.Tasks;
 using UnityEngine;
-using Proto = Mmo;
 
 /// <summary>
-/// UDP 高频通道 — 位置更新走 ProtoBuf 二进制，节省 62% 带宽
+/// UDP 高频通道：Phase 1 简化为纯连通性验证，Phase 2 升级二进制协议。
 /// </summary>
 public class UdpChannel
 {
@@ -17,7 +13,7 @@ public class UdpChannel
     private UdpClient _client;
     private CancellationTokenSource _cts;
 
-    public async UniTask ConnectAsync(string host, int port, string sessionId)
+    public async Cysharp.Threading.Tasks.UniTask ConnectAsync(string host, int port, string sessionId)
     {
         try
         {
@@ -36,19 +32,6 @@ public class UdpChannel
         }
     }
 
-    /// <summary>发送 ProtoBuf 位置更新</summary>
-    public void SendPosition(string uid, float x, float y, float z)
-    {
-        if (!IsConnected || _client == null) return;
-        try
-        {
-            var pos = new Proto.PositionUpdate { Uid = uid, X = x, Y = y, Z = z };
-            var bytes = pos.ToByteArray();
-            _client.SendAsync(bytes, bytes.Length);
-        }
-        catch { IsConnected = false; }
-    }
-
     public void Send(byte[] payload)
     {
         if (!IsConnected || _client == null) return;
@@ -56,7 +39,7 @@ public class UdpChannel
         catch { IsConnected = false; }
     }
 
-    /// <summary>发送文本（JSON 兼容旧格式）</summary>
+    /// <summary>发送文本（JSON），UTF8 编码后走 UDP</summary>
     public void SendString(string text)
     {
         if (!IsConnected || _client == null) return;

@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -39,6 +40,15 @@ public partial class NetworkManager : Singleton<NetworkManager>
             var sync = FindObjectOfType<EntitySyncManager>();
             if (sync) sync.ApplySnapshot(json);
         };
+
+        // ProtoBuf 快照（TCP 发 0x01 前缀的二进制包，兼容旧路径）
+        Tcp.OnSnapshotProto += data =>
+        {
+            var sync = FindObjectOfType<EntitySyncManager>();
+            if (sync) sync.ApplySnapshotProto(data);
+        };
+
+
     }
 
     /// <summary>Inspector 右键 → Test Gateway Connection，验证 TCP/UDP 链路</summary>
@@ -73,6 +83,7 @@ public partial class NetworkManager : Singleton<NetworkManager>
 
     private bool _connecting;
     private byte _lastProfession = 255;
+    private string _lastPassword = "";   // 缓存在线密码供断线重连
     private float _reconnectTimer;
     private bool _wasConnected;
 
@@ -91,6 +102,7 @@ public partial class NetworkManager : Singleton<NetworkManager>
             return true;
         }
         _connecting = true;
+        _lastPassword = password;  // 缓存密码供断线重连
         try
         {
             // 确保 Tcp/Udp 已初始化（Singleton AddComponent 时序保护）
@@ -114,6 +126,7 @@ public partial class NetworkManager : Singleton<NetworkManager>
 
             // 4. UDP 绑定
             await Udp.ConnectAsync(_serverHost, _udpPort, SessionId);
+
             Debug.Log($"[NetworkManager] 连接成功! Uid={PlayerUid}, Session={SessionId}");
             return true;
         }
@@ -162,7 +175,7 @@ public partial class NetworkManager : Singleton<NetworkManager>
         }
     }
 
-    public void SendPosition(Vector3 pos, Quaternion rot)
+    public void SendPosition(Vector3 pos, Quaternion rot, bool isCrouching = false, bool isJumping = false, bool isRolling = false, bool isDead = false)
     {
         // 用 forward 向量计算水平方位角，避免 eulerAngles.y 在含 Pitch/Roll 时的错误分解
         Vector3 fwd = rot * Vector3.forward;
@@ -175,12 +188,12 @@ public partial class NetworkManager : Singleton<NetworkManager>
             var y = safe(pos.y).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
             var z = safe(pos.z).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
             var ry = safe(rotY).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-            var json = $"{{\"type\":\"position\",\"uid\":\"{PlayerUid}\",\"x\":{x},\"y\":{y},\"z\":{z},\"rotY\":{ry}}}";
+            var json = $"{{\"type\":\"position\",\"uid\":\"{PlayerUid}\",\"x\":{x},\"y\":{y},\"z\":{z},\"rotY\":{ry},\"isCrouching\":{(isCrouching?"true":"false")},\"isJumping\":{(isJumping?"true":"false")},\"isRolling\":{(isRolling?"true":"false")},\"isDead\":{(isDead?"true":"false")}}}";
             Udp.SendString(json);
         }
-        else if (Tcp.IsConnected)
+        else if (Tcp?.IsConnected == true)
         {
-            var payload = new PositionPayload { type = "position", uid = PlayerUid, x = pos.x, y = pos.y, z = pos.z, rotY = rotY };
+            var payload = new PositionPayload { type = "position", uid = PlayerUid, x = pos.x, y = pos.y, z = pos.z, rotY = rotY, isCrouching = isCrouching, isJumping = isJumping, isRolling = isRolling, isDead = isDead };
             Tcp.Send(JsonUtility.ToJson(payload));
         }
     }
@@ -198,6 +211,13 @@ public partial class NetworkManager : Singleton<NetworkManager>
     {
         if (!Tcp.IsConnected) return;
         Tcp.Send($"{{\"type\":\"chat\",\"uid\":\"{PlayerUid}\",\"text\":\"{EscapeJson(text)}\"}}");
+    }
+
+    /// <summary>通知服务端玩家已复活（恢复 HP 到当前等级的最大血量）</summary>
+    public void SendRespawn(int maxHp)
+    {
+        if (!Tcp.IsConnected) return;
+        Tcp.Send($"{{\"type\":\"respawn\",\"uid\":\"{PlayerUid}\",\"maxHp\":{maxHp}}}");
     }
 
     /// <summary>发送玩家攻击触发（用于其他客户端播放攻击动画）</summary>
@@ -303,7 +323,7 @@ public partial class NetworkManager : Singleton<NetworkManager>
                 Tcp.Disconnect();
                 Udp?.Disconnect();
                 PlayerUid = uid;
-                _ = ConnectAsync(uid, "123", prof);
+                _ = ConnectAsync(uid, _lastPassword, prof);
             }
         }
         else _reconnectTimer = 0f;
@@ -316,7 +336,7 @@ public partial class NetworkManager : Singleton<NetworkManager>
     }
 
     [System.Serializable]
-    private struct PositionPayload { public string type; public string uid; public float x; public float y; public float z; public float rotY; }
+    private struct PositionPayload { public string type; public string uid; public float x; public float y; public float z; public float rotY; public bool isCrouching; public bool isJumping; public bool isRolling; public bool isDead; }
 
     [System.Serializable]
     private struct MonsterSpawnPayload { public string type; public uint instId; public int maxHp; public float x; public float y; public float z; }

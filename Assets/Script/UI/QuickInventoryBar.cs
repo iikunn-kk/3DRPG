@@ -34,6 +34,8 @@ public class QuickInventoryBar : MonoBehaviour
     /// </summary>
     private void Update()
     {
+        // 聊天框打开时不处理快捷键
+        if (ChatUI.IsChatFocused) return;
         // 防御性检查
         if (quickSlots == null || quickSlots.Count == 0) return;
         if (Keyboard.current == null) return;

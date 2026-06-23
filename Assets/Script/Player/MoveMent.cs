@@ -156,6 +156,10 @@ public class MoveMent : MonoBehaviour
         playerInput.Player.Sprint.canceled += OnSprinting;
 
         playerInput.Player.Roll.started += OnRoll;
+
+        playerInput.Player.Crouch.started += OnCrouch;
+        playerInput.Player.Crouch.performed += OnCrouch;
+        playerInput.Player.Crouch.canceled += OnCrouch;
     }
 
     void OnDisable()
@@ -169,6 +173,10 @@ public class MoveMent : MonoBehaviour
         playerInput.Player.Sprint.canceled -= OnSprinting;
 
         playerInput.Player.Roll.started -= OnRoll;
+
+        playerInput.Player.Crouch.started -= OnCrouch;
+        playerInput.Player.Crouch.performed -= OnCrouch;
+        playerInput.Player.Crouch.canceled -= OnCrouch;
     }
 
     void OnDestroy()
@@ -323,15 +331,12 @@ public class MoveMent : MonoBehaviour
 
     public void OnCrouch(InputAction.CallbackContext value)
     {
-        // 如果控制被锁定，或者Alt键被按下则不处理输入
         if (isControlLocked || isAltKeyDown) return;
-
-        // 翻滚时不能蹲下
         if (isRolling) return;
         isCrouching = value.ReadValueAsButton();
         isSprinting = false;
-        // 通过动画控制器设置蹲伏层权重
         characterAnimation?.SetCrouch(isCrouching);
+        UpdateAnimatorSpeedsFromInput(movementInput);
     }
 
     public void OnJump(InputAction.CallbackContext value)

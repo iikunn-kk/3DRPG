@@ -24,20 +24,22 @@ namespace Mmo {
     static EntityReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "CgxlbnRpdHkucHJvdG8SA21tbxoMY29tbW9uLnByb3RvIpoCCg5FbnRpdHlT",
+            "CgxlbnRpdHkucHJvdG8SA21tbxoMY29tbW9uLnByb3RvIvsCCg5FbnRpdHlT",
             "bmFwc2hvdBIRCgllbnRpdHlfaWQYASABKA0SEwoLZW50aXR5X3R5cGUYAiAB",
             "KA0SCwoDdWlkGAMgASgJEhIKCm1vZGVsX3R5cGUYBCABKA0SEwoLYXRrX3Ry",
             "aWdnZXIYBSABKA0SHgoIcG9zaXRpb24YBiABKAsyDC5tbW8uVmVjdG9yMxIN",
             "CgVyb3RfeRgHIAEoAhIKCgJocBgIIAEoBRIOCgZtYXhfaHAYCSABKAUSEgoK",
-            "YW5pbV9zdGF0ZRgKIAEoDRIVCg1za2lsbF90cmlnZ2VyGAsgASgNEhAKCHNr",
-            "aWxsX2lkGAwgASgJEiIKDHNraWxsX3RhcmdldBgNIAEoCzIMLm1tby5WZWN0",
-            "b3IzIlEKDlBsYXllclNuYXBzaG90EhgKEHBsYXllcl9lbnRpdHlfaWQYASAB",
-            "KA0SJQoIZW50aXRpZXMYAiADKAsyEy5tbW8uRW50aXR5U25hcHNob3RiBnBy",
-            "b3RvMw=="));
+            "YW5pbV9zdGF0ZRgKIAEoDRIQCghndWlsZF9pZBgOIAEoCRIVCg1za2lsbF90",
+            "cmlnZ2VyGAsgASgNEhAKCHNraWxsX2lkGAwgASgJEiIKDHNraWxsX3Rhcmdl",
+            "dBgNIAEoCzIMLm1tby5WZWN0b3IzEhQKDGlzX2Nyb3VjaGluZxgPIAEoCBIS",
+            "Cgppc19qdW1waW5nGBAgASgIEhIKCmlzX3JvbGxpbmcYESABKAgSDwoHaXNf",
+            "ZGVhZBgSIAEoCCJRCg5QbGF5ZXJTbmFwc2hvdBIYChBwbGF5ZXJfZW50aXR5",
+            "X2lkGAEgASgNEiUKCGVudGl0aWVzGAIgAygLMhMubW1vLkVudGl0eVNuYXBz",
+            "aG90YgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Mmo.CommonReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mmo.EntitySnapshot), global::Mmo.EntitySnapshot.Parser, new[]{ "EntityId", "EntityType", "Uid", "ModelType", "AtkTrigger", "Position", "RotY", "Hp", "MaxHp", "AnimState", "SkillTrigger", "SkillId", "SkillTarget" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Mmo.EntitySnapshot), global::Mmo.EntitySnapshot.Parser, new[]{ "EntityId", "EntityType", "Uid", "ModelType", "AtkTrigger", "Position", "RotY", "Hp", "MaxHp", "AnimState", "GuildId", "SkillTrigger", "SkillId", "SkillTarget", "IsCrouching", "IsJumping", "IsRolling", "IsDead" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Mmo.PlayerSnapshot), global::Mmo.PlayerSnapshot.Parser, new[]{ "PlayerEntityId", "Entities" }, null, null, null, null)
           }));
     }
@@ -93,9 +95,14 @@ namespace Mmo {
       hp_ = other.hp_;
       maxHp_ = other.maxHp_;
       animState_ = other.animState_;
+      guildId_ = other.guildId_;
       skillTrigger_ = other.skillTrigger_;
       skillId_ = other.skillId_;
       skillTarget_ = other.skillTarget_ != null ? other.skillTarget_.Clone() : null;
+      isCrouching_ = other.isCrouching_;
+      isJumping_ = other.isJumping_;
+      isRolling_ = other.isRolling_;
+      isDead_ = other.isDead_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -255,6 +262,21 @@ namespace Mmo {
       }
     }
 
+    /// <summary>Field number for the "guild_id" field.</summary>
+    public const int GuildIdFieldNumber = 14;
+    private string guildId_ = "";
+    /// <summary>
+    /// 公会 ID
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string GuildId {
+      get { return guildId_; }
+      set {
+        guildId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     /// <summary>Field number for the "skill_trigger" field.</summary>
     public const int SkillTriggerFieldNumber = 11;
     private uint skillTrigger_;
@@ -300,6 +322,66 @@ namespace Mmo {
       }
     }
 
+    /// <summary>Field number for the "is_crouching" field.</summary>
+    public const int IsCrouchingFieldNumber = 15;
+    private bool isCrouching_;
+    /// <summary>
+    /// 蹲伏
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool IsCrouching {
+      get { return isCrouching_; }
+      set {
+        isCrouching_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "is_jumping" field.</summary>
+    public const int IsJumpingFieldNumber = 16;
+    private bool isJumping_;
+    /// <summary>
+    /// 跳跃
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool IsJumping {
+      get { return isJumping_; }
+      set {
+        isJumping_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "is_rolling" field.</summary>
+    public const int IsRollingFieldNumber = 17;
+    private bool isRolling_;
+    /// <summary>
+    /// 翻滚
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool IsRolling {
+      get { return isRolling_; }
+      set {
+        isRolling_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "is_dead" field.</summary>
+    public const int IsDeadFieldNumber = 18;
+    private bool isDead_;
+    /// <summary>
+    /// 死亡
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool IsDead {
+      get { return isDead_; }
+      set {
+        isDead_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -325,9 +407,14 @@ namespace Mmo {
       if (Hp != other.Hp) return false;
       if (MaxHp != other.MaxHp) return false;
       if (AnimState != other.AnimState) return false;
+      if (GuildId != other.GuildId) return false;
       if (SkillTrigger != other.SkillTrigger) return false;
       if (SkillId != other.SkillId) return false;
       if (!object.Equals(SkillTarget, other.SkillTarget)) return false;
+      if (IsCrouching != other.IsCrouching) return false;
+      if (IsJumping != other.IsJumping) return false;
+      if (IsRolling != other.IsRolling) return false;
+      if (IsDead != other.IsDead) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -345,9 +432,14 @@ namespace Mmo {
       if (Hp != 0) hash ^= Hp.GetHashCode();
       if (MaxHp != 0) hash ^= MaxHp.GetHashCode();
       if (AnimState != 0) hash ^= AnimState.GetHashCode();
+      if (GuildId.Length != 0) hash ^= GuildId.GetHashCode();
       if (SkillTrigger != 0) hash ^= SkillTrigger.GetHashCode();
       if (SkillId.Length != 0) hash ^= SkillId.GetHashCode();
       if (skillTarget_ != null) hash ^= SkillTarget.GetHashCode();
+      if (IsCrouching != false) hash ^= IsCrouching.GetHashCode();
+      if (IsJumping != false) hash ^= IsJumping.GetHashCode();
+      if (IsRolling != false) hash ^= IsRolling.GetHashCode();
+      if (IsDead != false) hash ^= IsDead.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -418,6 +510,26 @@ namespace Mmo {
         output.WriteRawTag(106);
         output.WriteMessage(SkillTarget);
       }
+      if (GuildId.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(GuildId);
+      }
+      if (IsCrouching != false) {
+        output.WriteRawTag(120);
+        output.WriteBool(IsCrouching);
+      }
+      if (IsJumping != false) {
+        output.WriteRawTag(128, 1);
+        output.WriteBool(IsJumping);
+      }
+      if (IsRolling != false) {
+        output.WriteRawTag(136, 1);
+        output.WriteBool(IsRolling);
+      }
+      if (IsDead != false) {
+        output.WriteRawTag(144, 1);
+        output.WriteBool(IsDead);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -480,6 +592,26 @@ namespace Mmo {
         output.WriteRawTag(106);
         output.WriteMessage(SkillTarget);
       }
+      if (GuildId.Length != 0) {
+        output.WriteRawTag(114);
+        output.WriteString(GuildId);
+      }
+      if (IsCrouching != false) {
+        output.WriteRawTag(120);
+        output.WriteBool(IsCrouching);
+      }
+      if (IsJumping != false) {
+        output.WriteRawTag(128, 1);
+        output.WriteBool(IsJumping);
+      }
+      if (IsRolling != false) {
+        output.WriteRawTag(136, 1);
+        output.WriteBool(IsRolling);
+      }
+      if (IsDead != false) {
+        output.WriteRawTag(144, 1);
+        output.WriteBool(IsDead);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -520,6 +652,9 @@ namespace Mmo {
       if (AnimState != 0) {
         size += 1 + pb::CodedOutputStream.ComputeUInt32Size(AnimState);
       }
+      if (GuildId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(GuildId);
+      }
       if (SkillTrigger != 0) {
         size += 1 + pb::CodedOutputStream.ComputeUInt32Size(SkillTrigger);
       }
@@ -528,6 +663,18 @@ namespace Mmo {
       }
       if (skillTarget_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(SkillTarget);
+      }
+      if (IsCrouching != false) {
+        size += 1 + 1;
+      }
+      if (IsJumping != false) {
+        size += 2 + 1;
+      }
+      if (IsRolling != false) {
+        size += 2 + 1;
+      }
+      if (IsDead != false) {
+        size += 2 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -574,6 +721,9 @@ namespace Mmo {
       if (other.AnimState != 0) {
         AnimState = other.AnimState;
       }
+      if (other.GuildId.Length != 0) {
+        GuildId = other.GuildId;
+      }
       if (other.SkillTrigger != 0) {
         SkillTrigger = other.SkillTrigger;
       }
@@ -585,6 +735,18 @@ namespace Mmo {
           SkillTarget = new global::Mmo.Vector3();
         }
         SkillTarget.MergeFrom(other.SkillTarget);
+      }
+      if (other.IsCrouching != false) {
+        IsCrouching = other.IsCrouching;
+      }
+      if (other.IsJumping != false) {
+        IsJumping = other.IsJumping;
+      }
+      if (other.IsRolling != false) {
+        IsRolling = other.IsRolling;
+      }
+      if (other.IsDead != false) {
+        IsDead = other.IsDead;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -663,6 +825,26 @@ namespace Mmo {
             input.ReadMessage(SkillTarget);
             break;
           }
+          case 114: {
+            GuildId = input.ReadString();
+            break;
+          }
+          case 120: {
+            IsCrouching = input.ReadBool();
+            break;
+          }
+          case 128: {
+            IsJumping = input.ReadBool();
+            break;
+          }
+          case 136: {
+            IsRolling = input.ReadBool();
+            break;
+          }
+          case 144: {
+            IsDead = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -738,6 +920,26 @@ namespace Mmo {
               SkillTarget = new global::Mmo.Vector3();
             }
             input.ReadMessage(SkillTarget);
+            break;
+          }
+          case 114: {
+            GuildId = input.ReadString();
+            break;
+          }
+          case 120: {
+            IsCrouching = input.ReadBool();
+            break;
+          }
+          case 128: {
+            IsJumping = input.ReadBool();
+            break;
+          }
+          case 136: {
+            IsRolling = input.ReadBool();
+            break;
+          }
+          case 144: {
+            IsDead = input.ReadBool();
             break;
           }
         }

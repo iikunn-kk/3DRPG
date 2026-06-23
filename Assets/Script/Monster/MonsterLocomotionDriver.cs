@@ -153,6 +153,13 @@ public class MonsterLocomotionDriver : MonoBehaviour
 
         float speed = _smoothedPlanarVel.magnitude;
 
+        // 静止时强制归零，避免低通滤波器指数衰减残留的 e-4 级抖动
+        if (speed < minMoveSpeed)
+        {
+            _smoothedPlanarVel = Vector3.zero;
+            speed = 0f;
+        }
+
         // 1.5) 自动校准模型前向（仅在未面向某目标、且存在足够移动速度时采样若干帧）
         if (!_forwardCalibrated && speed >= (minMoveSpeed * 2f) && faceTarget == null)
         {

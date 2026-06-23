@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Google.Protobuf;
+using Mmo;
 using UnityEngine;
+using Vector3 = UnityEngine.Vector3;   // 解决 Mmo.Vector3 和 UnityEngine.Vector3 歧义
 
 /// <summary>
 /// 从 WorldServer 接收 AOI 快照，创建/更新/销毁远程实体。
@@ -24,10 +27,91 @@ public partial class EntitySyncManager : MonoBehaviour
     private readonly Dictionary<uint, GameObject> _entities = new();
     private readonly Dictionary<uint, byte> _remoteAtkCache = new();  // entityId → lastAtkTrigger
     private readonly Dictionary<uint, byte> _remoteSkillCache = new(); // entityId → lastSkillTrigger
+    private readonly Dictionary<uint, int> _remoteStateCache = new();  // entityId → packed state bits (0=idle, bit0=crouch, bit1=jump, bit2=roll, bit3=dead)
     private uint _localPlayerEntityId;
 
     public void SetLocalPlayerEntityId(uint id) => _localPlayerEntityId = id;
     public uint GetLocalPlayerEntityId() => _localPlayerEntityId;
+
+    private int _protoCount;
+    private float _lastRespawnTime = -99f;    // 复活保护：复活后 2s 内拒绝服务端的 hp=0
+
+    /// <summary>玩家复活后调用，保护期内不接收服务端 hp=0</summary>
+    public void OnPlayerRespawned()
+    {
+        _lastRespawnTime = Time.time;
+    }
+
+    /// <summary>ProtoBuf 格式快照处理（0x01 前缀二进制）</summary>
+    public void ApplySnapshotProto(byte[] data)
+    {
+        _protoCount++;
+        try
+        {
+            var proto = Mmo.PlayerSnapshot.Parser.ParseFrom(data);
+            if (proto?.Entities == null || proto.Entities.Count == 0) return;
+            if (_protoCount % 600 == 1)
+                Debug.Log($"[EntitySync] Proto快照累计#{_protoCount} 实体数={proto.Entities.Count} localId={_localPlayerEntityId}");
+
+            if (_localPlayerEntityId == 0)
+                _localPlayerEntityId = proto.PlayerEntityId;
+
+            foreach (var e in proto.Entities)
+            {
+                // 诊断：本地玩家匹配
+                if (e.EntityId == _localPlayerEntityId || (e.EntityType == 0 && e.Uid == NetworkManager.Instance.PlayerUid))
+                {
+                    var localState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+                    if (localState != null && e.Hp != localState.CurrentHealth)
+                    {
+                        // 复活保护：复活后 2s 内拒绝服务端 hp=0（竞态条件：服务端尚未处理 respawn 消息）
+                        if (e.Hp <= 0 && Time.time - _lastRespawnTime < 2f)
+                            continue;
+                        localState.CurrentHealth = e.Hp;
+                        localState.OnValueChange();
+                        if (e.Hp <= 0) localState.Die();
+                    }
+                    // Proto 公会同步
+                    var cd = SessionManager.Instance?.CurrentCharacter;
+                    if (cd != null && !string.IsNullOrEmpty(e.Uid) && cd.guildId != e.GuildId)
+                    {
+                        cd.guildId = e.GuildId ?? "";
+                        SessionManager.Instance.SetCurrentCharacterData(cd);
+                    }
+                    continue;
+                }
+
+                // 转为 EntitySnapshot 格式，复用现有 ApplyEntity
+                var es = new EntitySnapshot
+                {
+                    entityId = e.EntityId,
+                    entityType = (byte)e.EntityType,
+                    uid = e.Uid,
+                    modelType = (byte)e.ModelType,
+                    atkTrigger = (byte)e.AtkTrigger,
+                    skillTrigger = (byte)e.SkillTrigger,
+                    skillId = e.SkillId ?? "",
+                    skillTargetX = e.SkillTarget?.X ?? 0,
+                    skillTargetY = e.SkillTarget?.Y ?? 0,
+                    skillTargetZ = e.SkillTarget?.Z ?? 0,
+                    guildId = e.GuildId ?? "",
+                    isCrouching = e.IsCrouching,
+                    isJumping = e.IsJumping,
+                    isRolling = e.IsRolling,
+                    isDead = e.IsDead,
+                    posX = e.Position?.X ?? 0,
+                    posY = e.Position?.Y ?? 0,
+                    posZ = e.Position?.Z ?? 0,
+                    rotY = e.RotY,
+                    hp = e.Hp,
+                    maxHp = e.MaxHp,
+                    animState = (byte)e.AnimState,
+                };
+                ApplyEntity(es);
+            }
+        }
+        catch (Exception ex) { Debug.LogWarning($"[EntitySync] ProtoBuf 快照解析失败: {ex.Message}"); }
+    }
 
     /// <summary>收到服务端快照数据（JSON）时调用</summary>
     public void ApplySnapshot(string json)
@@ -63,7 +147,7 @@ public partial class EntitySyncManager : MonoBehaviour
 
             foreach (var e in snapshot.entities)
             {
-                // 本地玩家：同步服务端权威 HP + guildId（公会创建/加入/离开）
+                // 本地玩家：同步服务端权威 HP + guildId
                 if (e.entityId == _localPlayerEntityId || (e.entityType == 0 && e.uid == NetworkManager.Instance.PlayerUid))
                 {
                     var localState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
@@ -71,7 +155,11 @@ public partial class EntitySyncManager : MonoBehaviour
                     {
                         if (e.hp != localState.CurrentHealth)
                         {
+                            // 复活保护：复活后 2s 内拒绝服务端 hp=0
+                            if (e.hp <= 0 && Time.time - _lastRespawnTime < 2f)
+                                continue;
                             localState.CurrentHealth = e.hp;
+                            localState.OnValueChange();
                             if (e.hp <= 0) localState.Die();
                         }
                     }
@@ -127,15 +215,17 @@ public partial class EntitySyncManager : MonoBehaviour
             var localMonster = MonsterBase.FindByNetworkId(e.entityId);
             if (localMonster == null)
             {
-                // 首次匹配：位置接近的本地怪物 → 绑定服务端 entityId
                 var snapPos = new Vector3(e.posX, e.posY, e.posZ);
                 localMonster = MonsterBase.FindByPositionProximity(snapPos, 15f);
                 if (localMonster != null && localMonster.NetworkId != e.entityId)
                 {
+                    Debug.Log($"[EntitySync] 怪物位置匹配 {localMonster.NetworkId}→{e.entityId}");
                     MonsterBase.UnregisterNetwork(localMonster.NetworkId);
                     localMonster.NetworkId = e.entityId;
                     MonsterBase.RegisterNetwork(localMonster);
                 }
+                if (localMonster == null && _snapshotCount <= 5)
+                    Debug.LogWarning($"[EntitySync] 怪物 entityId={e.entityId} 未匹配 pos=({e.posX:F1},{e.posZ:F1}) state={e.animState}");
             }
             if (localMonster != null)
             {
@@ -174,6 +264,7 @@ public partial class EntitySyncManager : MonoBehaviour
                 var serverState = (MonsterState)e.animState;
                 if (sm != null && sm.currentState != serverState && serverState != MonsterState.Death)
                 {
+                    Debug.Log($"[EntitySync] 怪物#{e.entityId} 状态: {sm.currentState}→{serverState}");
                     sm.currentState = serverState;
                     SyncMmoAnimation(localMonster, sm, serverState);
                 }
@@ -203,8 +294,10 @@ public partial class EntitySyncManager : MonoBehaviour
                 if (e.entityType == 0 && go != _remotePlayerPrefab)
                 {
                     StripGameplayComponents(go);
-                    if (go.GetComponent<MonsterLocomotionDriver>() == null)
-                        go.AddComponent<MonsterLocomotionDriver>();
+                    var driver = go.GetComponent<MonsterLocomotionDriver>();
+                    if (driver == null)
+                        driver = go.AddComponent<MonsterLocomotionDriver>();
+                    driver.enableRotation = false;  // 旋转由快照 RotY 控制
                 }
 
                 _entities[e.entityId] = go;
@@ -220,14 +313,12 @@ public partial class EntitySyncManager : MonoBehaviour
         var rot = Quaternion.Euler(0, e.rotY, 0);
 
         var interpolator = go.GetComponent<PositionInterpolator>();
-        if (interpolator)
-        {
-            interpolator.RenderDelay = 0.03f;
-            interpolator.SetTarget(pos);
-        }
-        else go.transform.position = pos;
+        if (interpolator == null) interpolator = go.AddComponent<PositionInterpolator>();  // 和怪物一致：自动添加
+        interpolator.RenderDelay = 0.066f;   // 66ms = 2 tick，给插值两帧的平滑时间
+        interpolator.SetTarget(pos);
 
-        go.transform.rotation = rot;
+        // 远程玩家：旋转平滑插值，避免直接跳变
+        go.transform.rotation = Quaternion.Slerp(go.transform.rotation, rot, Time.deltaTime * 15f);
 
         var proxy = go.GetComponent<NetworkEntityProxy>();
         if (proxy) proxy.SetHp(e.hp, e.maxHp);
@@ -263,6 +354,9 @@ public partial class EntitySyncManager : MonoBehaviour
                 PlayRemoteSkillVfx(go, e.skillId, new Vector3(e.skillTargetX, e.skillTargetY, e.skillTargetZ));
             }
         }
+
+        // 远程玩家状态动画同步（蹲伏/跳跃/翻滚/死亡）
+        ApplyRemotePlayerState(go, e.entityId, e.isCrouching, e.isJumping, e.isRolling, e.isDead);
     }
 
     /// <summary>
@@ -354,6 +448,25 @@ public partial class EntitySyncManager : MonoBehaviour
         }
         _remoteAtkCache.Remove(entityId);
         _remoteSkillCache.Remove(entityId);
+        _remoteStateCache.Remove(entityId);
+    }
+
+    /// <summary>远程玩家状态动画同步（蹲伏/跳跃/翻滚/死亡）</summary>
+    void ApplyRemotePlayerState(GameObject go, uint entityId, bool isCrouching, bool isJumping, bool isRolling, bool isDead)
+    {
+        var anim = go?.GetComponent<Animator>();
+        if (anim == null) return;
+
+        int oldState = _remoteStateCache.GetValueOrDefault(entityId);
+        int newState = (isCrouching ? 1 : 0) | (isJumping ? 2 : 0) | (isRolling ? 4 : 0) | (isDead ? 8 : 0);
+        if (newState == oldState) return;
+        _remoteStateCache[entityId] = newState;
+
+        if (isDead) anim.SetBool("IsDead", true);
+        else if (isJumping) anim.SetTrigger("Jump");
+        else if (isRolling) anim.SetTrigger("Roll");
+        else if (isCrouching) anim.SetBool("IsCrouch", true);
+        else anim.SetBool("IsCrouch", false);
     }
 
     void OnDestroy()
@@ -362,6 +475,7 @@ public partial class EntitySyncManager : MonoBehaviour
         _entities.Clear();
         _remoteAtkCache.Clear();
         _remoteSkillCache.Clear();
+        _remoteStateCache.Clear();
     }
 
     /// <summary>在远程玩家身上实例化技能 VFX（只播放视觉效果，不造成伤害）</summary>
@@ -409,6 +523,7 @@ public partial class EntitySyncManager : MonoBehaviour
         public string skillId;
         public float skillTargetX, skillTargetY, skillTargetZ;
         public string guildId;
+        public bool isCrouching, isJumping, isRolling, isDead;
         public float posX, posY, posZ;
         public float rotY;
         public int hp, maxHp;

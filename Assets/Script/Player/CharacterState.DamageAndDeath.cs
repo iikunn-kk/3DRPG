@@ -118,6 +118,12 @@ public partial class CharacterState
         RestoreLayerAndInteraction();// 恢复碰撞层+解锁移动
         CameraDeathEventSo?.RaiseEvent(true, this);  // 解锁相机
         OnValueChange();
+        // MMO: 通知服务端恢复 HP + 复活保护（防止竞态快照重新杀死玩家）
+        if (GameModeConfig.IsMmoMode && NetworkManager.Instance != null && NetworkManager.Instance.IsConnected)
+        {
+            NetworkManager.Instance.SendRespawn(MaxHealth);  // 传当前等级的实际最大血量
+            FindFirstObjectByType<EntitySyncManager>()?.OnPlayerRespawned();
+        }
         PlayerRespawnEventSo.RaiseEvent(gameObject, this);
     }
 
