@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -39,7 +39,7 @@ public class SessionManager : Singleton<SessionManager>
         InventoryManager.Instance.Initialize(character.Id);
 
         // 从角色数据初始化货币系统
-        PlayerCurrencyManager.Instance.InitializeFromCharacterData(character);
+        CharacterService.Instance.InitializeFromCharacterData(character);
 
         // 可选：异步创建并保存角色数据到MongoDB
         _ = MongoDBManager.Instance.CreateAndSaveCharacterData(character);

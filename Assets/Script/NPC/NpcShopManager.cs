@@ -52,14 +52,14 @@ public class NpcShopManager : MonoBehaviour
 
         // 检查玩家是否有足够的金币
         int totalPrice = shopItem.price * quantity;
-        if (PlayerCurrencyManager.Instance.Money < totalPrice)
+        if (CharacterService.Instance.Money < totalPrice)
         {
             Debug.Log("金币不足");
             return false;
         }
 
         // 扣除玩家金币
-        if (!PlayerCurrencyManager.Instance.RemoveMoney(totalPrice))
+        if (!CharacterService.Instance.RemoveMoney(totalPrice))
         {
             Debug.LogError("扣除玩家金币失败");
             return false;
@@ -77,7 +77,7 @@ public class NpcShopManager : MonoBehaviour
         {
             Debug.LogError($"无法将物品添加到背包: {itemData.itemName}");
             // 如果添加物品失败，退还金币
-            PlayerCurrencyManager.Instance.AddMoney(totalPrice);
+            CharacterService.Instance.AddMoney(totalPrice);
             return false;
         }
 
@@ -183,7 +183,7 @@ public class NpcShopManager : MonoBehaviour
             unitPrice = GetDefaultSellPrice(itemData.itemType);
         }
         int totalPrice = unitPrice * quantity;
-        if (!PlayerCurrencyManager.Instance.AddMoney(totalPrice))
+        if (!CharacterService.Instance.AddMoney(totalPrice))
         {
             Debug.LogError("增加玩家金币失败");
             InventoryManager.Instance.AddItem(inventoryItem.itemId, quantity);
@@ -273,13 +273,13 @@ public class NpcShopManager : MonoBehaviour
         }
 
         int totalPrice = shopItem.price * quantity;
-        if (PlayerCurrencyManager.Instance.Money < totalPrice)
+        if (CharacterService.Instance.Money < totalPrice)
         {
             Debug.Log("金币不足");
             return false;
         }
 
-        if (!PlayerCurrencyManager.Instance.RemoveMoney(totalPrice))
+        if (!CharacterService.Instance.RemoveMoney(totalPrice))
         {
             Debug.LogError("扣除玩家金币失败");
             return false;
@@ -288,7 +288,7 @@ public class NpcShopManager : MonoBehaviour
         bool success = InventoryManager.Instance.AddItem(shopItem.itemId, quantity);
         if (!success)
         {
-            PlayerCurrencyManager.Instance.AddMoney(totalPrice);
+            CharacterService.Instance.AddMoney(totalPrice);
             Debug.LogError($"无法将物品添加到背包: {itemData.itemName}");
             return false;
         }

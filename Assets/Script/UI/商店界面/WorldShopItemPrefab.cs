@@ -148,7 +148,7 @@ public class WorldShopItemPrefab : MonoBehaviour
         }
         int totalCost = itemPrice * quantity;
         // 检查钻石
-        if (!PlayerCurrencyManager.Instance.RemoveDiamonds(totalCost))
+        if (!CharacterService.Instance.RemoveDiamonds(totalCost))
         {
             UIManager.Instance?.ShowToast("钻石不足");
             return;
@@ -158,7 +158,7 @@ public class WorldShopItemPrefab : MonoBehaviour
         if (!addOk)
         {
             // 回退钻石
-            PlayerCurrencyManager.Instance.AddDiamonds(totalCost);
+            CharacterService.Instance.AddDiamonds(totalCost);
             UIManager.Instance?.ShowToast("背包已满");
             return;
         }

@@ -249,7 +249,7 @@ public class NpcShopQuantityPanel : UIPopPanelBase
             }
             else
             {
-                int playerMoney = PlayerCurrencyManager.Instance?.Money ?? 0;
+                int playerMoney = CharacterService.Instance?.Money ?? 0;
                 int affordable = playerMoney / itemPrice;
                 currentQuantity = Mathf.Clamp(affordable, 1, maxQuantity);
             }
@@ -308,7 +308,7 @@ public class NpcShopQuantityPanel : UIPopPanelBase
             }
             else
             {
-                int playerMoney = PlayerCurrencyManager.Instance?.Money ?? 0;
+                int playerMoney = CharacterService.Instance?.Money ?? 0;
                 confirmButton.interactable = (long)playerMoney >= (long)currentQuantity * itemPrice;
             }
         }

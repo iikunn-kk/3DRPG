@@ -292,7 +292,7 @@ public class DragAndDropPanel : Singleton<DragAndDropPanel>
             };
             InventoryManager.Instance.RemoveItem(item.instanceId);
 
-            var player = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
+            var player = CharacterService.Instance.CurrentPlayerCharacter();
             Vector3 spawnPos = Vector3.zero;
             if (player != null && player.transform != null)
             {

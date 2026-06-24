@@ -231,10 +231,10 @@ public class BaseTask
                         }
                         case RewardType.Money:
                         {
-                            var pcm = PlayerCurrencyManager.Instance;
+                            var pcm = CharacterService.Instance;
                             if (pcm == null)
                             {
-                                Debug.LogWarning("PlayerCurrencyManager 不存在，无法发放金币奖励");
+                                Debug.LogWarning("CharacterService 不存在，无法发放金币奖励");
                                 UIManager.Instance?.ShowToast("货币系统未初始化，无法发放金币");
                                 success = false;
                                 break;
@@ -249,7 +249,7 @@ public class BaseTask
                         }
                         case RewardType.Exp:
                         {
-                            var cs = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+                            var cs = CharacterService.Instance?.CurrentPlayerCharacter();
                             if (cs == null)
                             {
                                 Debug.LogWarning("玩家角色不存在，无法发放经验奖励");

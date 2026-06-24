@@ -1,4 +1,4 @@
-#region 命名空间引用
+﻿#region 命名空间引用
 // using System; // 已移除：未使用
 using UnityEngine;
 using UnityEngine.UI;
@@ -407,7 +407,7 @@ namespace Game.UI.SkillUpgrade
             if (costText) costText.text = preview.Cost.ToString();
             if (reqLevelText) reqLevelText.text = preview.RequiredPlayerLevel.ToString();
 
-            bool enoughGold = (PlayerCurrencyManager.Instance != null ? PlayerCurrencyManager.Instance.Money : 0) >= preview.Cost;
+            bool enoughGold = (CharacterService.Instance != null ? CharacterService.Instance.Money : 0) >= preview.Cost;
             bool enoughLevel = (_skillUpgradePanel.GetPlayerLevel()) >= preview.RequiredPlayerLevel;
             bool isMaxLevel = curLv >= preview.MaxLevel;
             bool canUpgrade = enoughGold && enoughLevel && !isMaxLevel;

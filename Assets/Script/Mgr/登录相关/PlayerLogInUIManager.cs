@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// [已废弃] 面板切换逻辑已合并到 PlayerLogInManager，此类无任何调用方。
+/// </summary>
+[System.Obsolete("Use PlayerLogInManager instead.", false)]
 public class PlayerLogInUIManager : MonoBehaviour
 {
     #region 字段

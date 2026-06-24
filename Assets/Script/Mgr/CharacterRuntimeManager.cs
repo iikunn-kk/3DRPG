@@ -2,12 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 角色运行时管理器 - 管理玩家在场景中的运行时实例
-/// 职责：
-/// 1. 当前玩家角色实例引用（CharacterState）
-/// 2. 当前地图管理器引用（MapManager）
-/// 3. 跨场景 Buff 状态快照
+/// [已废弃] 请使用 CharacterService 替代。
+/// 保留仅用于向后兼容，将在后续版本删除。
 /// </summary>
+[System.Obsolete("Use CharacterService instead.", false)]
 public class CharacterRuntimeManager : Singleton<CharacterRuntimeManager>
 {
     // ==================== 角色实例引用 ====================

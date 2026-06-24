@@ -22,31 +22,14 @@ public class BasicSettingsPanel : MonoBehaviour
     [SerializeField] private Toggle bgmToggle;
     [SerializeField] private Toggle soundToggle;
 
-    // 为预设的分辨率下拉列表定义对应的分辨率值（保留，不再直接使用固定列表，改为动态构建）
-    private readonly List<Vector2Int> _presetResolutions = new List<Vector2Int>
-    {
-        new Vector2Int(1920, 1080),   // Index 0
-        new Vector2Int(2560, 1440),   // Index 1
-        new Vector2Int(3840, 2160)    // Index 2
-    };
+    // 显示设置服务（取代旧的 ResolutionManager）
+    private readonly DisplaySettingsService _displaySettings = new();
 
     private bool _listenersAdded = false;
     private CancellationTokenSource _deferredRefreshCts;
-    
-    // 用于缓存您在Editor中预设的分辨率选项（窗口模式下改为使用 ResolutionManager 动态生成）
-    private List<TMP_Dropdown.OptionData> _presetResolutionOptions;
 
     // 当前窗口模式的有效分辨率映射（与下拉索引对应）
     private List<Vector2Int> _currentWindowedOptions = new List<Vector2Int>();
-
-    private void Awake()
-    {
-        // 在开始时，缓存您在Editor中设置好的分辨率选项，以便后续恢复（如果需要）
-        if (_presetResolutionOptions == null || _presetResolutionOptions.Count == 0)
-        {
-            _presetResolutionOptions = new List<TMP_Dropdown.OptionData>(resolutionDropdown.options);
-        }
-    }
 
     private void Start()
     {
@@ -77,14 +60,14 @@ public class BasicSettingsPanel : MonoBehaviour
 
     private void InitDisplaySettings()
     {
-        // 与 ResolutionManager 统一映射：0=全屏(独占),1=窗口,2=无边框
-        int currentModeIndex = ResolutionManager.GetFullScreenDropdownIndex();
+        // 显示模式映射：0=全屏(独占),1=窗口,2=无边框
+        int currentModeIndex = _displaySettings.GetCurrentModeIndex();
         fullScreenDropdown.SetValueWithoutNotify(currentModeIndex);
 
         // 根据当前状态，重建分辨率下拉列表的UI
         RebuildResolutionDropdownForCurrentMode();
     }
-    
+
     /// <summary>
     /// 核心方法：根据当前显示模式，重建分辨率下拉列表的UI状态。
     /// </summary>
@@ -96,13 +79,13 @@ public class BasicSettingsPanel : MonoBehaviour
 
         if (isWindowed)
         {
-            // 窗口模式：使用 ResolutionManager 提供的有效选项
-            _currentWindowedOptions = ResolutionManager.GetWindowedOptions();
-            var optionStrings = ResolutionManager.BuildResolutionOptionStrings(_currentWindowedOptions);
+            // 窗口模式：动态获取有效分辨率选项
+            _currentWindowedOptions = _displaySettings.GetWindowedOptions();
+            var optionStrings = _displaySettings.BuildOptionStrings(_currentWindowedOptions);
             resolutionDropdown.AddOptions(optionStrings);
 
             // 选中当前分辨率对应的选项（若找不到则默认选中最后一项）
-            int idx = ResolutionManager.FindIndexForResolution(_currentWindowedOptions, Screen.width, Screen.height);
+            int idx = _displaySettings.FindResolutionIndex(_currentWindowedOptions, Screen.width, Screen.height);
             if (idx < 0) idx = Mathf.Max(0, _currentWindowedOptions.Count - 1);
             resolutionDropdown.SetValueWithoutNotify(idx);
         }
@@ -123,20 +106,20 @@ public class BasicSettingsPanel : MonoBehaviour
         if (index < 0 || index >= _currentWindowedOptions.Count) return;
 
         // 通过管理器应用（统一保存与模式逻辑）
-        ResolutionManager.ApplyWindowedResolutionByIndex(index);
+        _displaySettings.ApplyWindowedResolution(index);
         AudioManager.Instance?.PlayUISound(UISoundType.按下按钮);
     }
 
     public void OnFullScreenModeChange(int index)
     {
         // 与 ResolutionManager 的映射保持一致：0=全屏(独占),1=窗口,2=无边框
-        ResolutionManager.ApplyDisplayModeFromDropdownIndex(index);
+        _displaySettings.ApplyDisplayMode(index);
         AudioManager.Instance?.PlayUISound(UISoundType.按下按钮);
 
         // 延迟到下一帧刷新UI，以确保Screen.width/height已更新为最新值
         DeferredRefreshDisplayUI();
     }
-    
+
     /// <summary>
     /// 启动一个协程，在下一帧刷新显示设置的UI。
     /// </summary>
@@ -164,7 +147,7 @@ public class BasicSettingsPanel : MonoBehaviour
         if (audioMgr == null)
         {
             Debug.LogWarning("AudioManager尚未初始化，从存档加载音频设置UI。");
-            PlayerSetting playerSetting = SaveManager.Instance.LoadPlayerSetting() ?? new PlayerSetting();
+            PlayerSetting playerSetting = SettingsService.Instance.Load() ?? new PlayerSetting();
             UpdateAudioUI(playerSetting.openBgm, playerSetting.bgmVolume, playerSetting.openSound, playerSetting.soundVolume);
         }
         else
@@ -221,12 +204,12 @@ public class BasicSettingsPanel : MonoBehaviour
 
     private void SaveAudioSettings()
     {
-        PlayerSetting ps = SaveManager.Instance.LoadPlayerSetting() ?? new PlayerSetting();
+        PlayerSetting ps = SettingsService.Instance.Load() ?? new PlayerSetting();
         ps.openBgm = AudioManager.Instance.IsBGMEnabled();
         ps.bgmVolume = AudioManager.Instance.GetBGMVolume();
         ps.openSound = AudioManager.Instance.IsSFXEnabled();
         ps.soundVolume = AudioManager.Instance.GetSFXVolume();
-        SaveManager.Instance.SavePlayerSetting(ps);
+        SettingsService.Instance.Save(ps);
     }
 
     #endregion
@@ -245,7 +228,7 @@ public class BasicSettingsPanel : MonoBehaviour
         OnSoundVolumeSliderChange(soundVolumeSlider.value);
 
         fullScreenDropdown.value = 0; // 0 是 "全屏(独占)"
-        
+
         AudioManager.Instance.PlayUISound(UISoundType.按下按钮);
     }
 
@@ -261,7 +244,8 @@ public class BasicSettingsPanel : MonoBehaviour
 
     public void Logout()
     {
-        RunLoginAction(lm => {
+        RunLoginAction(lm =>
+        {
             lm.Logout();
             lm.ShowLoginPanel();
         });
@@ -287,7 +271,8 @@ public class BasicSettingsPanel : MonoBehaviour
         }
 
         if (SceneLoadManager.Instance.IsLoading) return;
-        SceneLoadManager.Instance.LoadLoginScene(true, () => {
+        SceneLoadManager.Instance.LoadLoginScene(true, () =>
+        {
             var lm = FindFirstObjectByType<PlayerLogInManager>();
             if (lm != null) action?.Invoke(lm);
             else Debug.LogWarning("[BasicSettingsPanel] 未找到 PlayerLogInManager (加载完成后)");

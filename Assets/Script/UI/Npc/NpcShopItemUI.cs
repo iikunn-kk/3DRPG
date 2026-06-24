@@ -81,7 +81,7 @@ public class NpcShopItemUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         }
 
         // 检查物品是否可购买
-        bool isPurchasable = (_shopItem.purchaseLimit < 0 || _shopItem.purchaseLimit > 0) && PlayerCurrencyManager.Instance.Money >= _shopItem.price;
+        bool isPurchasable = (_shopItem.purchaseLimit < 0 || _shopItem.purchaseLimit > 0) && CharacterService.Instance.Money >= _shopItem.price;
         SetItemInteractable(isPurchasable);
     }
 

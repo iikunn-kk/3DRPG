@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Michsky.MUIP;
@@ -162,7 +162,7 @@ public class LoginScreen : MonoBehaviour
     /// </summary>
     private void LoadPlayerSettings()
     {
-        playerSetting = SaveManager.Instance.LoadPlayerSetting();
+        playerSetting = SettingsService.Instance.Load();
         if (rememberMeToggle != null)
         {
             rememberMeToggle.isOn = playerSetting.RememberPassword;
@@ -198,7 +198,7 @@ public class LoginScreen : MonoBehaviour
                 playerSetting.Password = "";
             }
 
-            SaveManager.Instance.SavePlayerSetting(playerSetting);
+            SettingsService.Instance.Save(playerSetting);
         }
     }
 

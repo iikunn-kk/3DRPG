@@ -1,4 +1,4 @@
-// SceneLoadManager.cs
+﻿// SceneLoadManager.cs
 using System;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -288,12 +288,12 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
     {
         try
         {
-            var player = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
+            var player = CharacterService.Instance.CurrentPlayerCharacter();
             if (player != null)
             {
-                CharacterRuntimeManager.Instance.SaveSceneTransitionPlayerState(player);
+                CharacterService.Instance.SaveSceneTransitionPlayerState(player);
                 UnityEngine.Object.Destroy(player.gameObject);
-                CharacterRuntimeManager.Instance.UnsetPlayerInstance();
+                CharacterService.Instance.UnsetPlayerInstance();
             }
         }
         catch (Exception ex)

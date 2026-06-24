@@ -32,7 +32,7 @@ public class ArcaneIntellectSkill : Skill
             AudioManager.Instance.PlayWeaponSound(SkillSoundType.Buff释放);
         }
 
-        var cs = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+        var cs = CharacterService.Instance?.CurrentPlayerCharacter();
         if (cs == null)
         {
             Debug.LogWarning("ArcaneIntellectSkill: 未找到玩家角色");

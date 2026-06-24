@@ -130,7 +130,7 @@ public class LotteryPanel : UIPopPanelBase
             Destroy(UICenter.GetChild(i).gameObject);
         }
 
-        InventoryItem item = LegacyPackageManager.Instance.GetLotteryRandom1();
+        InventoryItem item = LotteryService.Instance.GetLotteryRandom1();
         if (item == null)
         {
             Debug.LogWarning("单抽失败，可能背包已满");
@@ -150,7 +150,7 @@ public class LotteryPanel : UIPopPanelBase
     {
         print(">>>>>>>>>> OnLottery10Btn");
 
-        List<InventoryItem> items = LegacyPackageManager.Instance.GetLotteryRandom10(sort: true);
+        List<InventoryItem> items = LotteryService.Instance.GetLotteryRandom10(sort: true);
         if (items == null || items.Count == 0)
         {
             Debug.LogWarning("十连抽返回空结果，可能背包已满");

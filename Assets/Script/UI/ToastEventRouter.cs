@@ -41,10 +41,10 @@ public class ToastEventRouter : MonoBehaviour
     private void Start()
     {
         // 初始化基准值，避免第一次事件被识别为大量正增量
-        if (PlayerCurrencyManager.Instance != null)
+        if (CharacterService.Instance != null)
         {
-            _lastMoney = PlayerCurrencyManager.Instance.Money;
-            _lastDiamonds = PlayerCurrencyManager.Instance.Diamonds;
+            _lastMoney = CharacterService.Instance.Money;
+            _lastDiamonds = CharacterService.Instance.Diamonds;
         }
     }
 

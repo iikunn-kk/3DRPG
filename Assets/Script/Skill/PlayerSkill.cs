@@ -29,7 +29,7 @@ public class PlayerSkill
     /// </summary>
     public float GetDamage()
     {
-        var ctrl = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+        var ctrl = CharacterService.Instance?.CurrentPlayerCharacter();
         int atk = ctrl != null ? ctrl.Attack : 0;
         float basePart = SkillSO.baseDamage * (1f + SkillSO.perLevelBaseDamagePercent * Level);
         float atkPct = SkillSO.baseAttackScalePercent + SkillSO.perLevelAttackScalePercent * Level;

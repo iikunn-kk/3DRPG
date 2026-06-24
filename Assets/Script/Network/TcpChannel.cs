@@ -120,7 +120,6 @@ public class TcpChannel
     private void PumpMessages()
     {
         var buf = new byte[4];
-        byte[]? latestProto = null;
         try
         {
             while (_stream.DataAvailable)
@@ -146,8 +145,8 @@ public class TcpChannel
                 // === 格式识别 ===
                 if (msg.Length > 0 && msg[0] == 0x01)
                 {
-                    // ProtoBuf 快照：只保留最新一条，攒到批处理结束再应用（防跳帧）
-                    latestProto = msg.AsSpan(1).ToArray();
+                    // ProtoBuf 快照：逐帧应用，PositionInterpolator 保证连续性
+                    OnSnapshotProto?.Invoke(msg.AsSpan(1).ToArray());
                 }
                 else
                 {
@@ -158,9 +157,6 @@ public class TcpChannel
                         OnSnapshotReceived?.Invoke(str);
                 }
             }
-            // 批处理结束：只应用最新一条 ProtoBuf 快照
-            if (latestProto != null)
-                OnSnapshotProto?.Invoke(latestProto);
         }
         catch (Exception ex)
         {

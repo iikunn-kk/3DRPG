@@ -3,8 +3,10 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
-/// 玩家货币管理器，用于管理玩家的金钱和钻石等游戏货币
+/// [已废弃] 请使用 CharacterService 替代。
+/// 保留仅用于向后兼容，将在后续版本删除。
 /// </summary>
+[System.Obsolete("Use CharacterService instead.", false)]
 public class PlayerCurrencyManager : Singleton<PlayerCurrencyManager>
 {
     // 移除 C# 静态事件，使用 ScriptableObject 事件在 Inspector 绑定

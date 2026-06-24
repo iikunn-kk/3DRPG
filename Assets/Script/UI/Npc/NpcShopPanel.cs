@@ -365,7 +365,7 @@ public class NpcShopPanel : UIPopPanelBase
     private void UpdatePlayerGoldDisplay()
     {
         // 获取玩家实际金币数量
-        int playerGold = PlayerCurrencyManager.Instance?.Money ?? 0;
+        int playerGold = CharacterService.Instance?.Money ?? 0;
         if (playerGoldText != null)
         {
             playerGoldText.text = $"金币: {playerGold}";

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Google.Protobuf;
@@ -61,7 +61,7 @@ public partial class EntitySyncManager : MonoBehaviour
                 // 诊断：本地玩家匹配
                 if (e.EntityId == _localPlayerEntityId || (e.EntityType == 0 && e.Uid == NetworkManager.Instance.PlayerUid))
                 {
-                    var localState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+                    var localState = CharacterService.Instance?.CurrentPlayerCharacter();
                     if (localState != null && e.Hp != localState.CurrentHealth)
                     {
                         // 复活保护：复活后 2s 内拒绝服务端 hp=0（竞态条件：服务端尚未处理 respawn 消息）
@@ -145,12 +145,13 @@ public partial class EntitySyncManager : MonoBehaviour
                 }
             }
 
+
             foreach (var e in snapshot.entities)
             {
                 // 本地玩家：同步服务端权威 HP + guildId
                 if (e.entityId == _localPlayerEntityId || (e.entityType == 0 && e.uid == NetworkManager.Instance.PlayerUid))
                 {
-                    var localState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+                    var localState = CharacterService.Instance?.CurrentPlayerCharacter();
                     if (localState != null)
                     {
                         if (e.hp != localState.CurrentHealth)
@@ -249,8 +250,8 @@ public partial class EntitySyncManager : MonoBehaviour
                 var newPos = new Vector3(e.posX, e.posY, e.posZ);
                 var interp = localMonster.GetComponent<PositionInterpolator>();
                 if (interp == null) interp = localMonster.gameObject.AddComponent<PositionInterpolator>();
-                interp.RenderDelay = 0.066f;
-                interp.SetTarget(newPos);
+                interp.RenderDelay = 0.066f;  // 66ms ≈ 2×30Hz，平滑过渡
+                interp.SetTarget(newPos);     // 怪物旋转由 MonsterLocomotionDriver 控制
                 var nav = localMonster.GetComponent<UnityEngine.AI.NavMeshAgent>();
                 if (nav != null)
                 {
@@ -313,12 +314,9 @@ public partial class EntitySyncManager : MonoBehaviour
         var rot = Quaternion.Euler(0, e.rotY, 0);
 
         var interpolator = go.GetComponent<PositionInterpolator>();
-        if (interpolator == null) interpolator = go.AddComponent<PositionInterpolator>();  // 和怪物一致：自动添加
-        interpolator.RenderDelay = 0.066f;   // 66ms = 2 tick，给插值两帧的平滑时间
-        interpolator.SetTarget(pos);
-
-        // 远程玩家：旋转平滑插值，避免直接跳变
-        go.transform.rotation = Quaternion.Slerp(go.transform.rotation, rot, Time.deltaTime * 15f);
+        if (interpolator == null) interpolator = go.AddComponent<PositionInterpolator>();
+        interpolator.RenderDelay = 0.066f;   // 66ms ≈ 2×30Hz，平滑过渡
+        interpolator.SetTarget(pos, rot);     // 位置和旋转一起传，共用同一插值时间线
 
         var proxy = go.GetComponent<NetworkEntityProxy>();
         if (proxy) proxy.SetHp(e.hp, e.maxHp);

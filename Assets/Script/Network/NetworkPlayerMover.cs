@@ -1,4 +1,4 @@
-// Unity 客户端：替换 Assets/Script/Network/NetworkPlayerMover.cs
+﻿// Unity 客户端：替换 Assets/Script/Network/NetworkPlayerMover.cs
 // ProtoBuf 版本：位置消息直接序列化为 proto binary，走 UDP
 
 using UnityEngine;
@@ -53,7 +53,7 @@ public class NetworkPlayerMover : MonoBehaviour
         bool crouch = _movement != null && _movement.isCrouching;
         bool jump = _movement != null && _movement.IsJumping;
         bool roll = _movement != null && _movement.IsRolling;
-        bool dead = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter()?.CurrentHealth <= 0;
+        bool dead = CharacterService.Instance?.CurrentPlayerCharacter()?.CurrentHealth <= 0;
         bool stateChanged = crouch != _lastCrouch || jump != _lastJump || roll != _lastRoll || dead != _lastDead;
 
         bool forceSend = _sendTimer > 0.5f;

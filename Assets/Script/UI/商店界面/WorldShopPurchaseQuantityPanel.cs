@@ -45,7 +45,7 @@ public class WorldShopPurchaseQuantityPanel : UIPopPanelBase
         {
             slider.wholeNumbers = true;
             slider.minValue = _maxNumber > 0 ? 1 : 0;
-            int gemCount = PlayerCurrencyManager.Instance.Diamonds;
+            int gemCount = CharacterService.Instance.Diamonds;
             int maxCount=math.min(gemCount / _itemPrice, _maxNumber);
             slider.maxValue = maxCount;
             slider.value = maxCount;

@@ -101,7 +101,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
 
     private void Setup3DStudio()
     {
-        var playerCharacter = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
+        var playerCharacter = CharacterService.Instance.CurrentPlayerCharacter();
         if (playerCharacter != null)
         {
             inventory3DStudioManager.InitStudio(playerCharacter.Profession);
@@ -177,7 +177,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
 
     private void RefenceGoldText()
     {
-        goldText.text = PlayerCurrencyManager.Instance.Money.ToString();
+        goldText.text = CharacterService.Instance.Money.ToString();
     }
 
     #endregion
@@ -196,7 +196,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
 
     public void OnUIPanelShow()
     {
-        var movement = CharacterRuntimeManager.Instance.CurrentPlayerCharacter()?.Movement;
+        var movement = CharacterService.Instance.CurrentPlayerCharacter()?.Movement;
         if (movement != null)
         {
             movement.LockPlayerControl();
@@ -205,7 +205,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
 
     public void OnUIPanelHide()
     {
-        var movement = CharacterRuntimeManager.Instance.CurrentPlayerCharacter()?.Movement;
+        var movement = CharacterService.Instance.CurrentPlayerCharacter()?.Movement;
         if (movement != null)
         {
             movement.UnlockPlayerControl();
@@ -228,7 +228,7 @@ public class InventoryPanel : UIPopPanelBase, IUIPlayerControlLock
 
     public void AddMoney()
     {
-        PlayerCurrencyManager.Instance.AddMoney(100000);
+        CharacterService.Instance.AddMoney(100000);
     }
     #endregion
 }

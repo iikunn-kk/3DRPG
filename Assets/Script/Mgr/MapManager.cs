@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +20,7 @@ public class MapManager : MonoBehaviour
     [SerializeField] private Camera miniMapCamera;
     private void OnEnable()
     {
-        CharacterRuntimeManager.Instance.SetMapManager(this);
+        CharacterService.Instance.SetMapManager(this);
     }
 
     private void Start()
@@ -70,7 +70,7 @@ public class MapManager : MonoBehaviour
         if (playerCharacter != null)
         {
             playerCharacter.Init(characterData, spawnPosition);
-            CharacterRuntimeManager.Instance.SetPlayerCharacter(playerCharacter);
+            CharacterService.Instance.SetPlayerCharacter(playerCharacter);
             // --- 在玩家生成后初始化任务（延迟到此，确保角色数据已就绪） ---
             if (TaskManager.Instance != null)
             {
@@ -79,7 +79,7 @@ public class MapManager : MonoBehaviour
             // 任务事件桥接：玩家生成后激活事件转发
             TaskEventBridge.Instance.Attach();
             // 恢复跨场景保存的临时 Buff
-            CharacterRuntimeManager.Instance.RestoreTransientPlayerState(playerCharacter);
+            CharacterService.Instance.RestoreTransientPlayerState(playerCharacter);
             cameraController.SetTarget(playerInstance.transform);
 
             // MMO 模式：挂网络同步组件并连接到 Gateway（职业在连接内同步发送）

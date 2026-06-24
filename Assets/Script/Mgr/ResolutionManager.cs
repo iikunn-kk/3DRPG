@@ -4,13 +4,10 @@ using System.Linq;
 using UnityEngine;
 
 /// <summary>
-/// 统一管理游戏分辨率与显示模式的管理器。
-/// - 在启动阶段（Unity 启动动画前）应用存档中的显示设置。
-/// - 过滤可选分辨率：仅保留 1080P、2K、4K，且不超过显示器最大分辨率。
-/// - 全屏和无边框窗口最大化时强制使用显示器最大分辨率，且不可修改。
-/// - 窗口模式下可在允许分辨率中自由选择。
-/// - 提供与 UI 交互的便捷方法。
+/// [已废弃] 请使用 DisplaySettingsService 替代。
+/// 保留此类仅为了不破坏已有引用（目前无引用方），将在后续版本删除。
 /// </summary>
+[System.Obsolete("Use DisplaySettingsService instead.", false)]
 public static class ResolutionManager
 {
     // 允许的标准分辨率列表（宽 x 高）
@@ -29,7 +26,7 @@ public static class ResolutionManager
     /// </summary>
     public static void ApplyInitialFromSave()
     {
-        var ps = SaveManager.Instance.LoadPlayerSetting() ?? new PlayerSetting();
+        var ps = SettingsService.Instance.Load() ?? new PlayerSetting();
         // 兼容历史：把 MaximizedWindow 当作无边框窗口处理
         if (ps.fullScreenMode == FullScreenMode.MaximizedWindow)
         {
@@ -117,7 +114,7 @@ public static class ResolutionManager
         else if (index == 1)
         {
             // 窗口模式：优先使用存档中的窗口分辨率，否则取可选列表中的最大一档
-            var ps = SaveManager.Instance.LoadPlayerSetting() ?? new PlayerSetting();
+            var ps = SettingsService.Instance.Load() ?? new PlayerSetting();
             var options = GetWindowedOptions();
             Vector2Int res;
             int i = FindIndexForResolution(options, ps.resolutionWidth, ps.resolutionHeight);
@@ -145,11 +142,11 @@ public static class ResolutionManager
     /// </summary>
     public static void SaveApplied()
     {
-        var ps = SaveManager.Instance.LoadPlayerSetting() ?? new PlayerSetting();
+        var ps = SettingsService.Instance.Load() ?? new PlayerSetting();
         ps.fullScreenMode = Screen.fullScreenMode;
         ps.resolutionWidth = Screen.width;
         ps.resolutionHeight = Screen.height;
-        SaveManager.Instance.SavePlayerSetting(ps);
+        SettingsService.Instance.Save(ps);
     }
 
     /// <summary>

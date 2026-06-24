@@ -31,7 +31,7 @@ namespace Game.UI.SkillUpgrade
             var so = SkillManager.Instance?.GetSkillSo(SkillID);
             if (GameDataConfig.Instance!=null)
             {
-                var skills = CharacterRuntimeManager.Instance.CurrentPlayerCharacter()?.GetComponent<SkillController>()?.GetAllSkillsSnapshot();
+                var skills = CharacterService.Instance.CurrentPlayerCharacter()?.GetComponent<SkillController>()?.GetAllSkillsSnapshot();
                 if (so != null && skills != null && skills.TryGetValue(SkillID, out var ps))
                 {
                     if (iconImage && so.icon != null) iconImage.sprite = so.icon; // 修复初始未显示图标（若 prefab 引用正确）

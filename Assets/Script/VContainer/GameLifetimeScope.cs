@@ -1,4 +1,4 @@
-using VContainer;
+﻿using VContainer;
 using VContainer.Unity;
 using UnityEngine;
 
@@ -21,21 +21,19 @@ public class GameLifetimeScope : LifetimeScope
         RegisterSingletonIfExists<AudioManager>(builder, AudioManager.Instance);
         RegisterSingletonIfExists<UIManager>(builder, UIManager.Instance);
         RegisterSingletonIfExists<InventoryManager>(builder, InventoryManager.Instance);
-        RegisterSingletonIfExists<PlayerCurrencyManager>(builder, PlayerCurrencyManager.Instance);
+        RegisterSingletonIfExists<CharacterService>(builder, CharacterService.Instance);
         RegisterSingletonIfExists<SceneLoadManager>(builder, SceneLoadManager.Instance);
         RegisterSingletonIfExists<SaveCoordinator>(builder, SaveCoordinator.Instance);
         RegisterSingletonIfExists<MongoDBManager>(builder, MongoDBManager.Instance);
-        RegisterSingletonIfExists<CharacterRuntimeManager>(builder, CharacterRuntimeManager.Instance);
         RegisterSingletonIfExists<SessionManager>(builder, SessionManager.Instance);
         RegisterSingletonIfExists<GuildManager>(builder, GuildManager.Instance);
-        RegisterSingletonIfExists<CharacterDataManager>(builder, CharacterDataManager.Instance);
-        RegisterSingletonIfExists<SaveManager>(builder, SaveManager.Instance);
+        RegisterSingletonIfExists<SettingsService>(builder, SettingsService.Instance);
         RegisterSingletonIfExists<GameDataConfig>(builder, GameDataConfig.Instance);
         RegisterSingletonIfExists<TaskEventBridge>(builder, TaskEventBridge.Instance);
 
         // 非 Singleton 的实例 — 运行时自动查找
         builder.RegisterComponentInHierarchy<LoadingScreenController>();
-        builder.RegisterComponentInHierarchy<CursorManager>();
+        builder.RegisterComponentInHierarchy<CursorService>();
         builder.RegisterComponentInHierarchy<MapManager>();
     }
 

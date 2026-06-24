@@ -5,12 +5,10 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// 控制鼠标光标的显示/隐藏与锁定状态。
-/// 核心逻辑：程序只有两种状态
-/// 1. UI控制模式：光标显示、不锁定，镜头锁定。
-/// 2. 游戏控制模式：光标隐藏、锁定，镜头不锁定。
-/// 触发条件：按下指定按键、UI面板打开、游戏窗口失焦时，进入“UI控制模式”，否则进入“游戏控制模式”。
+/// [已废弃] 请使用 CursorService 替代。
+/// 保留此类仅为向后兼容（场景中可能仍挂着此组件），将在后续版本删除。
 /// </summary>
+[System.Obsolete("Use CursorService instead.", false)]
 public class CursorManager : MonoBehaviour
 {
     [Header("Input (New Input System)")]
@@ -123,10 +121,10 @@ public class CursorManager : MonoBehaviour
         // 检查全局UI面板状态
         isPanelOpen = UIManager.Instance != null && UIManager.Instance.isOpenedPanel;
 
-        // 核心判断：只要满足任一条件，就应该进入“UI控制模式”
+        // 核心判断：只要满足任一条件，就应该进入"UI控制模式"
         bool isUiControlMode = isHoldKeyActive || isPanelOpen || !Application.isFocused;
 
-        // 只有在“模式”发生切换时，才执行状态更新，避免每帧重复调用API
+        // 只有在"模式"发生切换时，才执行状态更新，避免每帧重复调用API
         if (isUiControlMode != _lastIsUiControlMode)
         {
             SetCursorState(isUiControlMode);

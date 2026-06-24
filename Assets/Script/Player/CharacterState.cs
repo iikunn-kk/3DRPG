@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using UnityEngine;
 // 移除未使用的命名空间引用，保持文件整洁
@@ -129,10 +129,10 @@ public partial class CharacterState : MonoBehaviour, IDamageable
         MagicDamage = 0f;
         CritChancePercent = 0f;
         transform.position = pos;
-        CharacterRuntimeManager.Instance.SetPlayerCharacter(this);
+        CharacterService.Instance.SetPlayerCharacter(this);
 
         // 初始化货币
-        PlayerCurrencyManager.Instance.InitializeFromCharacterData(data);
+        CharacterService.Instance.InitializeFromCharacterData(data);
 
         _interaction = GetComponent<PlayerInteraction>();
         _anim = GetComponent<CharacterAnimationController>();
@@ -197,8 +197,8 @@ public partial class CharacterState : MonoBehaviour, IDamageable
         PlayerCharacterData.position = transform.position;
         PlayerCharacterData.characterName = CharacterName;
         PlayerCharacterData.profession = Profession;
-        PlayerCharacterData.gold = PlayerCurrencyManager.Instance.Money;
-        PlayerCharacterData.gem = PlayerCurrencyManager.Instance.Diamonds;
+        PlayerCharacterData.gold = CharacterService.Instance.Money;
+        PlayerCharacterData.gem = CharacterService.Instance.Diamonds;
         PlayerCharacterData.currentScene = SceneLoadManager.Instance.CurrentSceneName;
         TaskManager.Instance?.PopulateCharacterDataTasks(PlayerCharacterData);
         SkillManager.Instance?.PopulateCharacterDataSkills(PlayerCharacterData);

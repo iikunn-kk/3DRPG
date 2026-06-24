@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Audio;
 using UnityEngine.Pool;
@@ -107,7 +107,7 @@ public class AudioManager : Singleton<AudioManager>
 
     private void LoadSettings()
     {
-        _playerSettingCache = SaveManager.Instance.LoadPlayerSetting() ?? new PlayerSetting();
+        _playerSettingCache = SettingsService.Instance.Load() ?? new PlayerSetting();
         _isBGMEnabled = _playerSettingCache.openBgm;
         _isSFXEnabled = _playerSettingCache.openSound;
         _bgmVolume = Mathf.Clamp01(_playerSettingCache.bgmVolume);
@@ -121,7 +121,7 @@ public class AudioManager : Singleton<AudioManager>
         _playerSettingCache.openSound = _isSFXEnabled;
         _playerSettingCache.bgmVolume = _bgmVolume;
         _playerSettingCache.soundVolume = _sfxVolume;
-        SaveManager.Instance.SavePlayerSetting(_playerSettingCache);
+        SettingsService.Instance.Save(_playerSettingCache);
     }
 
     public void SetBGMEnabled(bool isEnabled)

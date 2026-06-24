@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
@@ -95,7 +95,7 @@ public class AvatarPanel : MonoBehaviour
 
     public void GrantPlayerMaxLevel()
     {
-        CharacterState cs = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
+        CharacterState cs = CharacterService.Instance.CurrentPlayerCharacter();
         if (cs == null)
         {
             Debug.LogWarning("[AvatarPanel] 无法获取 CharacterState 实例，无法升满级。");
@@ -122,7 +122,7 @@ public class AvatarPanel : MonoBehaviour
 
     public void TestTakeHalfDamage()
     {
-        CharacterState cs = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
+        CharacterState cs = CharacterService.Instance.CurrentPlayerCharacter();
         if (cs == null)
         {
             Debug.LogWarning("[AvatarPanel] 无法获取 CharacterState 实例，无法测试掉血。");

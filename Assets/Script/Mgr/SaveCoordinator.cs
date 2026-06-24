@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using System;
 using System.Collections.Generic;
@@ -23,7 +23,7 @@ public class SaveCoordinator : Singleton<SaveCoordinator>
             var character = SessionManager.Instance.CurrentCharacter;
             if (character == null) return;
 
-            var cs = CharacterRuntimeManager.Instance.CurrentPlayerCharacter();
+            var cs = CharacterService.Instance.CurrentPlayerCharacter();
             if (cs != null)
             {
                 character.exp = cs.Exp;
@@ -32,10 +32,10 @@ public class SaveCoordinator : Singleton<SaveCoordinator>
                 character.hp = cs.MaxHealth;
             }
 
-            if (PlayerCurrencyManager.Instance != null)
+            if (CharacterService.Instance != null)
             {
-                character.gold = PlayerCurrencyManager.Instance.Money;
-                character.gem = PlayerCurrencyManager.Instance.Diamonds;
+                character.gold = CharacterService.Instance.Money;
+                character.gem = CharacterService.Instance.Diamonds;
             }
 
             TaskManager.Instance?.PopulateCharacterDataTasks(character);

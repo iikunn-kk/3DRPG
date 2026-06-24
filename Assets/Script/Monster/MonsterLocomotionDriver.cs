@@ -8,14 +8,15 @@ using UnityEngine.AI;
 /// - 目标：避免模型面朝向与实际移动方向不一致；Idle 时严格置零
 /// </summary>
 [DisallowMultipleComponent]
+[DefaultExecutionOrder(50)]  // 在 PositionInterpolator(-100) 之后执行，确保读到当帧插值后的位置
 public class MonsterLocomotionDriver : MonoBehaviour
 {
     [Header("必需/可选引用")]
-    [Tooltip("可选：如果 Animator 不在同一对象上可手动赋值；若与 MonsterAnimationController 共存，仅用于设置 V/H 参数")] 
+    [Tooltip("可选：如果 Animator 不在同一对象上可手动赋值；若与 MonsterAnimationController 共存，仅用于设置 V/H 参数")]
     [SerializeField] private Animator animator;
     [SerializeField] private NavMeshAgent agent; // 可选，若为空将从本体获取；若禁用则回退用位移速度
 
-    [Header("可选：只旋转该模型节点（不影响导航物体），为空则旋转本体")] 
+    [Header("可选：只旋转该模型节点（不影响导航物体），为空则旋转本体")]
     [SerializeField] private Transform visualRoot;
 
     [Header("参数名（需与动画树一致)")]
@@ -25,19 +26,19 @@ public class MonsterLocomotionDriver : MonoBehaviour
     [Header("速度->动画 映射 & 平滑")]
     [Tooltip("参考的行走速度（该速度在动画树中约等于 1.0）；追击速度高于此值时可超过 1.5 触发跑步层")]
     [SerializeField] private float referenceWalkSpeed = 2f;
-    [Tooltip("启动时若存在 NavMeshAgent 则用其初始 speed 作为参考行走速度（建议为巡逻速度）")] 
+    [Tooltip("启动时若存在 NavMeshAgent 则用其初始 speed 作为参考行走速度（建议为巡逻速度）")]
     [SerializeField] private bool autoDetectReferenceFromAgent = true;
     [Tooltip("认为静止的最小实际速度（低于该值视为 0）")]
     [SerializeField] private float minMoveSpeed = 0.05f;
     [Tooltip("Animator.SetFloat 的阻尼时间（秒）")]
     [SerializeField] private float blendDampTime = 0.08f;
     [Tooltip("用于原始速度的低通滤波，0=无滤波，数值越大越平滑")]
-    [Range(0f, 1f)] [SerializeField] private float velocitySmoothing = 0.12f;
+    [Range(0f, 1f)][SerializeField] private float velocitySmoothing = 0.12f;
     [Tooltip("限制 V/H 的最大绝对值，避免极端速度导致动画出界（保持大于 1.5 即可触发跑步）")]
     [SerializeField] private float maxBlendAbs = 3f;
 
     [Header("朝向控制")]
-    [Tooltip("是否由本组件负责旋转朝向；关掉则只驱动 V/H，不做旋转")] 
+    [Tooltip("是否由本组件负责旋转朝向；关掉则只驱动 V/H，不做旋转")]
     public bool enableRotation = true;
     [Tooltip("旋转速度（度/秒）或插值速度（更直觉）")]
     [SerializeField] private float rotateLerpSpeed = 12f;
@@ -50,7 +51,7 @@ public class MonsterLocomotionDriver : MonoBehaviour
     [SerializeField][Tooltip("是否在开局自动检测一次是否需要反转模型前向（采样若干帧平均点积<0则自动勾选）")] private bool autoCalibrateForward = true;
     [SerializeField][Tooltip("用于自动校准的最少有效采样帧数")] private int calibrateSamples = 20;
 
-    [Header("生命周期")] 
+    [Header("生命周期")]
     [SerializeField] private MonsterCombat combat; // 用于侦测死亡，死亡后停止旋转/更新
 
     // 缓存
@@ -60,6 +61,7 @@ public class MonsterLocomotionDriver : MonoBehaviour
     private Vector3 _smoothedPlanarVel;
     private float _lastAgentSpeed;
     private bool _stoppedDueToDeath;
+    private PositionInterpolator _interpolator;  // 远程实体的位置插值器（如果有）
 
     // 自动校准内部状态
     private bool _forwardCalibrated;
@@ -88,6 +90,7 @@ public class MonsterLocomotionDriver : MonoBehaviour
         if (animator == null) animator = GetComponentInChildren<Animator>();
         if (agent == null) agent = GetComponent<NavMeshAgent>();
         if (combat == null) combat = GetComponent<MonsterCombat>();
+        _interpolator = GetComponent<PositionInterpolator>();
         _refTransform = visualRoot != null ? visualRoot : transform;
         _vHash = string.IsNullOrEmpty(vSpeedParam) ? 0 : Animator.StringToHash(vSpeedParam);
         _hHash = string.IsNullOrEmpty(hSpeedParam) ? 0 : Animator.StringToHash(hSpeedParam);
@@ -140,11 +143,22 @@ public class MonsterLocomotionDriver : MonoBehaviour
             Vector3 av = agent.velocity; av.y = 0f;
             planarVel = dv.sqrMagnitude > 0.0001f ? dv : av;
         }
+
         if (!haveAgent)
         {
-            Vector3 delta = transform.position - _lastPos; delta.y = 0f;
-            float dt = Mathf.Max(Time.deltaTime, 0.000001f);
-            planarVel = delta / dt;
+            if (_interpolator != null)
+            {
+                // 远程实体：直接从 PositionInterpolator 获取已平滑的速度，
+                // 避免从位置增量反推时把插值跳跃放大为速度尖峰
+                planarVel = _interpolator.SmoothedVelocity;
+                planarVel.y = 0f;
+            }
+            else
+            {
+                Vector3 delta = transform.position - _lastPos; delta.y = 0f;
+                float dt = Mathf.Max(Time.deltaTime, 0.000001f);
+                planarVel = delta / dt;
+            }
         }
         _lastPos = transform.position;
 

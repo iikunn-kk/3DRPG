@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 // 受击、死亡与复活相关逻辑
 public partial class CharacterState
@@ -83,7 +83,7 @@ public partial class CharacterState
         // MMO 模式：主动通知所有 MonsterSpawner 玩家已死亡（触发庆祝动画）
         if (GameModeConfig.IsMmoMode)
         {
-            var mm = CharacterRuntimeManager.Instance?.currentMapManager;
+            var mm = CharacterService.Instance?.currentMapManager;
             if (mm != null && mm.monsterSpawners != null)
             {
                 foreach (var sp in mm.monsterSpawners)

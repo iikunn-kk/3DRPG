@@ -75,7 +75,7 @@ public class SkillManager : Singleton<SkillManager>
     public void RebuildCurrentPlayerSkillsFromGame()
     {
         _currentPlayerSkills.Clear();
-        var characterState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+        var characterState = CharacterService.Instance?.CurrentPlayerCharacter();
         var data = characterState?.PlayerCharacterData;
 
         if (data != null)
@@ -236,7 +236,7 @@ public class SkillManager : Singleton<SkillManager>
             return false;
         }
 
-        if (!PlayerCurrencyManager.Instance.RemoveMoney(cost))
+        if (!CharacterService.Instance.RemoveMoney(cost))
         {
             failReason = "金币不足";
             return false;
@@ -265,7 +265,7 @@ public class SkillManager : Singleton<SkillManager>
         }
 
         // 同步到运行时 PlayerCharacterData（如果存在），保证 UI/运行时逻辑读取到最新等级
-        var runtimePlayer = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+        var runtimePlayer = CharacterService.Instance?.CurrentPlayerCharacter();
         var runtimeData = runtimePlayer?.PlayerCharacterData;
         if (runtimeData != null)
         {
@@ -298,7 +298,7 @@ public class SkillManager : Singleton<SkillManager>
     /// </summary>
     public bool TryUpgradeSkill(string skillID, out string failReason)
     {
-        var characterState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+        var characterState = CharacterService.Instance?.CurrentPlayerCharacter();
         var data = characterState?.PlayerCharacterData;
         int playerLevel = data?.level ?? 0;
 
@@ -342,7 +342,7 @@ public class SkillManager : Singleton<SkillManager>
         }
 
         // 2) 来自运行时 PlayerCharacterData（如果存在）
-        var runtimePlayer = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+        var runtimePlayer = CharacterService.Instance?.CurrentPlayerCharacter();
         var runtimeData = runtimePlayer?.PlayerCharacterData;
         if (runtimeData != null && runtimeData.skills != null)
         {

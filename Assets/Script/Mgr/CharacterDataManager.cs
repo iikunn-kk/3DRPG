@@ -1,6 +1,11 @@
 using UnityEngine;
 using System;
 
+/// <summary>
+/// [已废弃] 货币管理已被 CharacterService 替代，此类无任何调用方。
+/// 保留仅用于向后兼容，将在后续版本删除。
+/// </summary>
+[System.Obsolete("Use CharacterService instead. This class has no callers.", false)]
 public class CharacterDataManager : Singleton<CharacterDataManager>
 {
     #region 字段和属性

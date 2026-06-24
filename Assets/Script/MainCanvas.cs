@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Game.UI.SkillUpgrade;
 using UnityEngine;
 using System.Linq; // 添加以便使用 ToList
@@ -49,7 +49,7 @@ public class MainCanvas : MonoBehaviour
         var playerStatePanel = UIManager.Instance.OpenPanel<PlayerStatePanel>(out var isOpen);
         if (isOpen)
         {
-            playerStatePanel.Init(CharacterRuntimeManager.Instance.CurrentPlayerCharacter());
+            playerStatePanel.Init(CharacterService.Instance.CurrentPlayerCharacter());
         }
     }
     public void ShowInventoryPanel()

@@ -5,7 +5,8 @@ namespace PlayerFSM
     /// <summary>
     /// 蹲伏状态：按住 Crouch，速度减半。
     /// 物理行为：加速到蹲伏速度（减半）+ 面向摄像机前方。
-    /// 可切换到：Idle（松开 Crouch）、Roll。
+    /// 可切换到：Idle（松开 Crouch）。
+    /// 蹲伏中不允许翻滚。
     /// </summary>
     public class PlayerCrouchState : PlayerStateBase
     {

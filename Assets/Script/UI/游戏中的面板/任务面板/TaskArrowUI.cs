@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -97,7 +97,7 @@ public class TaskArrowUI : MonoBehaviour
             return;
         }
 
-        var playerState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+        var playerState = CharacterService.Instance?.CurrentPlayerCharacter();
         if (playerState == null)
         {
             SetVisible(false);

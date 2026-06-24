@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// [已废弃] 请使用 SettingsService 替代。
+/// </summary>
+[System.Obsolete("Use SettingsService instead.", false)]
 public class SaveManager : Singleton<SaveManager>
 {
     private const string PLAYER_SETTING_KEY = "PlayerSetting";

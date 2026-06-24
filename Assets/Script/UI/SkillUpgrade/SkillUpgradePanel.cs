@@ -23,7 +23,7 @@ namespace Game.UI.SkillUpgrade
         // 去掉事件订阅，仅初始化
         public void Init()
         {
-            var skillController = CharacterRuntimeManager.Instance.CurrentPlayerCharacter()?.GetComponent<SkillController>();
+            var skillController = CharacterService.Instance.CurrentPlayerCharacter()?.GetComponent<SkillController>();
             RefreshGold();
             OnSkillsInitialized(skillController);
             Show();
@@ -33,7 +33,7 @@ namespace Game.UI.SkillUpgrade
         {
             if (goldText != null)
             {
-                goldText.text = PlayerCurrencyManager.Instance != null ? PlayerCurrencyManager.Instance.Money.ToString() : "0";
+                goldText.text = CharacterService.Instance != null ? CharacterService.Instance.Money.ToString() : "0";
             }
         }
 
@@ -130,6 +130,6 @@ namespace Game.UI.SkillUpgrade
 
 
         public IReadOnlyDictionary<string, PlayerSkill> GetSkillsSnapshot() => _skillsSnapshot;
-        public int GetPlayerLevel() => CharacterRuntimeManager.Instance.CurrentPlayerCharacter()?.PlayerCharacterData.level ?? 0;
+        public int GetPlayerLevel() => CharacterService.Instance.CurrentPlayerCharacter()?.PlayerCharacterData.level ?? 0;
     }
 }

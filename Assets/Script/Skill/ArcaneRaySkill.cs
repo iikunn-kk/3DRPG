@@ -161,7 +161,7 @@ public class ArcaneRaySkill : Skill
         try
         {
             if (PlayerSkill == null) return;
-            var cs = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+            var cs = CharacterService.Instance?.CurrentPlayerCharacter();
 
             while (_isChanneling)
             {

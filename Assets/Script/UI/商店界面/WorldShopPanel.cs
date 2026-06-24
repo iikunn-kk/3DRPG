@@ -57,7 +57,7 @@ public class WorldShopPanel : UIPopPanelBase
             }
         }
 
-        gemText.text = PlayerCurrencyManager.Instance?.Diamonds.ToString();
+        gemText.text = CharacterService.Instance?.Diamonds.ToString();
     }
     
     /// <summary>
@@ -137,6 +137,6 @@ public class WorldShopPanel : UIPopPanelBase
 
     public void AddGem()
     {
-        PlayerCurrencyManager.Instance.AddDiamonds(50000);
+        CharacterService.Instance.AddDiamonds(50000);
     }
 }

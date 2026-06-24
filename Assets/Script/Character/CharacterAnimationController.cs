@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 
+
 /// <summary>
 /// 通用的玩家/角色动画控制器（代码直接驱动版）：
 /// - 所有动画切换使用 CrossFadeInFixedTime()，不再依赖 Animator Trigger 连接
@@ -298,12 +299,13 @@ public class CharacterAnimationController : MonoBehaviour
     //  移动速度（混合树）
     // ═════════════════════════════════════════════
 
-    public void SetMoveSpeeds(float horizontal, float vertical)
+    public void SetMoveSpeeds(float vertical, float horizontal)
     {
         if (animator == null) return;
         if (_movement != null && _movement.IsControlLocked()) return;
-        if (_hSpeedHash != 0) animator.SetFloat(_vSpeedHash, horizontal);
-        if (_vSpeedHash != 0) animator.SetFloat(_hSpeedHash, vertical);
+        if (_vSpeedHash != 0) animator.SetFloat(_vSpeedHash, vertical);
+        if (_hSpeedHash != 0) animator.SetFloat(_hSpeedHash, horizontal);
+
     }
 
     public void SetCrouch(bool crouch)

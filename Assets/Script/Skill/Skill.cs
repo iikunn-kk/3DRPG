@@ -32,7 +32,7 @@ public abstract class Skill : MonoBehaviour
         if (CasterState == null)
         {
             // 回退：从 GameManager 取当前玩家（在单人玩家的场景中适用）
-            CasterState = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+            CasterState = CharacterService.Instance?.CurrentPlayerCharacter();
         }
         // 可选：为一次性技能提供兜底的自动销毁，避免遗漏清理
         if (enableAutoDestroy && autoDestroyAfter > 0f)

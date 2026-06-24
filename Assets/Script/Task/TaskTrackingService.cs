@@ -141,7 +141,7 @@ public class TaskTrackingService : Singleton<TaskTrackingService>
         var anchors = global::TaskTargetAnchor.GetAnchors(objective.objectiveType, objective.targetId);
         if (anchors != null && anchors.Count > 0)
         {
-            var player = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+            var player = CharacterService.Instance?.CurrentPlayerCharacter();
             if (player != null)
             {
                 Transform best = null; float bestSqr = float.MaxValue;
@@ -208,7 +208,7 @@ public class TaskTrackingService : Singleton<TaskTrackingService>
         targetScene = objScene;
 
         var activeScene = SceneManager.GetActiveScene().name;
-        var player = CharacterRuntimeManager.Instance?.CurrentPlayerCharacter();
+        var player = CharacterService.Instance?.CurrentPlayerCharacter();
         if (player == null) { hint = "无玩家"; return false; }
 
         var playerPos = player.transform.position;
@@ -216,7 +216,7 @@ public class TaskTrackingService : Singleton<TaskTrackingService>
         // 场景不同：寻找传送点
         if (activeScene != objScene)
         {
-            var tp = CharacterRuntimeManager.Instance?.currentMapManager.teleportPoint;
+            var tp = CharacterService.Instance?.currentMapManager.teleportPoint;
             if (tp != null)
             {
                 worldPos = tp.transform.position;

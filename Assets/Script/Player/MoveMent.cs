@@ -407,9 +407,8 @@ public class MoveMent : MonoBehaviour
         // 如果控制被锁定，或者Alt键被按下则不处理输入
         if (isControlLocked || isAltKeyDown) return;
 
-        // 只有在按键按下且未在翻滚状态且不在冷却期间时才触发翻滚
-        // 使用 rollTriggered 防止重复触发
-        if (value.started && !isRolling && IsGrounded() && rollCooldownTimer <= 0 && !rollTriggered)
+        // 蹲伏/跳跃/翻滚中/冷却期间不触发
+        if (value.started && !isRolling && !isCrouching && IsGrounded() && rollCooldownTimer <= 0 && !rollTriggered)
         {
             Roll();
         }
