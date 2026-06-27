@@ -88,6 +88,22 @@ public class TcpChannel
         lock (_sendQueue) _sendQueue.Enqueue(packet);
     }
 
+    /// <summary>立即同步写入 stream（绕过发送队列），仅供连接初始化阶段使用。
+    /// 此时 Update 尚未处理过队列，无并发写入，线程安全。
+    /// 用途：鉴权成功后第一时间发送 player_info，避免队列帧延迟导致服务端"等待 entityId"超时。</summary>
+    public void SendImmediate(string json)
+    {
+        if (_stream == null) return;
+        var data = Encoding.UTF8.GetBytes(json);
+        var packet = BuildPacket(data);
+        try { _stream.Write(packet, 0, packet.Length); }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[TCP] SendImmediate 异常: {ex.Message}");
+            IsConnected = false;
+        }
+    }
+
     /// <summary>发送 ProtoBuf 二进制消息（进队列，避免与 Update 并发写 stream）</summary>
     public void SendProto(byte[] bytes)
     {

@@ -54,7 +54,20 @@ public partial class EntitySyncManager : MonoBehaviour
                 Debug.Log($"[EntitySync] Proto快照累计#{_protoCount} 实体数={proto.Entities.Count} localId={_localPlayerEntityId}");
 
             if (_localPlayerEntityId == 0)
+            {
                 _localPlayerEntityId = proto.PlayerEntityId;
+                Debug.Log($"[EntitySync] 设置 localPlayerEntityId={_localPlayerEntityId}");
+            }
+
+            // 首次快照诊断：打印所有实体的关键信息
+            if (_protoCount <= 3)
+            {
+                foreach (var e in proto.Entities)
+                {
+                    var pos = e.Position;
+                    Debug.Log($"[EntitySync] 实体#{e.EntityId} type={e.EntityType} uid={e.Uid} model={e.ModelType} pos=({pos?.X:F1},{pos?.Y:F1},{pos?.Z:F1}) hp={e.Hp}");
+                }
+            }
 
             foreach (var e in proto.Entities)
             {
@@ -284,9 +297,14 @@ public partial class EntitySyncManager : MonoBehaviour
                 if (e.entityType == 0)
                 {
                     prefab = GetRemotePlayerPrefab(e.modelType);
+                    Debug.Log($"[EntitySync] 远程玩家#{e.entityId} uid={e.uid} modelType={e.modelType} prefab={(prefab != null ? prefab.name : "NULL")}");
                 }
                 if (prefab == null) prefab = e.entityType == 0 ? _remotePlayerPrefab : _remoteMonsterPrefab;
-                if (prefab == null) return;
+                if (prefab == null)
+                {
+                    Debug.LogWarning($"[EntitySync] 实体#{e.entityId} prefab为空，跳过实例化 (modelType={e.modelType} _remotePlayerPrefab={(_remotePlayerPrefab != null ? "有" : "无")})");
+                    return;
+                }
                 go = Instantiate(prefab);
                 go.transform.position = new Vector3(e.posX, e.posY, e.posZ);
                 go.transform.rotation = Quaternion.Euler(0, e.rotY, 0);
@@ -295,6 +313,9 @@ public partial class EntitySyncManager : MonoBehaviour
                 if (e.entityType == 0 && go != _remotePlayerPrefab)
                 {
                     StripGameplayComponents(go);
+                    // 附加 AnimationEvent 空壳接收器：CharacterAnimationController 被销毁后，
+                    // 远程 Animator 播放的 CrossFadeInFixedTime 动画仍会触发事件
+                    EnsureRemoteVfxEventReceiver(go);
                     var driver = go.GetComponent<MonsterLocomotionDriver>();
                     if (driver == null)
                         driver = go.AddComponent<MonsterLocomotionDriver>();
@@ -321,14 +342,14 @@ public partial class EntitySyncManager : MonoBehaviour
         var proxy = go.GetComponent<NetworkEntityProxy>();
         if (proxy) proxy.SetHp(e.hp, e.maxHp);
 
-        // 远程玩家攻击动画：atkTrigger 变化时播放攻击
+        // 远程玩家攻击动画：atkTrigger 变化时 CrossFade 到 Attack 状态
         if (e.entityType == 0 && e.atkTrigger > 0)
         {
             var lastAtk = _remoteAtkCache.GetValueOrDefault(e.entityId);
             if (e.atkTrigger != lastAtk)
             {
                 _remoteAtkCache[e.entityId] = e.atkTrigger;
-                go.GetComponent<Animator>()?.SetTrigger("Attack");
+                go.GetComponent<Animator>()?.CrossFadeInFixedTime("Attack", 0.1f, 0);
             }
         }
 
@@ -342,13 +363,14 @@ public partial class EntitySyncManager : MonoBehaviour
             }
         }
 
-        // 远程玩家技能特效：skillTrigger 变化时实例化技能 VFX
+        // 远程玩家技能：skillTrigger 变化时 CrossFade 到 Skill 状态 + 实例化 VFX
         if (e.entityType == 0 && e.skillTrigger > 0 && !string.IsNullOrEmpty(e.skillId))
         {
             var lastSkill = _remoteSkillCache.GetValueOrDefault(e.entityId);
             if (e.skillTrigger != lastSkill)
             {
                 _remoteSkillCache[e.entityId] = e.skillTrigger;
+                go.GetComponent<Animator>()?.CrossFadeInFixedTime("Skill", 0.1f, 0);
                 PlayRemoteSkillVfx(go, e.skillId, new Vector3(e.skillTargetX, e.skillTargetY, e.skillTargetZ));
             }
         }
@@ -449,7 +471,11 @@ public partial class EntitySyncManager : MonoBehaviour
         _remoteStateCache.Remove(entityId);
     }
 
-    /// <summary>远程玩家状态动画同步（蹲伏/跳跃/翻滚/死亡）</summary>
+    /// <summary>
+    /// 远程玩家状态动画同步。使用 CrossFadeInFixedTime 直接驱动 FSM 动画状态机，
+    /// 不再依赖 Animator Trigger/Bool 参数（FSM 模式下参数无效）。
+    /// 优先级：死亡 > 跳跃 > 翻滚 > 蹲伏 > 待机
+    /// </summary>
     void ApplyRemotePlayerState(GameObject go, uint entityId, bool isCrouching, bool isJumping, bool isRolling, bool isDead)
     {
         var anim = go?.GetComponent<Animator>();
@@ -460,11 +486,32 @@ public partial class EntitySyncManager : MonoBehaviour
         if (newState == oldState) return;
         _remoteStateCache[entityId] = newState;
 
-        if (isDead) anim.SetBool("IsDead", true);
-        else if (isJumping) anim.SetTrigger("Jump");
-        else if (isRolling) anim.SetTrigger("Roll");
-        else if (isCrouching) anim.SetBool("IsCrouch", true);
-        else anim.SetBool("IsCrouch", false);
+        // 优先级：Death > Jump > Roll > Crouch > Idle
+        if (isDead)
+        {
+            anim.SetLayerWeight(1, 0f);
+            anim.CrossFadeInFixedTime("Death", 0.15f, 0);
+        }
+        else if (isJumping)
+        {
+            anim.SetLayerWeight(1, 0f);
+            anim.CrossFadeInFixedTime("Jump", 0.1f, 0);
+        }
+        else if (isRolling)
+        {
+            anim.SetLayerWeight(1, 0f);
+            anim.CrossFadeInFixedTime("Roll", 0.08f, 0);
+        }
+        else if (isCrouching)
+        {
+            anim.CrossFadeInFixedTime("Movement", 0.1f, 0);
+            anim.SetLayerWeight(1, 1f);
+        }
+        else
+        {
+            anim.CrossFadeInFixedTime("Movement", 0.15f, 0);
+            anim.SetLayerWeight(1, 0f);
+        }
     }
 
     void OnDestroy()
@@ -488,6 +535,11 @@ public partial class EntitySyncManager : MonoBehaviour
             targetPos != remotePlayer.transform.position
                 ? Quaternion.LookRotation(targetPos - remotePlayer.transform.position)
                 : remotePlayer.transform.rotation);
+
+        // 附加空壳组件接收 AnimationEvent（OnSkillCastPoint/OnActionAnimationEnd），
+        // 不修改共享 AnimationClip 数据，不影响本地玩家特效。
+        EnsureRemoteVfxEventReceiver(go);
+
         var comp = go.GetComponent<Skill>();
         if (comp != null)
         {
@@ -500,6 +552,16 @@ public partial class EntitySyncManager : MonoBehaviour
         {
             Destroy(go, 6f);
         }
+    }
+
+    /// <summary>
+    /// 确保 VFX GameObject 上有空壳组件接收 AnimationEvent。
+    /// 不修改共享 AnimationClip，安全无副作用。
+    /// </summary>
+    static void EnsureRemoteVfxEventReceiver(GameObject go)
+    {
+        if (go.GetComponent<RemoteVfxEventReceiver>() == null)
+            go.AddComponent<RemoteVfxEventReceiver>();
     }
 
     [Serializable]

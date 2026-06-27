@@ -1,15 +1,21 @@
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
 
 /// <summary>
-/// UDP 高频通道：Phase 1 简化为纯连通性验证，Phase 2 升级二进制协议。
+/// UDP 通道：上行发送位置（30Hz）+ 下行接收快照。
+/// Update() 中同步批量读取 UDP 缓冲区，消除 async await 的帧延迟累积（参考 MMO_DEBUG_LOG 问题6）。
 /// </summary>
 public class UdpChannel
 {
     public bool IsConnected { get; private set; }
+
+    /// <summary>收到 UDP 下行数据（ProtoBuf 快照，首字节 0x01）。在主线程 Update 中触发。</summary>
+    public event Action<byte[]> OnDataReceived;
+
     private UdpClient _client;
     private CancellationTokenSource _cts;
 
@@ -32,6 +38,35 @@ public class UdpChannel
         }
     }
 
+    /// <summary>
+    /// 主线程每帧调用：同步批量读取所有可用的 UDP 数据报，立即触发回调。
+    /// 关键：不使用 async await，避免每次接收 1 帧的 PlayerLoop 调度延迟累积。
+    /// </summary>
+    public void Update()
+    {
+        if (_client == null || !IsConnected) return;
+
+        try
+        {
+            // 同步批量读取：Available > 0 表示有数据报在 OS 缓冲区
+            while (_client.Available > 0)
+            {
+                IPEndPoint remoteEp = null;
+                byte[] data = _client.Receive(ref remoteEp);
+                if (data.Length > 0)
+                {
+                    OnDataReceived?.Invoke(data);
+                }
+            }
+        }
+        catch (SocketException) { }
+        catch (ObjectDisposedException) { }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[UDP] 接收异常: {ex.Message}");
+        }
+    }
+
     public void Send(byte[] payload)
     {
         if (!IsConnected || _client == null) return;
@@ -50,8 +85,6 @@ public class UdpChannel
         }
         catch { IsConnected = false; }
     }
-
-    public void Update() { }
 
     public void Disconnect()
     {

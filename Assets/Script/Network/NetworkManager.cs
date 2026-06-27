@@ -48,6 +48,16 @@ public partial class NetworkManager : Singleton<NetworkManager>
             if (sync) sync.ApplySnapshotProto(data);
         };
 
+        // UDP 下行快照：首字节 0x01 = ProtoBuf，去掉前缀后交给 EntitySyncManager
+        Udp.OnDataReceived += data =>
+        {
+            if (data.Length > 1 && data[0] == 0x01)
+            {
+                var sync = FindObjectOfType<EntitySyncManager>();
+                if (sync) sync.ApplySnapshotProto(data.AsSpan(1).ToArray());
+            }
+        };
+
 
     }
 
@@ -86,6 +96,7 @@ public partial class NetworkManager : Singleton<NetworkManager>
     private string _lastPassword = "";   // 缓存在线密码供断线重连
     private float _reconnectTimer;
     private bool _wasConnected;
+    private float _lastPlayerAtkTime;    // SendPlayerAtk 频率限制
 
     /// <summary>完整连接流程：HTTP 登录 → TCP 连接 → 发送职业 → UDP 绑定</summary>
     public async UniTask<bool> ConnectAsync(string username, string password, byte profession = 255)
@@ -110,25 +121,47 @@ public partial class NetworkManager : Singleton<NetworkManager>
             Udp ??= new UdpChannel();
 
             // 1. HTTP 登录获取 JWT
+            Debug.Log($"[NetworkManager] 步骤1: HTTP登录 username={username}");
             var loginSuccess = await HttpLoginAsync(username, password);
-            if (!loginSuccess) return false;
+            if (!loginSuccess)
+            {
+                Debug.LogError($"[NetworkManager] HTTP登录失败，连接中止");
+                return false;
+            }
 
             // 2. TCP 连接 + 首包鉴权
+            Debug.Log($"[NetworkManager] 步骤2: TCP连接 {_serverHost}:{_tcpPort}");
             var tcpOk = await Tcp.ConnectAsync(_serverHost, _tcpPort, BearerToken);
-            if (!tcpOk) return false;
+            if (!tcpOk)
+            {
+                Debug.LogError($"[NetworkManager] TCP连接失败，连接中止");
+                return false;
+            }
             PlayerUid = Tcp.AuthenticatedUid;
             SessionId = Tcp.SessionId;
             _lastProfession = profession;  // 断线重连时复用
+            Debug.Log($"[NetworkManager] TCP认证成功 Uid={PlayerUid}");
 
-            // 3. 立即发送职业信息（赶在第一个位置消息和第一个快照之前）
+            // 3. 立即同步发送职业信息（绕过发送队列，确保在服务端 entityId 超时前到达）
+            //    不能用 SendPlayerInfo（入队等下一帧 Update），否则帧延迟会导致服务端"等待 entityId"超时
             if (profession <= 3)
-                SendPlayerInfo(profession);
+            {
+                var payload = new PlayerInfoPayload { type = "player_info", uid = PlayerUid, profession = profession };
+                Tcp.SendImmediate(JsonUtility.ToJson(payload));
+                Debug.Log($"[NetworkManager] 已立即发送 player_info uid={PlayerUid} profession={profession}");
+            }
 
-            // 4. UDP 绑定
-            await Udp.ConnectAsync(_serverHost, _udpPort, SessionId);
+            // 4. UDP 绑定（用 PlayerUid 而非 SessionId，因为 AuthResponse 未返回 sessionId）
+            Debug.Log($"[NetworkManager] 步骤4: UDP绑定 {_serverHost}:{_udpPort} uid={PlayerUid}");
+            await Udp.ConnectAsync(_serverHost, _udpPort, PlayerUid);
 
             Debug.Log($"[NetworkManager] 连接成功! Uid={PlayerUid}, Session={SessionId}");
             return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[NetworkManager] ConnectAsync 异常: {ex}");
+            return false;
         }
         finally
         {
@@ -206,11 +239,13 @@ public partial class NetworkManager : Singleton<NetworkManager>
         Debug.Log($"[NetworkManager] 注册怪物 instId={instId} hp={maxHp}");
     }
 
-    /// <summary>发送聊天消息</summary>
-    public void SendChat(string text)
+    /// <summary>发送聊天消息（携带角色名和头像下标以供其他客户端正确显示气泡）</summary>
+    public void SendChat(string text, int avatarIndex = -1)
     {
         if (!Tcp.IsConnected) return;
-        Tcp.Send($"{{\"type\":\"chat\",\"uid\":\"{PlayerUid}\",\"text\":\"{EscapeJson(text)}\"}}");
+        var charName = EscapeJson(CharacterService.Instance?.CurrentPlayerCharacter()?.CharacterName ?? PlayerUid);
+        var idxPart = avatarIndex >= 0 ? $",\"avatarIndex\":{avatarIndex}" : "";
+        Tcp.Send($"{{\"type\":\"chat\",\"uid\":\"{PlayerUid}\",\"text\":\"{EscapeJson(text)}\",\"characterName\":\"{charName}\"{idxPart}}}");
     }
 
     /// <summary>通知服务端玩家已复活（恢复 HP 到当前等级的最大血量）</summary>
@@ -220,10 +255,13 @@ public partial class NetworkManager : Singleton<NetworkManager>
         Tcp.Send($"{{\"type\":\"respawn\",\"uid\":\"{PlayerUid}\",\"maxHp\":{maxHp}}}");
     }
 
-    /// <summary>发送玩家攻击触发（用于其他客户端播放攻击动画）</summary>
+    /// <summary>发送玩家攻击触发（用于其他客户端播放攻击动画）。限制频率：最快每秒1次，防止通道攻击刷屏。</summary>
     public void SendPlayerAtk()
     {
         if (!Tcp.IsConnected) return;
+        // 频率限制：通道攻击可能每帧触发 DealDamageTo，限制最快 1 次/秒
+        if (Time.time - _lastPlayerAtkTime < 1f) return;
+        _lastPlayerAtkTime = Time.time;
         Tcp.Send($"{{\"type\":\"player_atk\",\"uid\":\"{PlayerUid}\"}}");
     }
 

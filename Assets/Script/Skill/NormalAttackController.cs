@@ -255,6 +255,13 @@ public class NormalAttackController : MonoBehaviour
         // 通知 FSM 进入通道攻击状态（由状态类统一处理动画播放和锁定）
         GetPlayerFsm()?.RequestAction(PlayerFSM.PlayerState.ChannelAttack);
 
+        // MMO: 立即通知远程播放攻击动画（在按下的第一帧触发，不等 DealDamageTo）
+        if (GameModeConfig.IsMmoMode)
+        {
+            var nm = NetworkManager.Instance;
+            if (nm != null && nm.IsConnected) nm.SendPlayerAtk();
+        }
+
         // 目标缓存到本次激活流程（在前摇回调中取用）
         _cachedPlayerSkill = playerSkill;
         _cachedTarget = targetTransform;
@@ -285,6 +292,18 @@ public class NormalAttackController : MonoBehaviour
         _rayInstance.Activate(caster, _cachedPlayerSkill, firePoint, _cachedTarget);
         _activeRay = _rayInstance;
         _hasStartedRay = true;
+
+        // MMO: 通知远程播放技能特效（射线 VFX）
+        if (GameModeConfig.IsMmoMode)
+        {
+            var nm = NetworkManager.Instance;
+            if (nm != null && nm.IsConnected && normalAttackSo != null)
+            {
+                Vector3 targetPos = _cachedTarget != null ? _cachedTarget.position : transform.position + transform.forward * 5f;
+                nm.SendSkillCast(normalAttackSo.SkillID, targetPos);
+            }
+        }
+
         // 只有真正开始射线后才播放循环音效
         if (!_isRaySoundPlaying && AudioManager.Instance != null)
         {

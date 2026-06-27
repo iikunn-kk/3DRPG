@@ -296,6 +296,12 @@ public class MoveMent : MonoBehaviour
         {
             Quaternion targetRotation = Quaternion.LookRotation(forward);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, turnSpeed);
+            // Slerp 尾部收敛极慢（0.9^N 指数衰减），残留 <2° 时人眼不可分辨
+            // 但 NetworkPlayerMover 每 33ms 窗口累积仍会超过 1° 阈值，产生无效同步流量
+            if (Quaternion.Angle(transform.rotation, targetRotation) < 2f)
+            {
+                transform.rotation = targetRotation;
+            }
         }
     }
     // 输入回调方法

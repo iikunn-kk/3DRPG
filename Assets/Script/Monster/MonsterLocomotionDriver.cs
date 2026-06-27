@@ -134,31 +134,32 @@ public class MonsterLocomotionDriver : MonoBehaviour
             return;
         }
 
-        // 1) 计算水平速度（优先 NavMeshAgent.desiredVelocity，其次 agent.velocity，再次 位置差）
+        // 1) 计算水平速度
+        // MMO 模式：EntitySyncManager 动态添加 PositionInterpolator，
+        // 必须优先读取其 SmoothedVelocity（agent.enabled=true 但 velocity=0）
         Vector3 planarVel = Vector3.zero;
         bool haveAgent = agent != null && agent.enabled;
-        if (haveAgent)
+        var interp = _interpolator;
+        if (interp == null) interp = GetComponent<PositionInterpolator>(); // MMO 动态添加后补获取
+
+        if (interp != null)
+        {
+            // 远程实体 / MMO 怪物：直接从 PositionInterpolator 获取已平滑的速度，
+            // 避免从位置增量反推时把插值跳跃放大为速度尖峰
+            planarVel = interp.SmoothedVelocity;
+            planarVel.y = 0f;
+        }
+        else if (haveAgent)
         {
             Vector3 dv = agent.desiredVelocity; dv.y = 0f;
             Vector3 av = agent.velocity; av.y = 0f;
             planarVel = dv.sqrMagnitude > 0.0001f ? dv : av;
         }
-
-        if (!haveAgent)
+        else
         {
-            if (_interpolator != null)
-            {
-                // 远程实体：直接从 PositionInterpolator 获取已平滑的速度，
-                // 避免从位置增量反推时把插值跳跃放大为速度尖峰
-                planarVel = _interpolator.SmoothedVelocity;
-                planarVel.y = 0f;
-            }
-            else
-            {
-                Vector3 delta = transform.position - _lastPos; delta.y = 0f;
-                float dt = Mathf.Max(Time.deltaTime, 0.000001f);
-                planarVel = delta / dt;
-            }
+            Vector3 delta = transform.position - _lastPos; delta.y = 0f;
+            float dt = Mathf.Max(Time.deltaTime, 0.000001f);
+            planarVel = delta / dt;
         }
         _lastPos = transform.position;
 
