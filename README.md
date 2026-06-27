@@ -1,4 +1,4 @@
-# Unity 3D RPG 游戏项目
+# Unity 3D MMORPG 游戏项目
 
 <div align="center">
 
@@ -8,7 +8,7 @@
 
 <img src="Screenshots/banner.png" width="800" alt="游戏主画面">
 
-**一个功能完整的 3D RPG 游戏框架，包含完整的角色系统、战斗系统、技能系统、锁定系统、任务系统、背包系统、商店系统、公会系统、昼夜系统、抽卡系统等核心模块**
+**一个功能完整的 3D MMORPG 游戏框架，包含完整的角色系统、战斗系统、技能系统、锁定系统、任务系统、背包系统、商店系统、公会系统、昼夜系统、抽卡系统等核心模块**
 
 [快速开始](#-快速开始) • [功能特性](#-功能特性) • [技术架构](#-技术架构) • [项目结构](#-项目结构)
 
@@ -42,7 +42,7 @@
 ### 项目亮点
 
 ✅ **完整的 RPG 核心系统** — 角色创建、战斗、技能、任务、背包、公会等  
-✅ **MMO 联机架构** — 客户端-服务端分离，5 容器 Docker 编排，双窗口互见 + HP 同步  
+✅ **MMO 联机架构** — 客户端-服务端分离，6 容器 Docker 编排，双窗口互见 + HP 同步 + 聊天 + 公会  
 ✅ **上帝类治理** — GameManager 800+ 行 → 完全删除，绞杀者模式三阶段迁移  
 ✅ **依赖注入** — VContainer DI 容器集成，14+ Manager 注册，支持单元测试 Mock  
 ✅ **UniTask 异步** — 40+ 文件全部替换 Coroutine，零 `async void` 残留  
@@ -58,6 +58,7 @@
 ✅ **本地离线模式** — 策略模式 + 门面模式，MongoDB 不可用时自动降级为本地 JSON 存储  
 ✅ **Addressables 加载** — UI Prefab 全面迁移至 Addressables，AddressableCache 同步加载工具  
 ✅ **虚拟滚动背包** — LoopScrollRect 对象池复用，1000 格仅 ~63 个 GameObject，O(1) 槽位查找
+✅ **Protobuf 上行** — 位置消息 JSON(130B)→Protobuf(33B)，省 74% 带宽，零 GC
 
 ---
 
@@ -165,12 +166,25 @@
 
 <img src="Screenshots/mmo-sync.gif" width="700" alt="MMO双窗口同步演示">
 
-- **客户端-服务端分离架构**：Unity 客户端 + .NET 8 服务端三件套（Gateway / WorldServer / CombatServer）
-- **Docker 一键部署**：5 容器编排（MongoDB / Redis / Gateway / WorldServer / CombatServer）
-- **AOI 九宫格**：50m cell 空间分区，20 tick/s 快照广播
-- **服务端权威战斗**：CombatServer 伤害公式 + Buff/Debuff，HP 同步到所有客户端
-- **位置同步**：30Hz 发送 + 30ms 延迟平滑插值，双窗口互见移动
-- **三通道通信**：HTTP JWT 登录 + TCP JSON 消息 + UDP 高频同步（预留）
+- **客户端-服务端分离架构**：Unity 客户端 + .NET 8 服务端（Gateway / WorldServer / CombatServer / ChatServer）
+- **Docker 一键部署**：6 容器编排（MongoDB / Redis / Gateway / WorldServer / CombatServer / ChatServer）
+- **三通道通信**：HTTP JWT 登录 + TCP JSON 可靠消息 + UDP Protobuf 高频位置同步
+- **AOI 九宫格**：50m cell 空间分区，30 tick/s 快照广播，per-client 频道 O(N) 带宽
+- **服务端权威战斗**：CombatServer 伤害计算 + Buff/Debuff，HP 同步到所有客户端
+- **位置同步**：Protobuf 上行(~33B) + UDP 下行快照 + PositionInterpolator 66ms 平滑插值
+- **实时聊天**：ChatServer 独立服务（Redis chat:in/out），聊天气泡含玩家名 + 随机头像
+- **公会系统**：MMO 服务端权威公会（创建/加入/审批/晋升/踢出）
+- **技能特效同步**：skill_cast 全链路，远程客户端实例化 VFX 播放
+- **断线重连**：3 秒自动重连 + Session 恢复
+- **双模式零侵入切换**：`GameModeConfig.IsMmoMode` 单开关，单机/MMO 共用 FSM + Animator
+
+### 💬 实时聊天系统
+
+- **MMO 世界频道**：ChatServer 独立服务，Redis `chat:in` → `chat:out` 转发
+- **聊天气泡**：`ChatBubble` Prefab，显示玩家名 + 消息文字 + 头像
+- **头像池**：Inspector 配置 Sprite[] 数组，会话首次消息随机选取，重启重新随机
+- **发送者头像同步**：头像下标随消息发送，接收方按发送者下标查本地池还原
+- **Enter 发送**：保持输入框聚焦，连续聊天不打断
 
 ### 🎨 UI 系统
 
@@ -224,7 +238,7 @@
 | **Unity**    | 6000.0.59f2+  | 游戏引擎         |
 | **C#**       | 9.0+          | 编程语言         |
 | **.NET**     | 8.0           | 服务端运行时     |
-| **Docker**   | —             | 容器化部署       |
+| **Docker**   | —             | 6 容器一键部署 (Gateway/World/Combat/Chat/Redis/MongoDB) |
 | **Redis**    | 7-alpine      | 服务间 Pub/Sub   |
 
 ### 核心包
@@ -233,6 +247,7 @@
 | ----------------------------- | ------------------ |
 | **VContainer**                | DI 依赖注入        |
 | **UniTask**                   | 零 GC 异步替代 Coroutine |
+| **Google.Protobuf**           | 高频位置消息序列化（130B→33B） |
 | **MongoDB.Driver**            | 数据库连接与操作   |
 | **DOTween**                   | 动画效果           |
 | **Cinemachine**               | 摄像机控制         |
@@ -265,57 +280,37 @@
 1. **克隆仓库**
 
 ```bash
-git clone https://github.com/yourusername/3DRPG.git
+git clone https://github.com/iikunn-kk/3DRPG.git
 cd 3DRPG
 ```
 
-2. **打开项目**
+2. **打开项目** — 使用 Unity Hub 打开项目文件夹，等待 Unity 完成包导入
 
-- 使用 Unity Hub 打开项目文件夹
-- 等待 Unity 完成包导入
-
-3. **安装必需包**
-
-```
-Window > Package Manager
-- MongoDB.Driver
-- DOTween
-- Cinemachine
-- TextMeshPro
-- Addressables
-```
-
-4. **配置渲染管线**
-
-**内置渲染管线（Built-in）:**
-
-```
-1. Package Manager > 安装 Post Processing
-2. Edit > Project Settings > Player > Other Settings > Color Space: Linear
-3. （可选）Suntail Village > Demo > Settings
-```
-
-**通用渲染管线（URP）:**
-
-```
-1. Edit > Project Settings > Player > Other Settings > Color Space: Linear
-2. 解压 "SRP Packages" 文件夹中的 URP 包
-3. Edit > Project Settings > Graphics > Scriptable Render Pipeline Settings: SuntailUniversalRenderPipelineAsset
-```
-
-5. **配置 MongoDB（可选）**
-
-如果需要使用数据库功能：
-
-```csharp
-// 在 MongoDBManager 中配置连接字符串
-private const string ConnectionString = "mongodb://localhost:27017";
-```
-
-6. **运行游戏**
+3. **运行单机模式**
 
 - 打开 `Assets/Scenes/七月/登录界面/LoginScene 1.unity`
-- 点击 Play 按钮
+- 点击 Play 按钮即可（默认单机模式，无需数据库）
+
+4. **运行 MMO 模式（可选）**
+
+前提：安装 Docker Desktop
+
+```powershell
+# 启动全部 6 个容器
+docker compose -f docker-compose.mmo.yml up -d
+
+# 确认状态
+docker ps --format "table {{.Names}}\t{{.Status}}"
+
+# 在 Unity 场景中找到 GameConfig 物体，勾选 GameModeConfig 的 IsMmoMode
+# 点击 Play → 进入 Village → 自动连接 Gateway
+```
+
+5. **停止 MMO**
+
+```powershell
+docker compose -f docker-compose.mmo.yml down
+```
 
 ---
 
@@ -360,12 +355,15 @@ Assets/
 │   │   ├── CharacterDataManager.cs
 │   │   └── Singleton.cs
 │   ├── Network/              # MMO 客户端网络层
-│   │   ├── NetworkManager.cs
-│   │   ├── TcpChannel.cs
-│   │   ├── UdpChannel.cs
-│   │   ├── EntitySyncManager.cs
-│   │   ├── NetworkPlayerMover.cs
-│   │   └── PositionInterpolator.cs
+│   │   ├── NetworkManager.cs        # HTTP+TCP+UDP 三通道入口（Singleton）
+│   │   ├── TcpChannel.cs            # 4B LE长度头 + JSON/Proto 双格式
+│   │   ├── UdpChannel.cs            # 上行Protobuf位置 + 下行快照批量接收
+│   │   ├── EntitySyncManager.cs     # 快照解析 + 远程实体管理 + 组件剥离
+│   │   ├── NetworkPlayerMover.cs    # 30Hz位置上报（阈值0.05m+1°）
+│   │   ├── PositionInterpolator.cs  # 位置Lerp + 角速度外推 + EMA速度
+│   │   ├── NetworkEntityProxy.cs    # 远程实体HP/名称UI
+│   │   ├── RemoteVfxEventReceiver.cs # 远程AnimationEvent空壳接收器
+│   │   └── Proto/                   # Protobuf 生成代码（messages/entity/common/guild）
 │   ├── Monster/              # 怪物系统
 │   │   ├── MonsterBase.cs
 │   │   ├── MonsterCombat.cs
@@ -424,6 +422,13 @@ Assets/
 └── Packages/                 # Unity包配置
     ├── manifest.json
     └── packages-lock.json
+
+GatewayServer/                # .NET 8 Gateway（HTTP认证 + TCP/UDP消息路由 + 快照转发）
+WorldServer/                  # .NET 8 WorldServer（30 tick/s + AOI + 怪物AI + 公会 + 快照）
+CombatServer/                 # .NET 8 CombatServer（伤害公式 + Buff/Debuff）
+ChatServer/                   # .NET 8 ChatServer（chat:in → chat:out 转发）
+Proto/                        # .proto 源文件（messages/entity/common/udp/guild）
+docker-compose.mmo.yml        # 6 容器一键编排
 ```
 
 ---
@@ -915,7 +920,7 @@ public class MonsterAttackState : MonsterStateBase { /* 攻击冷却 + 3 种随�
 // VSpeed/HSpeed → Idle/Walk/Run, Attack/Death/Alert → Trigger
 ```
 
-**玩家 FSM**（12 个独立状态类）：Idle / Walk / Sprint / Crouch / Jump / Fall / Roll / Attack / Hit / Death / Cast / Interact。物理移动、旋转矫正、跳跃朝向全部迁移至各状态类的 `FixedUpdate()` / `LateUpdate()`。
+**玩家 FSM**（12 个独立状态类）：Idle / Walk / Sprint / Crouch / Jump / Roll / Attack / Skill / Buff / ChannelAttack / Hurt / Death。FixedUpdate 物理移动 + LateUpdate 旋转矫正全迁移至各状态类，Slerp <2° 硬对齐消除网络无效同步。
 
 ---
 
@@ -1065,6 +1070,21 @@ await SceneLoadManager.Instance.LoadSceneAsync("NewScene");
 - 添加必要的注释
 - 使用有意义的变量/函数名
 - 保持代码简洁清晰
+
+---
+
+## 📖 深度文档
+
+| 文档 | 说明 |
+|------|------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 主架构设计文档（76KB）— 完整的设计决策、组件交互、已解决问题、架构演进 |
+| [MMO_ARCHITECTURE.md](MMO_ARCHITECTURE.md) | MMO 架构速览（11KB）— 三通道通信、AOI、Protobuf、动画同步 |
+| [MMO_FULL.md](MMO_FULL.md) | MMO 完整手册（29KB）— Phase 0~15 详解、Docker 操作、问题排查 |
+| [MMO_DEBUG_LOG.md](MMO_DEBUG_LOG.md) | MMO 调试日志（49KB）— 各阶段调试记录与 Bug 修复过程 |
+| [SERVER_PLAN.md](SERVER_PLAN.md) | 服务端规划设计（27KB） |
+| [SERVER_PLAN_MMO.md](SERVER_PLAN_MMO.md) | MMO 服务端详细规划（42KB） |
+| [GAMEMANAGER_REFACTOR_DESIGN.md](GAMEMANAGER_REFACTOR_DESIGN.md) | GameManager 上帝类治理设计 |
+| [LOCAL_OFFLINE_MODE_DESIGN.md](LOCAL_OFFLINE_MODE_DESIGN.md) | 本地离线模式设计 — IDataStore 策略+门面 |
 
 ---
 
