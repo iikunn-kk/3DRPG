@@ -299,6 +299,10 @@ namespace Mmo {
       y_ = other.y_;
       z_ = other.z_;
       rotY_ = other.rotY_;
+      isCrouching_ = other.isCrouching_;
+      isJumping_ = other.isJumping_;
+      isRolling_ = other.isRolling_;
+      isDead_ = other.isDead_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -371,6 +375,42 @@ namespace Mmo {
       }
     }
 
+    /// <summary>Field number for the "is_crouching" field.</summary>
+    public const int IsCrouchingFieldNumber = 6;
+    private bool isCrouching_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool IsCrouching {
+      get { return isCrouching_; }
+      set { isCrouching_ = value; }
+    }
+
+    /// <summary>Field number for the "is_jumping" field.</summary>
+    public const int IsJumpingFieldNumber = 7;
+    private bool isJumping_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool IsJumping {
+      get { return isJumping_; }
+      set { isJumping_ = value; }
+    }
+
+    /// <summary>Field number for the "is_rolling" field.</summary>
+    public const int IsRollingFieldNumber = 8;
+    private bool isRolling_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool IsRolling {
+      get { return isRolling_; }
+      set { isRolling_ = value; }
+    }
+
+    /// <summary>Field number for the "is_dead" field.</summary>
+    public const int IsDeadFieldNumber = 9;
+    private bool isDead_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool IsDead {
+      get { return isDead_; }
+      set { isDead_ = value; }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -391,6 +431,10 @@ namespace Mmo {
       if (!pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.Equals(Y, other.Y)) return false;
       if (!pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.Equals(Z, other.Z)) return false;
       if (!pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.Equals(RotY, other.RotY)) return false;
+      if (IsCrouching != other.IsCrouching) return false;
+      if (IsJumping != other.IsJumping) return false;
+      if (IsRolling != other.IsRolling) return false;
+      if (IsDead != other.IsDead) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -403,6 +447,10 @@ namespace Mmo {
       if (Y != 0F) hash ^= pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.GetHashCode(Y);
       if (Z != 0F) hash ^= pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.GetHashCode(Z);
       if (RotY != 0F) hash ^= pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.GetHashCode(RotY);
+      if (IsCrouching != false) hash ^= IsCrouching.GetHashCode();
+      if (IsJumping != false) hash ^= IsJumping.GetHashCode();
+      if (IsRolling != false) hash ^= IsRolling.GetHashCode();
+      if (IsDead != false) hash ^= IsDead.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -441,6 +489,22 @@ namespace Mmo {
         output.WriteRawTag(45);
         output.WriteFloat(RotY);
       }
+      if (IsCrouching != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(IsCrouching);
+      }
+      if (IsJumping != false) {
+        output.WriteRawTag(56);
+        output.WriteBool(IsJumping);
+      }
+      if (IsRolling != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(IsRolling);
+      }
+      if (IsDead != false) {
+        output.WriteRawTag(72);
+        output.WriteBool(IsDead);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -471,6 +535,22 @@ namespace Mmo {
         output.WriteRawTag(45);
         output.WriteFloat(RotY);
       }
+      if (IsCrouching != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(IsCrouching);
+      }
+      if (IsJumping != false) {
+        output.WriteRawTag(56);
+        output.WriteBool(IsJumping);
+      }
+      if (IsRolling != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(IsRolling);
+      }
+      if (IsDead != false) {
+        output.WriteRawTag(72);
+        output.WriteBool(IsDead);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -495,6 +575,18 @@ namespace Mmo {
       }
       if (RotY != 0F) {
         size += 1 + 4;
+      }
+      if (IsCrouching != false) {
+        size += 1 + 1;
+      }
+      if (IsJumping != false) {
+        size += 1 + 1;
+      }
+      if (IsRolling != false) {
+        size += 1 + 1;
+      }
+      if (IsDead != false) {
+        size += 1 + 1;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -522,6 +614,18 @@ namespace Mmo {
       }
       if (other.RotY != 0F) {
         RotY = other.RotY;
+      }
+      if (other.IsCrouching != false) {
+        IsCrouching = other.IsCrouching;
+      }
+      if (other.IsJumping != false) {
+        IsJumping = other.IsJumping;
+      }
+      if (other.IsRolling != false) {
+        IsRolling = other.IsRolling;
+      }
+      if (other.IsDead != false) {
+        IsDead = other.IsDead;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -562,6 +666,22 @@ namespace Mmo {
             RotY = input.ReadFloat();
             break;
           }
+          case 48: {
+            IsCrouching = input.ReadBool();
+            break;
+          }
+          case 56: {
+            IsJumping = input.ReadBool();
+            break;
+          }
+          case 64: {
+            IsRolling = input.ReadBool();
+            break;
+          }
+          case 72: {
+            IsDead = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -599,6 +719,22 @@ namespace Mmo {
           }
           case 45: {
             RotY = input.ReadFloat();
+            break;
+          }
+          case 48: {
+            IsCrouching = input.ReadBool();
+            break;
+          }
+          case 56: {
+            IsJumping = input.ReadBool();
+            break;
+          }
+          case 64: {
+            IsRolling = input.ReadBool();
+            break;
+          }
+          case 72: {
+            IsDead = input.ReadBool();
             break;
           }
         }
